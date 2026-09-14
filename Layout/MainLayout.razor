@@ -1,16 +1,31 @@
 ﻿@inherits LayoutComponentBase
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
+
+<!-- 1. ENCABEZADO / MENÚ FIJO -->
+<header class="navbar">
+    <div class="logo-container">
+        <NavLink href="" Match="NavLinkMatch.All">
+            <img src="assets/Logo.png" alt="Logo" class="logo-img" id="appLogo" />
+            <span class="brand-title" id="appTitle">INDIKA GASTRO</span>
+        </NavLink>
     </div>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
+    <nav class="nav-links">
+        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">Inicio</NavLink>
+        <NavLink class="nav-link" href="emprendimientos">Emprendimientos</NavLink>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+        <div id="authButtons" class="auth-group">
+            <NavLink class="btn-outline" href="login">INICIAR SESIÓN</NavLink>
+            <NavLink class="btn-solid" href="registro">REGISTRARSE</NavLink>
+        </div>
+    </nav>
+</header>
+
+<!-- 2. CONTENEDOR DINÁMICO (Blazor inyecta aquí la vista activa) -->
+<main class="main-container">
+    @Body
+</main>
+
+<!-- 3. PIE DE PÁGINA -->
+<footer style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.9rem;">
+    <p>&copy; 2026 INDIKA GASTRO - Todos los derechos reservados.</p>
+</footer>
