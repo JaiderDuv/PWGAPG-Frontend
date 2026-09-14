@@ -38,6 +38,8 @@ namespace PWGAPG_Frontend.Models
 
         [Required(ErrorMessage = "La contraseña es obligatoria.")]
         [MinLength(8, ErrorMessage = "La contraseña debe tener al menos 8 caracteres.")]
+        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$", 
+            ErrorMessage = "La contraseña debe contener al menos una letra mayúscula, una letra minúscula, un número y un carácter especial.")]
         public string Password { get; set; } = string.Empty;
     }
 }
