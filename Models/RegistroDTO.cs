@@ -5,10 +5,8 @@ namespace PWGAPG_Frontend.Models
     public class RegistroDTO
     {
         [Required(ErrorMessage = "Debe indicar si el negocio está formalizado.")]
-        public string Formalizado { get; set; } = "no"; // "si" o "no"
+        public string Formalizado { get; set; } = "no";
 
-        // No llevan [Required] aquí; la lógica de si es obligatorio o no para NIT y Razón Social 
-        // se evalúa en el botón de envío según el valor de 'Formalizado'
         public string? Nit { get; set; }
         public string? RazonSocial { get; set; }
 
@@ -22,7 +20,7 @@ namespace PWGAPG_Frontend.Models
         [Required(ErrorMessage = "El documento de identidad es obligatorio.")]
         public string DocumentoIdentidad { get; set; } = string.Empty;
 
-        // Este campo es opcional (se puede completar después)
+        
         public string? NombreEmprendimiento { get; set; }
 
         [Required(ErrorMessage = "Seleccione una categoría de negocio.")]
