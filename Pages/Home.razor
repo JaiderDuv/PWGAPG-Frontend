@@ -6,15 +6,17 @@
     <span class="badge" style="background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 15px; font-size: 0.85rem; font-weight: bold;">
         RED DE EMPRENDIMIENTO 2026
     </span>
-    <h1 style="font-size: 2.2rem; margin: 15px 0 10px 0;">Conecta, Crece e Impulsa tu Negocio</h1>
+    <h1 style="font-size: 2.2rem; margin: 15px 0 10px 0; outline: none; border: none;">
+        Conecta, Crece e Impulsa tu Negocio
+    </h1>
     <p style="font-size: 1.1rem; opacity: 0.95; max-width: 600px; margin-bottom: 25px;">
         La plataforma diseñada para visibilizar a pequeños y medianos emprendedores. Registra tu marca y da a conocer tus productos.
     </p>
-    <div style="display: flex; gap: 15px;">
-        <button class="btn-solid" style="background-color: white; color: #D97706; font-size: 1rem; padding: 10px 22px;" @onclick='() => Navigation.NavigateTo("registro")'>
+    <div style="display: flex; gap: 15px; align-items: center;">
+        <button class="btn-banner-primary" @onclick='() => Navigation.NavigateTo("registro")'>
             Registrar mi Emprendimiento
         </button>
-        <button class="btn-outline" style="border-color: white; color: white; font-size: 1rem; padding: 10px 22px;" @onclick='() => Navigation.NavigateTo("emprendimientos")'>
+        <button class="btn-banner-secondary" @onclick='() => Navigation.NavigateTo("emprendimientos")'>
             Explorar Negocios
         </button>
     </div>
