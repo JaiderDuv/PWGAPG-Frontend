@@ -1,11 +1,10 @@
 ﻿@inherits LayoutComponentBase
 
-<!-- 1. ENCABEZADO / MENÚ FIJO -->
 <header class="navbar">
     <div class="logo-container">
-        <NavLink href="" Match="NavLinkMatch.All">
+        <NavLink href="" Match="NavLinkMatch.All" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
             <img src="assets/Logo.png" alt="Logo" class="logo-img" id="appLogo" />
-            <span class="brand-title" id="appTitle">INDIKA GASTRO</span>
+            <span class="brand-title" id="appTitle" style="text-decoration: none;">INDIKA GASTRO</span>
         </NavLink>
     </div>
 
@@ -20,12 +19,10 @@
     </nav>
 </header>
 
-<!-- 2. CONTENEDOR DINÁMICO (Blazor inyecta aquí la vista activa) -->
 <main class="main-container">
     @Body
 </main>
 
-<!-- 3. PIE DE PÁGINA -->
 <footer style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.9rem;">
     <p>&copy; 2026 INDIKA GASTRO - Todos los derechos reservados.</p>
 </footer>

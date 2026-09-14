@@ -104,3 +104,11 @@ body {
     margin: 0 auto;
     padding: 30px 20px;
 }
+
+
+.logo-container a,
+.logo-container a:hover,
+.logo-container a:focus,
+.brand-title {
+    text-decoration: none !important;
+}
