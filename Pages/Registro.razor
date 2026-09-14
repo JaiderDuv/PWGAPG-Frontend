@@ -103,17 +103,15 @@
         </div>
 
         <!-- 11. Contraseña con Ojo para mostrar/ocultar -->
-        <div style="margin-bottom: 10px;">
+        <div style="margin-bottom: 20px;">
             <label style="font-weight: bold; display: block; margin-bottom: 6px; color: #374151; font-size: 0.9rem;">Contraseña *</label>
             <div style="position: relative;">
                 <InputText @bind-Value="modelo.Password" type="@tipoCampoPassword" class="form-control" placeholder="••••••••" style="padding-right: 40px;" />
 
-                <!-- Botón icono ojo -->
                 <button type="button" @onclick="AlternarVisibilidadPassword"
                         style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #6B7280; padding: 0;">
                     @if (mostrarPassword)
                     {
-                        <!-- Icono Ojo Abierto (SVG) -->
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z" />
                             <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z" />
@@ -121,7 +119,6 @@
                     }
                     else
                     {
-                        <!-- Icono Ojo Tachado (SVG) -->
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z" />
                             <path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z" />
@@ -137,6 +134,14 @@
         <button type="submit" class="btn-solid" style="width: 100%; padding: 12px; font-size: 1rem;">
             Crear Cuenta
         </button>
+
+        <!-- Redirección a Iniciar Sesión -->
+        <div style="text-align: center; margin-top: 20px; font-size: 0.9rem; color: #4B5563;">
+            ¿Ya tienes una cuenta?
+            <a href="login" style="color: #D97706; font-weight: bold; text-decoration: none;">
+                Inicia sesión aquí
+            </a>
+        </div>
     </EditForm>
 </div>
 
@@ -147,11 +152,9 @@
 
     private void ManejarRegistro()
     {
-        // Limpiar errores personalizados
         mensajeErrorNit = null;
         mensajeErrorRazonSocial = null;
 
-        // Validación condicional para NIT y Razón Social cuando está Formalizado
         if (modelo.Formalizado == "si")
         {
             bool hayError = false;
@@ -169,10 +172,10 @@
             if (hayError) return;
         }
 
-        // Aquí más adelante tus compañeros de Backend consumirán esta información enviando 'modelo' a la API
         Console.WriteLine("Formulario válido. Datos listos para enviar al backend.");
         Navigation.NavigateTo("login");
     }
+
     private bool mostrarPassword = false;
     private string tipoCampoPassword => mostrarPassword ? "text" : "password";
 
