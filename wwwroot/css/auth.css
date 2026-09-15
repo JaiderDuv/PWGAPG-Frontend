@@ -133,3 +133,9 @@
     align-items: center;
     gap: 10px;
 }
+
+.acciones-form-container {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
