@@ -3,9 +3,9 @@
 @using PWGAPG_Frontend.Models
 @inject NavigationManager Navigation
 
-<div style="max-width: 450px; margin: 50px auto; background: white; padding: 35px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
-    <h2 style="color: #374151; font-size: 1.8rem; margin-bottom: 8px; text-align: center; font-weight: 700;">Iniciar Sesión</h2>
-    <p style="color: #6B7280; font-size: 0.9rem; text-align: center; margin-bottom: 25px;">
+<div class="auth-card-login">
+    <h2 class="auth-titulo">Iniciar Sesión</h2>
+    <p class="auth-subtitulo">
         Ingresa tus credenciales para acceder a la plataforma
     </p>
 
@@ -13,24 +13,21 @@
         <DataAnnotationsValidator />
 
         <!-- 1. Correo Electrónico -->
-        <div style="margin-bottom: 18px;">
-            <label style="font-weight: bold; display: block; margin-bottom: 6px; color: #374151; font-size: 0.9rem;">Correo Electrónico *</label>
+        <div class="form-group">
+            <label class="auth-label">Correo Electrónico *</label>
             <InputText @bind-Value="modelo.CorreoElectronico" class="form-control" type="email" placeholder="ejemplo@correo.com" />
-            <ValidationMessage For="@(() => modelo.CorreoElectronico)" class="text-danger" style="font-size: 0.82rem;" />
+            <ValidationMessage For="@(() => modelo.CorreoElectronico)" class="text-danger msg-error" />
         </div>
 
-        <!-- 2. Contraseña con Ojo para mostrar/ocultar -->
-        <div style="margin-bottom: 10px;">
-            <label style="font-weight: bold; display: block; margin-bottom: 6px; color: #374151; font-size: 0.9rem;">Contraseña *</label>
-            <div style="position: relative;">
-                <InputText @bind-Value="modelo.Password" type="@tipoCampoPassword" class="form-control" placeholder="••••••••" style="padding-right: 40px;" />
+        <!-- 2. Contraseña -->
+        <div class="form-group-sm">
+            <label class="auth-label">Contraseña *</label>
+            <div class="campo-password-container">
+                <InputText @bind-Value="modelo.Password" type="@tipoCampoPassword" class="form-control input-password" placeholder="••••••••" />
 
-                <!-- Botón icono ojo -->
-                <button type="button" @onclick="AlternarVisibilidadPassword"
-                        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #6B7280; padding: 0;">
+                <button type="button" class="btn-ojo-password" @onclick="AlternarVisibilidadPassword">
                     @if (mostrarPassword)
                     {
-                        <!-- Icono Ojo Abierto (SVG) -->
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z" />
                             <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z" />
@@ -38,7 +35,6 @@
                     }
                     else
                     {
-                        <!-- Icono Ojo Tachado (SVG) -->
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z" />
                             <path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z" />
@@ -47,30 +43,30 @@
                     }
                 </button>
             </div>
-            <ValidationMessage For="@(() => modelo.Password)" class="text-danger" style="font-size: 0.82rem;" />
+            <ValidationMessage For="@(() => modelo.Password)" class="text-danger msg-error" />
         </div>
 
         <!-- 3. Enlace Recuperar Contraseña -->
-        <div style="text-align: right; margin-bottom: 22px;">
-            <NavLink href="recuperar-password" style="color: #D97706; font-size: 0.85rem; text-decoration: none; font-weight: 600;">
+        <div class="recuperar-container">
+            <NavLink href="recuperar-contraseña" class="link-recuperar">
                 ¿Olvidaste tu contraseña?
             </NavLink>
         </div>
 
         <!-- 4. Botón Iniciar Sesión -->
-        <button type="submit" class="btn-solid" style="width: 100%; padding: 11px; font-size: 1rem; margin-bottom: 20px;">
+        <button type="submit" class="btn-solid btn-full">
             Iniciar Sesión
         </button>
     </EditForm>
 
-    <hr style="border: 0; border-top: 1px solid #E5E7EB; margin: 20px 0;" />
+    <hr class="divider" />
 
-    <!-- 5. ¿No estás registrado? Ir al Registro -->
-    <div style="text-align: center;">
-        <span style="color: #6B7280; font-size: 0.9rem;">¿Aún no tienes una cuenta? </span>
-        <button type="button" class="btn-outline" style="width: 100%; margin-top: 12px; padding: 9px; font-size: 0.9rem;" @onclick='() => Navigation.NavigateTo("registro")'>
-            Registrarse
-        </button>
+    <!-- 5. Enlace directo a Registro -->
+    <div class="auth-footer">
+        ¿Aún no tienes una cuenta?
+        <a href="registro" class="link-destacado">
+            Regístrate aquí
+        </a>
     </div>
 </div>
 
@@ -86,7 +82,6 @@
 
     private void ManejarLogin()
     {
-        // Petición al backend más adelante
         Console.WriteLine($"Iniciando sesión con: {modelo.CorreoElectronico}");
         Navigation.NavigateTo("");
     }

@@ -1,0 +1,121 @@
+﻿/* Contenedores Principales */
+.auth-card-login {
+    max-width: 450px;
+    margin: 50px auto;
+    background: #ffffff;
+    padding: 35px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.auth-card-registro {
+    max-width: 650px;
+    margin: 30px auto;
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Tipografía y Encabezados */
+.auth-titulo {
+    color: #374151;
+    font-size: 1.8rem;
+    margin-bottom: 8px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.auth-subtitulo {
+    color: #6B7280;
+    font-size: 0.9rem;
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.auth-label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 6px;
+    color: #374151;
+    font-size: 0.9rem;
+}
+
+.auth-label-opcional {
+    font-weight: normal;
+    color: #6B7280;
+}
+
+/* Campos de Formulario */
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group-sm {
+    margin-bottom: 15px;
+}
+
+.campo-password-container {
+    position: relative;
+}
+
+.input-password {
+    padding-right: 40px;
+}
+
+.btn-ojo-password {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #6B7280;
+    padding: 0;
+}
+
+.msg-error {
+    font-size: 0.82rem;
+}
+
+/* Acciones y Enlaces */
+.recuperar-container {
+    text-align: right;
+    margin-bottom: 22px;
+}
+
+.link-recuperar {
+    color: #D97706;
+    font-size: 0.85rem;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.divider {
+    border: 0;
+    border-top: 1px solid #E5E7EB;
+    margin: 20px 0;
+}
+
+.auth-footer {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #4B5563;
+}
+
+.auth-footer-margin {
+    margin-top: 20px;
+}
+
+.link-destacado {
+    color: #D97706;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.btn-full {
+    width: 100%;
+    padding: 11px;
+    font-size: 1rem;
+}
