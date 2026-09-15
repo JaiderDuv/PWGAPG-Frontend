@@ -1,0 +1,64 @@
+﻿@page "/recuperar-contraseña"
+@using System.ComponentModel.DataAnnotations
+@inject NavigationManager Navigation
+
+<div class="recuperar-card">
+    <h2 class="recuperar-titulo">Recuperar Contraseña</h2>
+
+    <p class="recuperar-subtitulo">
+        Ingresa tu correo electrónico registrado y te enviaremos las instrucciones para restablecer tu contraseña.
+    </p>
+
+    <EditForm Model="@modelo" OnValidSubmit="@ManejarEnvioCorreo">
+        <DataAnnotationsValidator />
+
+        <!-- Campo Correo Electrónico -->
+        <div class="form-group">
+            <label class="form-label">Correo Electrónico *</label>
+            <InputText @bind-Value="modelo.Correo" class="form-control-custom" placeholder="ejemplo@correo.com" />
+            <ValidationMessage For="@(() => modelo.Correo)" class="text-danger" style="font-size: 0.82rem; margin-top: 4px;" />
+        </div>
+
+        @if (mensajeEnviado)
+        {
+            <div class="alerta-exito">
+                ¡Correo enviado con éxito! Revisa tu bandeja de entrada.
+            </div>
+        }
+
+        <!-- Botones en bloque full-width como Iniciar Sesión -->
+        <div class="acciones-container">
+            <button type="submit" class="btn-enviar">
+                Enviar enlace
+            </button>
+
+            <button type="button" class="btn-cancelar" @onclick="Cancelar">
+                Cancelar
+            </button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private RecuperarModel modelo = new RecuperarModel();
+    private bool mensajeEnviado = false;
+
+    private async Task ManejarEnvioCorreo()
+    {
+        mensajeEnviado = true;
+        await Task.Delay(2000);
+        Navigation.NavigateTo("login");
+    }
+
+    private void Cancelar()
+    {
+        Navigation.NavigateTo("login");
+    }
+
+    public class RecuperarModel
+    {
+        [Required(ErrorMessage = "El correo electrónico es obligatorio.")]
+        [EmailAddress(ErrorMessage = "Ingrese un correo electrónico válido.")]
+        public string Correo { get; set; } = string.Empty;
+    }
+}

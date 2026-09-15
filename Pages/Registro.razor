@@ -3,54 +3,54 @@
 @using PWGAPG_Frontend.Models
 @inject NavigationManager Navigation
 
-<div style="max-width: 650px; margin: 30px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-    <h2 style="color: #374151; font-size: 1.8rem; margin-bottom: 20px; text-align: center;">Registro de Emprendimiento</h2>
+<div class="auth-card-registro">
+    <h2 class="auth-titulo">Registro de Emprendimiento</h2>
 
     <EditForm Model="@modelo" OnValidSubmit="@ManejarRegistro">
         <DataAnnotationsValidator />
 
         <!-- 1. Formalizado -->
-        <div style="margin-bottom: 15px;">
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">¿Tu emprendimiento está formalizado? *</label>
+        <div class="form-group-sm">
+            <label class="auth-label">¿Tu emprendimiento está formalizado? *</label>
             <InputSelect @bind-Value="modelo.Formalizado" class="form-select">
                 <option value="no">No</option>
                 <option value="si">Sí</option>
             </InputSelect>
-            <ValidationMessage For="@(() => modelo.Formalizado)" class="text-danger" />
+            <ValidationMessage For="@(() => modelo.Formalizado)" class="text-danger msg-error" />
         </div>
 
-        <!-- 2 y 3. NIT y Razón Social (Solo si está formalizado) -->
+        <!-- 2 y 3. NIT y Razón Social -->
         @if (modelo.Formalizado == "si")
         {
-            <div style="margin-bottom: 15px;">
-                <label style="font-weight: bold; display: block; margin-bottom: 5px;">NIT *</label>
+            <div class="form-group-sm">
+                <label class="auth-label">NIT *</label>
                 <InputText @bind-Value="modelo.Nit" class="form-control" placeholder="Ej: 900123456-1" />
                 @if (mensajeErrorNit != null)
                 {
-                    <span class="text-danger" style="font-size: 0.85rem;">@mensajeErrorNit</span>
+                    <span class="text-danger msg-error">@mensajeErrorNit</span>
                 }
             </div>
 
-            <div style="margin-bottom: 15px;">
-                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Razón Social *</label>
+            <div class="form-group-sm">
+                <label class="auth-label">Razón Social *</label>
                 <InputText @bind-Value="modelo.RazonSocial" class="form-control" placeholder="Ej: Mi Empresa S.A.S." />
                 @if (mensajeErrorRazonSocial != null)
                 {
-                    <span class="text-danger" style="font-size: 0.85rem;">@mensajeErrorRazonSocial</span>
+                    <span class="text-danger msg-error">@mensajeErrorRazonSocial</span>
                 }
             </div>
         }
 
         <!-- 4. Correo Electrónico de la cuenta -->
-        <div style="margin-bottom: 15px;">
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Correo Electrónico de la Cuenta *</label>
+        <div class="form-group-sm">
+            <label class="auth-label">Correo Electrónico de la Cuenta *</label>
             <InputText @bind-Value="modelo.CorreoElectronico" class="form-control" type="email" placeholder="correo@ejemplo.com" />
-            <ValidationMessage For="@(() => modelo.CorreoElectronico)" class="text-danger" />
+            <ValidationMessage For="@(() => modelo.CorreoElectronico)" class="text-danger msg-error" />
         </div>
 
         <!-- 5. Tipo de Documento -->
-        <div style="margin-bottom: 15px;">
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Tipo de Documento *</label>
+        <div class="form-group-sm">
+            <label class="auth-label">Tipo de Documento *</label>
             <InputSelect @bind-Value="modelo.TipoDocumento" class="form-select">
                 <option value="">-- Seleccione una opción --</option>
                 <option value="CC">Cédula de Ciudadanía</option>
@@ -58,25 +58,27 @@
                 <option value="PP">Pasaporte</option>
                 <option value="PEP">Permiso Especial de Permanencia</option>
             </InputSelect>
-            <ValidationMessage For="@(() => modelo.TipoDocumento)" class="text-danger" />
+            <ValidationMessage For="@(() => modelo.TipoDocumento)" class="text-danger msg-error" />
         </div>
 
         <!-- 6. Documento de Identidad -->
-        <div style="margin-bottom: 15px;">
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Documento de Identidad *</label>
+        <div class="form-group-sm">
+            <label class="auth-label">Documento de Identidad *</label>
             <InputText @bind-Value="modelo.DocumentoIdentidad" class="form-control" placeholder="Número de documento" />
-            <ValidationMessage For="@(() => modelo.DocumentoIdentidad)" class="text-danger" />
+            <ValidationMessage For="@(() => modelo.DocumentoIdentidad)" class="text-danger msg-error" />
         </div>
 
-        <!-- 7. Nombre del Emprendimiento (Opcional) -->
-        <div style="margin-bottom: 15px;">
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Nombre del Emprendimiento <span style="font-weight: normal; color: #6B7280;">(Opcional, puedes completarlo después)</span></label>
+        <!-- 7. Nombre del Emprendimiento -->
+        <div class="form-group-sm">
+            <label class="auth-label">
+                Nombre del Emprendimiento <span class="auth-label-opcional">(Opcional, puedes completarlo después)</span>
+            </label>
             <InputText @bind-Value="modelo.NombreEmprendimiento" class="form-control" placeholder="Nombre comercial de tu marca" />
         </div>
 
         <!-- 8. Categoría Negocio -->
-        <div style="margin-bottom: 15px;">
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Categoría del Negocio *</label>
+        <div class="form-group-sm">
+            <label class="auth-label">Categoría del Negocio *</label>
             <InputSelect @bind-Value="modelo.CategoriaNegocio" class="form-select">
                 <option value="">-- Seleccione una categoría --</option>
                 <option value="Gastronomía">Gastronomía</option>
@@ -85,31 +87,30 @@
                 <option value="Productos Frescos">Productos Frescos</option>
                 <option value="Otros">Otros</option>
             </InputSelect>
-            <ValidationMessage For="@(() => modelo.CategoriaNegocio)" class="text-danger" />
+            <ValidationMessage For="@(() => modelo.CategoriaNegocio)" class="text-danger msg-error" />
         </div>
 
         <!-- 9. Teléfono Contacto -->
-        <div style="margin-bottom: 15px;">
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Teléfono de Contacto *</label>
+        <div class="form-group-sm">
+            <label class="auth-label">Teléfono de Contacto *</label>
             <InputText @bind-Value="modelo.TelefonoContacto" class="form-control" placeholder="Ej: 3001234567" />
-            <ValidationMessage For="@(() => modelo.TelefonoContacto)" class="text-danger" />
+            <ValidationMessage For="@(() => modelo.TelefonoContacto)" class="text-danger msg-error" />
         </div>
 
         <!-- 10. Correo Electrónico de Contacto -->
-        <div style="margin-bottom: 15px;">
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Correo Electrónico de Contacto *</label>
+        <div class="form-group-sm">
+            <label class="auth-label">Correo Electrónico de Contacto *</label>
             <InputText @bind-Value="modelo.CorreoContacto" class="form-control" type="email" placeholder="contacto@negocio.com" />
-            <ValidationMessage For="@(() => modelo.CorreoContacto)" class="text-danger" />
+            <ValidationMessage For="@(() => modelo.CorreoContacto)" class="text-danger msg-error" />
         </div>
 
-        <!-- 11. Contraseña con Ojo para mostrar/ocultar -->
-        <div style="margin-bottom: 20px;">
-            <label style="font-weight: bold; display: block; margin-bottom: 6px; color: #374151; font-size: 0.9rem;">Contraseña *</label>
-            <div style="position: relative;">
-                <InputText @bind-Value="modelo.Password" type="@tipoCampoPassword" class="form-control" placeholder="••••••••" style="padding-right: 40px;" />
+        <!-- 11. Contraseña -->
+        <div class="form-group">
+            <label class="auth-label">Contraseña *</label>
+            <div class="campo-password-container">
+                <InputText @bind-Value="modelo.Password" type="@tipoCampoPassword" class="form-control input-password" placeholder="••••••••" />
 
-                <button type="button" @onclick="AlternarVisibilidadPassword"
-                        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #6B7280; padding: 0;">
+                <button type="button" class="btn-ojo-password" @onclick="AlternarVisibilidadPassword">
                     @if (mostrarPassword)
                     {
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
@@ -127,18 +128,18 @@
                     }
                 </button>
             </div>
-            <ValidationMessage For="@(() => modelo.Password)" class="text-danger" style="font-size: 0.82rem;" />
+            <ValidationMessage For="@(() => modelo.Password)" class="text-danger msg-error" />
         </div>
 
         <!-- Botón enviar -->
-        <button type="submit" class="btn-solid" style="width: 100%; padding: 12px; font-size: 1rem;">
+        <button type="submit" class="btn-solid btn-full">
             Crear Cuenta
         </button>
 
         <!-- Redirección a Iniciar Sesión -->
-        <div style="text-align: center; margin-top: 20px; font-size: 0.9rem; color: #4B5563;">
+        <div class="auth-footer auth-footer-margin">
             ¿Ya tienes una cuenta?
-            <a href="login" style="color: #D97706; font-weight: bold; text-decoration: none;">
+            <a href="login" class="link-destacado">
                 Inicia sesión aquí
             </a>
         </div>
@@ -149,6 +150,14 @@
     private RegistroDTO modelo = new RegistroDTO();
     private string? mensajeErrorNit;
     private string? mensajeErrorRazonSocial;
+
+    private bool mostrarPassword = false;
+    private string tipoCampoPassword => mostrarPassword ? "text" : "password";
+
+    private void AlternarVisibilidadPassword()
+    {
+        mostrarPassword = !mostrarPassword;
+    }
 
     private void ManejarRegistro()
     {
@@ -174,13 +183,5 @@
 
         Console.WriteLine("Formulario válido. Datos listos para enviar al backend.");
         Navigation.NavigateTo("login");
-    }
-
-    private bool mostrarPassword = false;
-    private string tipoCampoPassword => mostrarPassword ? "text" : "password";
-
-    private void AlternarVisibilidadPassword()
-    {
-        mostrarPassword = !mostrarPassword;
     }
 }
