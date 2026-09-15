@@ -9,7 +9,7 @@
         Ingresa tus credenciales para acceder a la plataforma
     </p>
 
-    <!-- Mensaje de Confirmación de Cuenta de Éxito -->
+    <!-- Mensaje 1: Confirmación de Cuenta -->
     @if (CuentaConfirmada)
     {
         <div class="alert-exito">
@@ -17,6 +17,17 @@
                 <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l4.992-6.005a.75.75 0 0 0-.012-1.054z" />
             </svg>
             <span>¡Tu cuenta ha sido confirmada con éxito! Ya puedes iniciar sesión.</span>
+        </div>
+    }
+
+    <!-- Mensaje 2: Cambio de Contraseña de Éxito (NUEVO) -->
+    @if (PasswordCambiada)
+    {
+        <div class="alert-exito">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l4.992-6.005a.75.75 0 0 0-.012-1.054z" />
+            </svg>
+            <span>Contraseña guardada correctamente.</span>
         </div>
     }
 
@@ -81,6 +92,10 @@
 @code {
     [SupplyParameterFromQuery(Name = "confirmado")]
     public bool CuentaConfirmada { get; set; }
+
+    // NUEVA PROPIEDAD
+    [SupplyParameterFromQuery(Name = "passwordCambiada")]
+    public bool PasswordCambiada { get; set; }
 
     private LoginDTO modelo = new LoginDTO();
     private bool mostrarPassword = false;
