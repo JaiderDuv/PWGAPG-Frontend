@@ -1,0 +1,33 @@
+﻿@page "/dashboard-empresa"
+@inject PWGAPG_Frontend.Services.AuthService AuthService
+@inject NavigationManager Navigation
+
+<div class="profile-dashboard">
+    <div class="profile-header">
+        <div class="profile-avatar-large">
+            @AuthService.NombreEmpresa.Substring(0, 1).ToUpper()
+        </div>
+        <div>
+            <h1 class="profile-empresa-nombre">@AuthService.NombreEmpresa</h1>
+            <span class="badge" style="background-color: #FEF3C7; color: #D97706; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">
+                Emprendimiento Verificado
+            </span>
+        </div>
+    </div>
+
+    <div class="profile-empresa-info">
+        <h3 style="margin-top: 0; color: #374151; font-size: 1.1rem;">Información General</h3>
+        <p>@AuthService.DescripcionEmpresa</p>
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Validación de Sesión: Previene el acceso mediante botón "Atrás" del navegador
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/", replace: true);
+        }
+    }
+}

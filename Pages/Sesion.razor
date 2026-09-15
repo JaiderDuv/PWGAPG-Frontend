@@ -1,5 +1,6 @@
 ﻿@page "/login"
 @using System.ComponentModel.DataAnnotations
+@inject PWGAPG_Frontend.Services.AuthService AuthService
 @using PWGAPG_Frontend.Models
 @inject NavigationManager Navigation
 
@@ -84,5 +85,13 @@
     {
         Console.WriteLine($"Iniciando sesión con: {modelo.CorreoElectronico}");
         Navigation.NavigateTo("");
+        // 1. Simula que el backend validó las credenciales con éxito
+        AuthService.IniciarSesion();
+
+        // 2. Opcional: Asigna un nombre de empresa personalizado para la prueba
+        AuthService.NombreEmpresa = "Mi Tienda Ejemplo";
+
+        // 3. Redirige a la vista protegida o al Home
+        Navigation.NavigateTo("dashboard-empresa");
     }
 }
