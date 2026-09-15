@@ -76,6 +76,15 @@
     private bool mostrarPassword = false;
     private string tipoCampoPassword => mostrarPassword ? "text" : "password";
 
+    protected override void OnInitialized()
+    {
+        // Bloquea el acceso al login si ya iniciaste sesión
+        if (AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("dashboard-empresa", replace: true);
+        }
+    }
+
     private void AlternarVisibilidadPassword()
     {
         mostrarPassword = !mostrarPassword;
@@ -84,14 +93,13 @@
     private void ManejarLogin()
     {
         Console.WriteLine($"Iniciando sesión con: {modelo.CorreoElectronico}");
-        Navigation.NavigateTo("");
-        // 1. Simula que el backend validó las credenciales con éxito
-        AuthService.IniciarSesion();
 
-        // 2. Opcional: Asigna un nombre de empresa personalizado para la prueba
-        AuthService.NombreEmpresa = "Mi Tienda Ejemplo";
+        // Le pasa los datos que exige el método actualizado en AuthService
+        AuthService.IniciarSesion(
+            nombreEmpresa: "Mi Tienda Ejemplo",
+            descripcionEmpresa: "Descripción simulada de la empresa."
+        );
 
-        // 3. Redirige a la vista protegida o al Home
         Navigation.NavigateTo("dashboard-empresa");
     }
 }
