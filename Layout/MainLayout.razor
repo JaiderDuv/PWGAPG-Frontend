@@ -1,4 +1,7 @@
 ﻿@inherits LayoutComponentBase
+@inject PWGAPG_Frontend.Services.AuthService AuthService
+@inject NavigationManager Navigation
+@implements IDisposable
 
 <header class="navbar">
     <div class="logo-container">
@@ -12,13 +15,62 @@
         <NavLink class="nav-link" href="" Match="NavLinkMatch.All">Inicio</NavLink>
         <NavLink class="nav-link" href="emprendimientos">Emprendimientos</NavLink>
 
-        <div id="authButtons" class="auth-group">
-            <NavLink class="btn-outline" href="login">INICIAR SESIÓN</NavLink>
-            <NavLink class="btn-solid" href="registro">REGISTRARSE</NavLink>
-        </div>
+        @if (AuthService.IsAuthenticated)
+        {
+            <div class="user-profile-menu">
+                <button type="button" class="avatar-btn" @onclick="ToggleMenu">
+                    <span>@AuthService.NombreEmpresa.Substring(0, 1).ToUpper()</span>
+                </button>
+
+                @if (mostrarMenu)
+                {
+                    <div class="dropdown-menu-custom">
+                        <button type="button" class="avatar-btn" @onclick="ToggleMenu">
+                            <span>
+                                @(string.IsNullOrWhiteSpace(AuthService.NombreEmpresa) ? "E" : AuthService.NombreEmpresa.Substring(0, 1).ToUpper())
+                            </span>
+                        </button>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div id="authButtons" class="auth-group">
+                <NavLink class="btn-outline" href="login">INICIAR SESIÓN</NavLink>
+                <NavLink class="btn-solid" href="registro">REGISTRARSE</NavLink>
+            </div>
+        }
     </nav>
 </header>
 
 <main class="main-container">
     @Body
 </main>
+
+@code {
+    private bool mostrarMenu = false;
+
+    protected override void OnInitialized()
+    {
+        AuthService.OnChange += StateHasChanged;
+    }
+
+    private void ToggleMenu()
+    {
+        mostrarMenu = !mostrarMenu;
+    }
+
+    // CAMBIO AQUI: Se convierte a async Task y usa await
+    private async Task CerrarSesion()
+    {
+        mostrarMenu = false;
+        await AuthService.CerrarSesionAsync();
+        Navigation.NavigateTo("/", replace: true);
+    }
+
+    public void Dispose()
+    {
+        AuthService.OnChange -= StateHasChanged;
+    }
+}

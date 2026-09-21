@@ -1,5 +1,6 @@
 ﻿@page "/login"
 @using System.ComponentModel.DataAnnotations
+@inject PWGAPG_Frontend.Services.AuthService AuthService
 @using PWGAPG_Frontend.Models
 @inject NavigationManager Navigation
 
@@ -101,14 +102,31 @@
     private bool mostrarPassword = false;
     private string tipoCampoPassword => mostrarPassword ? "text" : "password";
 
+    protected override void OnInitialized()
+    {
+        // Bloquea el acceso al login si ya iniciaste sesión
+        if (AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("dashboard-empresa", replace: true);
+        }
+    }
+
     private void AlternarVisibilidadPassword()
     {
         mostrarPassword = !mostrarPassword;
     }
 
-    private void ManejarLogin()
+    private async Task ManejarLogin()
     {
-        Console.WriteLine($"Iniciando sesión con: {modelo.CorreoElectronico}");
-        Navigation.NavigateTo("");
+        bool exito = await AuthService.IniciarSesionAsync(modelo.CorreoElectronico, modelo.Password);
+
+        if (exito)
+        {
+            Navigation.NavigateTo("dashboard-empresa");
+        }
+        else
+        {
+            // Mostrar mensaje de credenciales inválidas si falla
+        }
     }
 }
