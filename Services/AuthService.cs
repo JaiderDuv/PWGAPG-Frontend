@@ -1,38 +1,69 @@
-﻿namespace PWGAPG_Frontend.Services
+﻿using System.Net.Http.Json;
+using Microsoft.JSInterop;
+
+namespace PWGAPG_Frontend.Services
 {
     public class AuthService
     {
+        private readonly HttpClient _httpClient;
+        private readonly IJSRuntime _jsRuntime;
+
         public bool IsAuthenticated { get; private set; } = false;
-
-        public string NombreEmpresa { get; set; } = "Mi Emprendimiento S.A.S.";
-
-        public string DescripcionEmpresa { get; set; } = "Aquí puedes agregar una breve descripción de tu negocio, productos principales y horarios de atención.";
-
-        public string UrlFotoPerfil { get; set; } = "images/default-avatar.png"; 
+        public string NombreEmpresa { get; private set; } = string.Empty;
+        public string DescripcionEmpresa { get; private set; } = string.Empty;
+        public string UrlFotoPerfil { get; private set; } = "images/default-avatar.png";
 
         public event Action? OnChange;
 
-        public void IniciarSesion(string nombreEmpresa, string descripcionEmpresa = "", string urlFoto = "images/default-avatar.png")
+        // Inyección de HttpClient para consultar tu API y JSInterop para localStorage
+        public AuthService(HttpClient httpClient, IJSRuntime jsRuntime)
         {
-            IsAuthenticated = true;
-            NombreEmpresa = nombreEmpresa;
-            DescripcionEmpresa = string.IsNullOrWhiteSpace(descripcionEmpresa)
-                ? "Sin descripción registrada."
-                : descripcionEmpresa;
-            UrlFotoPerfil = string.IsNullOrWhiteSpace(urlFoto)
-                ? "images/default-avatar.png"
-                : urlFoto;
-
-            NotifyStateChanged();
+            _httpClient = httpClient;
+            _jsRuntime = jsRuntime;
         }
 
-        public void CerrarSesion()
+        // Método de Inicio de Sesión asíncrono para conectar con la API
+        public async Task<bool> IniciarSesionAsync(string correo, string password)
         {
+            try
+            {
+                // TODO: Descomentar al tener el endpoint real de C# / Web API
+                // var response = await _httpClient.PostAsJsonAsync("api/auth/login", new { correo, password });
+                // if (!response.IsSuccessStatusCode) return false;
+                // var resultado = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
+
+                // Guardar token JWT o indicador de sesión en localStorage
+                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", "TOKEN_RECIBIDO_DEL_BACKEND");
+
+                IsAuthenticated = true;
+                NombreEmpresa = "Empresa Ejemplo"; // Reemplazar por resultado.NombreEmpresa
+                DescripcionEmpresa = "Descripción recuperada de la API.";
+
+                NotifyStateChanged();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // Método de Cierre de Sesión real que remueve el token almacenado
+        public async Task CerrarSesionAsync()
+        {
+            // 1. Elimina el token guardado en el navegador
+            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
+
+            // 2. Opcional: Opcionalmente puedes notificar a tu backend sobre el logout
+            // await _httpClient.PostAsync("api/auth/logout", null);
+
+            // 3. Limpia el estado interno en memoria
             IsAuthenticated = false;
             NombreEmpresa = string.Empty;
             DescripcionEmpresa = string.Empty;
             UrlFotoPerfil = "images/default-avatar.png";
 
+            // 4. Notifica a la interfaz para refrescar vistas
             NotifyStateChanged();
         }
 

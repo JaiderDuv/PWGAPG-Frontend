@@ -90,16 +90,17 @@
         mostrarPassword = !mostrarPassword;
     }
 
-    private void ManejarLogin()
+    private async Task ManejarLogin()
     {
-        Console.WriteLine($"Iniciando sesión con: {modelo.CorreoElectronico}");
+        bool exito = await AuthService.IniciarSesionAsync(modelo.CorreoElectronico, modelo.Password);
 
-        // Le pasa los datos que exige el método actualizado en AuthService
-        AuthService.IniciarSesion(
-            nombreEmpresa: "Mi Tienda Ejemplo",
-            descripcionEmpresa: "Descripción simulada de la empresa."
-        );
-
-        Navigation.NavigateTo("dashboard-empresa");
+        if (exito)
+        {
+            Navigation.NavigateTo("dashboard-empresa");
+        }
+        else
+        {
+            // Mostrar mensaje de credenciales inválidas si falla
+        }
     }
 }
