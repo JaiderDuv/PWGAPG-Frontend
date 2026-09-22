@@ -1,0 +1,70 @@
+@page "/confirmar-cuenta"
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<div class="auth-card-login">
+    <h2 class="auth-titulo">Confirmación de cuenta</h2>
+
+    @if (procesando)
+    {
+        <p class="auth-subtitulo">Estamos validando tu cuenta...</p>
+    }
+    else if (cuentaConfirmada)
+    {
+        <div class="alerta-exito">Tu cuenta fue confirmada correctamente. Ya puedes iniciar sesión.</div>
+        <button type="button" class="btn-solid btn-full" @onclick="IrAlLogin">Iniciar sesión</button>
+    }
+    else
+    {
+        <div class="text-danger msg-error">@mensaje</div>
+        <button type="button" class="btn-outline btn-full" @onclick="IrAlLogin">Ir al inicio de sesión</button>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "token")]
+    public string? Token { get; set; }
+
+    private bool procesando = true;
+    private bool cuentaConfirmada;
+    private string mensaje = "El enlace de confirmación no es válido.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Token))
+        {
+            procesando = false;
+            return;
+        }
+
+        try
+        {
+            var url = $"api/usuarios/validar-token?token={Uri.EscapeDataString(Token)}";
+            using var respuesta = await Http.GetAsync(url);
+            var resultado = await respuesta.Content.ReadFromJsonAsync<RespuestaConfirmacion>();
+
+            cuentaConfirmada = respuesta.IsSuccessStatusCode && resultado?.Exito == true;
+            mensaje = resultado?.Mensaje ?? mensaje;
+        }
+        catch (HttpRequestException)
+        {
+            mensaje = "No fue posible conectar con el servidor. Intenta nuevamente.";
+        }
+        finally
+        {
+            procesando = false;
+        }
+    }
+
+    private void IrAlLogin()
+    {
+        Navigation.NavigateTo("login");
+    }
+
+    private sealed class RespuestaConfirmacion
+    {
+        public bool Exito { get; set; }
+        public string? Mensaje { get; set; }
+    }
+}

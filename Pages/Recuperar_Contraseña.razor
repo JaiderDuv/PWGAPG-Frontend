@@ -1,6 +1,8 @@
 ﻿@page "/recuperar-contrasena"
 @using System.ComponentModel.DataAnnotations
+@using System.Net.Http.Json
 @inject NavigationManager Navigation
+@inject HttpClient Http
 
 <div class="recuperar-card">
     <h2 class="recuperar-titulo">Recuperar Contraseña</h2>
@@ -26,10 +28,15 @@
             </div>
         }
 
+        @if (mensajeError != null)
+        {
+            <div class="text-danger msg-error">@mensajeError</div>
+        }
+
         <!-- Botones en bloque full-width como Iniciar Sesión -->
         <div class="acciones-container">
-            <button type="submit" class="btn-enviar">
-                Enviar enlace
+            <button type="submit" class="btn-enviar" disabled="@enviando">
+                @(enviando ? "Enviando..." : "Enviar enlace")
             </button>
 
             <button type="button" class="btn-cancelar" @onclick="Cancelar">
@@ -42,12 +49,39 @@
 @code {
     private RecuperarModel modelo = new RecuperarModel();
     private bool mensajeEnviado = false;
+    private bool enviando = false;
+    private string? mensajeError;
 
     private async Task ManejarEnvioCorreo()
     {
-        mensajeEnviado = true;
-        await Task.Delay(2000);
-        Navigation.NavigateTo("login");
+        mensajeEnviado = false;
+        mensajeError = null;
+        enviando = true;
+
+        try
+        {
+            using var respuesta = await Http.PostAsJsonAsync(
+                "api/auth/recuperar-password",
+                new { CorreoElectronico = modelo.Correo });
+
+            var resultado = await respuesta.Content.ReadFromJsonAsync<RespuestaCorreo>();
+            if (respuesta.IsSuccessStatusCode && resultado?.Exito == true)
+            {
+                mensajeEnviado = true;
+            }
+            else
+            {
+                mensajeError = resultado?.Mensaje ?? "No fue posible enviar el correo.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            mensajeError = "No fue posible conectar con el servidor. Intenta nuevamente.";
+        }
+        finally
+        {
+            enviando = false;
+        }
     }
 
     private void Cancelar()
@@ -60,5 +94,11 @@
         [Required(ErrorMessage = "El correo electrónico es obligatorio.")]
         [EmailAddress(ErrorMessage = "Ingrese un correo electrónico válido.")]
         public string Correo { get; set; } = string.Empty;
+    }
+
+    private sealed class RespuestaCorreo
+    {
+        public bool Exito { get; set; }
+        public string? Mensaje { get; set; }
     }
 }
