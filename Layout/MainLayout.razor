@@ -19,16 +19,23 @@
         {
             <div class="user-profile-menu">
                 <button type="button" class="avatar-btn" @onclick="ToggleMenu">
-                    <span>@AuthService.NombreEmpresa.Substring(0, 1).ToUpper()</span>
+                    <span>@(string.IsNullOrWhiteSpace(AuthService.NombreEmpresa) ? "E" : AuthService.NombreEmpresa.Substring(0, 1).ToUpper())</span>
                 </button>
 
                 @if (mostrarMenu)
                 {
                     <div class="dropdown-menu-custom">
-                        <button type="button" class="avatar-btn" @onclick="ToggleMenu">
-                            <span>
-                                @(string.IsNullOrWhiteSpace(AuthService.NombreEmpresa) ? "E" : AuthService.NombreEmpresa.Substring(0, 1).ToUpper())
-                            </span>
+                        <div class="dropdown-header-custom">
+                            <p class="dropdown-user-name">@(string.IsNullOrWhiteSpace(AuthService.NombreEmpresa) ? "Usuario" : AuthService.NombreEmpresa)</p>
+                            <span class="dropdown-user-role">Emprendedor</span>
+                        </div>
+
+                        <NavLink class="dropdown-item-custom" href="mi-perfil" @onclick="() => mostrarMenu = false">
+                            Mi perfil
+                        </NavLink>
+
+                        <button type="button" class="dropdown-item-custom cerrar-sesion" @onclick="CerrarSesion">
+                            Cerrar Sesión
                         </button>
                     </div>
                 }
