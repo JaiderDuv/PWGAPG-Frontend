@@ -1,0 +1,260 @@
+﻿@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Components
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<h3 class="onboarding-subtitulo">Insumos (opcional)</h3>
+<p class="text-muted" style="margin-top: -8px; margin-bottom: 18px;">
+    Registra los insumos que necesitas para tus productos, o continúa sin ingresarlos por ahora.
+</p>
+
+@if (sugerenciasPendientes.Any())
+{
+    <div class="sugerencias-box">
+        <span class="sugerencias-titulo">Ingredientes detectados en tus productos:</span>
+        <div class="chips-container">
+            @foreach (var sugerencia in sugerenciasPendientes)
+            {
+                <button type="button" class="chip chip-sugerencia" @onclick="() => AbrirFormularioDesdeSugerencia(sugerencia)">
+                    + @sugerencia
+                </button>
+            }
+        </div>
+    </div>
+}
+
+<div class="socios-header">
+    <span></span>
+    <button type="button" class="btn-outline" @onclick="AbrirFormularioNuevoInsumo">+ Añadir insumo</button>
+</div>
+
+@if (insumos.Any())
+{
+    <div class="socios-lista">
+        @foreach (var insumo in insumos)
+        {
+            <div class="socio-item">
+                <div class="socio-info">
+                    <strong>@insumo.Nombre</strong>
+                    <span>@insumo.Cantidad @insumo.UnidadMedida · $@insumo.Precio.ToString("N0") @(string.IsNullOrWhiteSpace(insumo.Marca) ? "" : $"· {insumo.Marca}")</span>
+                </div>
+                <div class="socio-acciones">
+                    <button type="button" class="btn-mini-editar" @onclick="() => EditarInsumo(insumo)">Editar</button>
+                    <button type="button" class="btn-mini-eliminar" @onclick="() => PedirEliminarInsumo(insumo)">Eliminar</button>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <p class="text-muted">Aún no has añadido insumos.</p>
+}
+
+@if (mensajeErrorGeneral != null)
+{
+    <div class="text-danger msg-error">@mensajeErrorGeneral</div>
+}
+
+<div class="onboarding-acciones onboarding-acciones-dobles">
+    <button type="button" class="btn-outline" @onclick="Omitir">Omitir</button>
+    <button type="button" class="btn-solid" @onclick="GuardarYFinalizar">Guardar</button>
+</div>
+
+@if (mostrarFormularioInsumo)
+{
+    <div class="confirm-overlay">
+        <div class="socio-modal">
+            <h3 class="onboarding-subtitulo">@(insumoEditando != null ? "Editar insumo" : "Nuevo insumo")</h3>
+
+            <EditForm Model="@insumoTemporal" OnValidSubmit="@GuardarInsumo">
+                <DataAnnotationsValidator />
+
+                <ImageUpload @bind-ImagenBase64="insumoTemporal.ImagenBase64" Forma="cuadrado" Texto="Foto (opcional)" InputId="fotoInsumo" />
+
+                <div class="form-group-sm">
+                    <label class="auth-label">Nombre *</label>
+                    <InputText @bind-Value="insumoTemporal.Nombre" class="form-control" />
+                    <ValidationMessage For="@(() => insumoTemporal.Nombre)" class="text-danger msg-error" />
+                </div>
+
+                <div class="form-group-sm">
+                    <label class="auth-label">Marca</label>
+                    <InputText @bind-Value="insumoTemporal.Marca" class="form-control" placeholder="Opcional" />
+                </div>
+
+                <div class="onb-grid">
+                    <div class="form-group-sm">
+                        <label class="auth-label">Cantidad *</label>
+                        <div class="cantidad-unidad-row">
+                            <InputNumber @bind-Value="insumoTemporal.Cantidad" class="form-control cantidad-input" />
+                            <InputSelect @bind-Value="insumoTemporal.UnidadMedida" class="form-select unidad-select">
+                                <option value="">Unidad</option>
+                                <option value="g">g</option>
+                                <option value="mg">mg</option>
+                                <option value="kg">kg</option>
+                                <option value="lb">lb</option>
+                                <option value="l">l</option>
+                                <option value="ml">ml</option>
+                                <option value="unidad">unidad</option>
+                            </InputSelect>
+                        </div>
+                        @if (mostrarErrorCantidadUnidad())
+                        {
+                            <span class="text-danger msg-error">Ingresa la cantidad y selecciona una unidad de medida.</span>
+                        }
+                    </div>
+
+                    <div class="form-group-sm">
+                        <label class="auth-label">Precio *</label>
+                        <InputNumber @bind-Value="insumoTemporal.Precio" class="form-control" />
+                        <ValidationMessage For="@(() => insumoTemporal.Precio)" class="text-danger msg-error" />
+                    </div>
+                </div>
+
+                <div class="confirm-acciones" style="margin-top: 16px;">
+                    <button type="button" class="btn-outline" @onclick="CerrarFormularioInsumo">Cancelar</button>
+                    <button type="submit" class="btn-solid">Guardar insumo</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<ConfirmDialog Visible="@mostrarConfirmEliminar"
+               Mensaje="¿Estás seguro de eliminar este insumo?"
+               OnConfirmar="ConfirmarEliminarInsumo"
+               OnCancelar="() => mostrarConfirmEliminar = false" />
+
+@code {
+    [Parameter] public EventCallback OnGuardado { get; set; }
+    [Parameter] public List<string> IngredientesSugeridos { get; set; } = new();
+
+    private List<InsumoDTO> insumos = new();
+    private List<string> sugerenciasPendientes = new();
+
+    private bool mostrarFormularioInsumo = false;
+    private InsumoDTO insumoTemporal = new();
+    private InsumoDTO? insumoEditando = null;
+
+    private bool mostrarConfirmEliminar = false;
+    private InsumoDTO? insumoAEliminar = null;
+    private bool formularioEnviado = false;
+    private bool mostrarErrorCantidadUnidad()
+    {
+        return formularioEnviado && (insumoTemporal.Cantidad <= 0 || string.IsNullOrWhiteSpace(insumoTemporal.UnidadMedida));
+    }
+
+    private string? mensajeErrorGeneral;
+
+    protected override void OnParametersSet()
+    {
+        // Solo agrega sugerencias que aún no se han usado ni están ya en la lista de insumos
+        sugerenciasPendientes = IngredientesSugeridos
+            .Where(ing => !insumos.Any(i => i.Nombre.Equals(ing, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+    }
+
+    private void AbrirFormularioNuevoInsumo()
+    {
+        insumoEditando = null;
+        insumoTemporal = new InsumoDTO();
+        mostrarFormularioInsumo = true;
+    }
+
+    private void AbrirFormularioDesdeSugerencia(string nombreSugerido)
+    {
+        insumoEditando = null;
+        insumoTemporal = new InsumoDTO { Nombre = nombreSugerido };
+        mostrarFormularioInsumo = true;
+    }
+
+    private void EditarInsumo(InsumoDTO insumo)
+    {
+        insumoEditando = insumo;
+        insumoTemporal = new InsumoDTO
+        {
+            Id = insumo.Id,
+            ImagenBase64 = insumo.ImagenBase64,
+            Nombre = insumo.Nombre,
+            Marca = insumo.Marca,
+            Cantidad = insumo.Cantidad,
+            UnidadMedida = insumo.UnidadMedida,
+            Precio = insumo.Precio
+        };
+        mostrarFormularioInsumo = true;
+    }
+
+    private void GuardarInsumo()
+    {
+        formularioEnviado = true;
+
+        if (insumoTemporal.Cantidad <= 0 || string.IsNullOrWhiteSpace(insumoTemporal.UnidadMedida))
+        {
+            return;
+        }
+        if (insumoEditando != null)
+        {
+            var index = insumos.FindIndex(i => i.Id == insumoEditando.Id);
+            if (index >= 0) insumos[index] = insumoTemporal;
+        }
+        else
+        {
+            insumos.Add(insumoTemporal);
+        }
+
+        sugerenciasPendientes = IngredientesSugeridos
+            .Where(ing => !insumos.Any(i => i.Nombre.Equals(ing, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+        CerrarFormularioInsumo();
+    }
+
+    private void CerrarFormularioInsumo()
+    {
+        mostrarFormularioInsumo = false;
+        insumoEditando = null;
+    }
+
+    private void PedirEliminarInsumo(InsumoDTO insumo)
+    {
+        insumoAEliminar = insumo;
+        mostrarConfirmEliminar = true;
+    }
+
+    private void ConfirmarEliminarInsumo()
+    {
+        if (insumoAEliminar != null)
+        {
+            insumos.Remove(insumoAEliminar);
+        }
+        insumoAEliminar = null;
+        mostrarConfirmEliminar = false;
+
+        sugerenciasPendientes = IngredientesSugeridos
+            .Where(ing => !insumos.Any(i => i.Nombre.Equals(ing, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+    }
+
+    private async Task GuardarYFinalizar()
+    {
+        mensajeErrorGeneral = null;
+
+        // Cuando el backend tenga el endpoint listo, descomenta esto:
+        // var resp = await Http.PostAsJsonAsync("api/onboarding/insumos", insumos);
+        // if (!resp.IsSuccessStatusCode)
+        // {
+        //     mensajeErrorGeneral = "No se pudo guardar la información. Intenta de nuevo.";
+        //     return;
+        // }
+        // También aquí, cuando exista, se debe marcar OnboardingCompletado = true en el backend
+        // y actualizar AuthService.OnboardingCompletado en el frontend.
+
+        await OnGuardado.InvokeAsync();
+    }
+
+    private async Task Omitir()
+    {
+        await OnGuardado.InvokeAsync();
+    }
+}

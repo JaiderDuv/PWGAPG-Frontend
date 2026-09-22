@@ -1,0 +1,42 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+
+<div class="img-upload-container">
+    <label class="img-upload-label" for="@InputId">
+        @if (!string.IsNullOrEmpty(ImagenBase64))
+        {
+            <img src="@ImagenBase64" class="img-upload-preview @FormaClass" />
+        }
+        else
+        {
+            <div class="img-upload-placeholder @FormaClass">+</div>
+        }
+    </label>
+    <InputFile id="@InputId" OnChange="CargarImagen" class="img-upload-input" accept="image/*" />
+    @if (!string.IsNullOrEmpty(Texto))
+    {
+        <span class="img-upload-texto">@Texto</span>
+    }
+</div>
+
+@code {
+    [Parameter] public string? ImagenBase64 { get; set; }
+    [Parameter] public EventCallback<string> ImagenBase64Changed { get; set; }
+    [Parameter] public string InputId { get; set; } = Guid.NewGuid().ToString();
+    [Parameter] public string Texto { get; set; } = "";
+    [Parameter] public string Forma { get; set; } = "circular"; // "circular" o "cuadrado"
+
+    private string FormaClass => Forma == "cuadrado" ? "img-upload-cuadrado" : "img-upload-circular";
+
+    private async Task CargarImagen(InputFileChangeEventArgs e)
+    {
+        var archivo = e.File;
+        if (archivo == null) return;
+
+        using var stream = archivo.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024); // 2 MB máx
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        var base64 = Convert.ToBase64String(ms.ToArray());
+        var resultado = $"data:{archivo.ContentType};base64,{base64}";
+        await ImagenBase64Changed.InvokeAsync(resultado);
+    }
+}

@@ -1,0 +1,22 @@
+﻿@if (Visible)
+{
+    <div class="confirm-overlay">
+        <div class="confirm-box">
+            <p class="confirm-mensaje">@Mensaje</p>
+            <div class="confirm-acciones">
+                <button type="button" class="btn-outline" @onclick="Cancelar">Cancelar</button>
+                <button type="button" class="btn-solid btn-confirmar-peligro" @onclick="Confirmar">Sí, continuar</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public string Mensaje { get; set; } = "¿Estás seguro de realizar esta acción?";
+    [Parameter] public EventCallback OnConfirmar { get; set; }
+    [Parameter] public EventCallback OnCancelar { get; set; }
+
+    private async Task Confirmar() => await OnConfirmar.InvokeAsync();
+    private async Task Cancelar() => await OnCancelar.InvokeAsync();
+}
