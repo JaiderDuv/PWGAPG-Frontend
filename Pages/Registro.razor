@@ -1,7 +1,9 @@
 ﻿@page "/registro"
 @using System.ComponentModel.DataAnnotations
 @using PWGAPG_Frontend.Models
+@using System.Net.Http.Json
 @inject NavigationManager Navigation
+@inject HttpClient Http
 
 <div class="auth-card-registro">
     <h2 class="auth-titulo">Registro de Emprendimiento</h2>
@@ -12,15 +14,15 @@
         <!-- 1. Formalizado -->
         <div class="form-group-sm">
             <label class="auth-label">¿Tu emprendimiento está formalizado? *</label>
-            <InputSelect @bind-Value="modelo.Formalizado" class="form-select">
-                <option value="no">No</option>
-                <option value="si">Sí</option>
+            <InputSelect @bind-Value="modelo.Formalizado" class="form-select" TValue="bool">
+                <option value="false">No</option>
+                <option value="true">Sí</option>
             </InputSelect>
             <ValidationMessage For="@(() => modelo.Formalizado)" class="text-danger msg-error" />
         </div>
 
         <!-- 2 y 3. NIT y Razón Social -->
-        @if (modelo.Formalizado == "si")
+        @if (modelo.Formalizado)
         {
             <div class="form-group-sm">
                 <label class="auth-label">NIT *</label>
@@ -64,8 +66,8 @@
         <!-- 6. Documento de Identidad -->
         <div class="form-group-sm">
             <label class="auth-label">Documento de Identidad *</label>
-            <InputText @bind-Value="modelo.DocumentoIdentidad" class="form-control" placeholder="Número de documento" />
-            <ValidationMessage For="@(() => modelo.DocumentoIdentidad)" class="text-danger msg-error" />
+            <InputText @bind-Value="modelo.DocumentoIdentidadUe" class="form-control" placeholder="Número de documento" />
+            <ValidationMessage For="@(() => modelo.DocumentoIdentidadUe)" class="text-danger msg-error" />
         </div>
 
         <!-- 7. Nombre del Emprendimiento -->
@@ -100,15 +102,15 @@
         <!-- 10. Correo Electrónico de Contacto -->
         <div class="form-group-sm">
             <label class="auth-label">Correo Electrónico de Contacto *</label>
-            <InputText @bind-Value="modelo.CorreoContacto" class="form-control" type="email" placeholder="contacto@negocio.com" />
-            <ValidationMessage For="@(() => modelo.CorreoContacto)" class="text-danger msg-error" />
+            <InputText @bind-Value="modelo.CorreoElectronicoContacto" class="form-control" type="email" placeholder="contacto@negocio.com" />
+            <ValidationMessage For="@(() => modelo.CorreoElectronicoContacto)" class="text-danger msg-error" />
         </div>
 
         <!-- 11. Contraseña -->
         <div class="form-group">
             <label class="auth-label">Contraseña *</label>
             <div class="campo-password-container">
-                <InputText @bind-Value="modelo.Password" type="@tipoCampoPassword" class="form-control input-password" placeholder="••••••••" />
+                <InputText @bind-Value="modelo.HashContrasena" type="@tipoCampoPassword" class="form-control input-password" placeholder="••••••••" />
 
                 <button type="button" class="btn-ojo-password" @onclick="AlternarVisibilidadPassword">
                     @if (mostrarPassword)
@@ -128,8 +130,20 @@
                     }
                 </button>
             </div>
-            <ValidationMessage For="@(() => modelo.Password)" class="text-danger msg-error" />
+            <ValidationMessage For="@(() => modelo.HashContrasena)" class="text-danger msg-error" />
         </div>
+
+        @if (mensajeErrorGeneral != null)
+        {
+            <div class="text-danger msg-error">@mensajeErrorGeneral</div>
+        }
+        
+        @if (registroExitoso)
+        {
+            <div class="alerta-exito">
+                Se registró correctamente, para continuar primero verifique la cuenta en su correo.
+            </div>
+        }
 
         <!-- Botón enviar -->
         <button type="submit" class="btn-solid btn-full">
@@ -159,12 +173,16 @@
         mostrarPassword = !mostrarPassword;
     }
 
-    private void ManejarRegistro()
+    private bool registroExitoso = false;
+    private string? mensajeErrorGeneral;
+
+    private async Task ManejarRegistro()
     {
         mensajeErrorNit = null;
         mensajeErrorRazonSocial = null;
+        mensajeErrorGeneral = null;
 
-        if (modelo.Formalizado == "si")
+        if (modelo.Formalizado)
         {
             bool hayError = false;
             if (string.IsNullOrWhiteSpace(modelo.Nit))
@@ -181,7 +199,53 @@
             if (hayError) return;
         }
 
-        Console.WriteLine("Formulario válido. Datos listos para enviar al backend.");
-        Navigation.NavigateTo("login");
+        HttpResponseMessage resp;
+
+        if (modelo.Formalizado)
+        {
+            var payload = new
+            {
+                Formalizado = modelo.Formalizado,
+                Nit = modelo.Nit,
+                RazonSocial = modelo.RazonSocial,
+                CorreoElectronico = modelo.CorreoElectronico,
+                TipoDocumento = modelo.TipoDocumento,
+                DocumentoIdentidadUe = modelo.DocumentoIdentidadUe,
+                NombreEmprendimiento = modelo.NombreEmprendimiento,
+                CategoriaNegocio = modelo.CategoriaNegocio,
+                TelefonoContacto = modelo.TelefonoContacto,
+                CorreoElectronicoContacto = modelo.CorreoElectronicoContacto,
+                HashContrasena = modelo.HashContrasena
+            };
+            resp = await Http.PostAsJsonAsync("api/usuarios/registro-formalizado", payload);
+        }
+        else
+        {
+            var payload = new
+            {
+                Formalizado = modelo.Formalizado,
+                CorreoElectronico = modelo.CorreoElectronico,
+                TipoDocumento = modelo.TipoDocumento,
+                DocumentoIdentidadUe = modelo.DocumentoIdentidadUe,
+                NombreEmprendimiento = modelo.NombreEmprendimiento,
+                CategoriaNegocio = modelo.CategoriaNegocio,
+                TelefonoContacto = modelo.TelefonoContacto,
+                CorreoElectronicoContacto = modelo.CorreoElectronicoContacto,
+                HashContrasena = modelo.HashContrasena
+            };
+            resp = await Http.PostAsJsonAsync("api/usuarios/registro-no-formalizado", payload);
+        }
+
+        if (resp.IsSuccessStatusCode)
+        {
+            registroExitoso = true;
+            StateHasChanged();
+            await Task.Delay(3000);
+            Navigation.NavigateTo("login");
+        }
+        else
+        {
+            mensajeErrorGeneral = "No se pudo completar el registro. Verifica los datos e intenta de nuevo.";
+        }
     }
 }

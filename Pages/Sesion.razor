@@ -70,10 +70,15 @@
         </div>
 
         <div class="recuperar-container">
-            <NavLink href="recuperar-contraseña" class="link-recuperar">
+            <NavLink href="recuperar-contrasena" class="link-recuperar">
                 ¿Olvidaste tu contraseña?
             </NavLink>
         </div>
+
+        @if (mensajeErrorLogin != null)
+        {
+            <div class="text-danger msg-error">@mensajeErrorLogin</div>
+        }
 
         <button type="submit" class="btn-solid btn-full">
             Iniciar Sesión
@@ -102,6 +107,11 @@
     private bool mostrarPassword = false;
     private string tipoCampoPassword => mostrarPassword ? "text" : "password";
 
+    private void AlternarVisibilidadPassword()
+    {
+        mostrarPassword = !mostrarPassword;
+    }
+
     protected override void OnInitialized()
     {
         // Bloquea el acceso al login si ya iniciaste sesión
@@ -111,22 +121,21 @@
         }
     }
 
-    private void AlternarVisibilidadPassword()
-    {
-        mostrarPassword = !mostrarPassword;
-    }
+    private string? mensajeErrorLogin;
 
     private async Task ManejarLogin()
     {
-        bool exito = await AuthService.IniciarSesionAsync(modelo.CorreoElectronico, modelo.Password);
+        mensajeErrorLogin = null;
 
-        if (exito)
+        var resultado = await AuthService.Login(modelo);
+
+        if (resultado is { Exito: true })
         {
             Navigation.NavigateTo("dashboard-empresa");
         }
         else
         {
-            // Mostrar mensaje de credenciales inválidas si falla
+            mensajeErrorLogin = resultado?.Mensaje ?? "Correo o contraseña incorrectos.";
         }
     }
 }
