@@ -1,0 +1,79 @@
+﻿@page "/onboarding"
+@attribute [Authorize]
+@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Pages.OnboardingTabs
+@inject NavigationManager Navigation
+
+<div class="onboarding-container">
+    <h2 class="auth-titulo">Configura tu negocio</h2>
+    <p class="auth-subtitulo">Completa esta información para comenzar a usar Chef Metrics.</p>
+
+    <div class="onboarding-tabs">
+        @for (int i = 0; i < NombresPestanas.Length; i++)
+        {
+            var index = i;
+            <button type="button"
+                    class="onboarding-tab @(PestanaActiva == index ? "activa" : "") @(index > MaximaPestanaHabilitada ? "deshabilitada" : "")"
+                    disabled="@(index > MaximaPestanaHabilitada)"
+                    @onclick="() => PestanaActiva = index">
+                @NombresPestanas[index]
+            </button>
+        }
+    </div>
+
+    <div class="onboarding-contenido">
+        @switch (PestanaActiva)
+        {
+            case 0:
+                <InformacionPersonalTab OnGuardado="AvanzarPestana" />
+                break;
+            case 1:
+                <InformacionNegocioTab OnGuardado="AvanzarPestana" />
+                break;
+            case 2:
+                <EmpleadosTab OnGuardado="AvanzarPestana" />
+                break;
+            case 3:
+                <ProductosTab OnGuardado="AvanzarPestana"
+                              OnProductosActualizados="@((List<ProductoDTO> p) => productosGuardados = p)" />
+                break;
+            case 4:
+                <InsumosTab OnGuardado="FinalizarOnboarding"
+                            IngredientesSugeridos="@productosGuardados.SelectMany(p => p.Ingredientes).Distinct().ToList()" />
+                break;
+        }
+    </div>
+</div>
+
+@code {
+    private readonly string[] NombresPestanas =
+    {
+        "Información Personal",
+        "Información del Negocio",
+        "Empleados",
+        "Productos",
+        "Insumos"
+    };
+
+    private int PestanaActiva = 0;
+    private List<ProductoDTO> productosGuardados = new();
+    private int MaximaPestanaHabilitada = 0;
+
+
+    private void AvanzarPestana()
+    {
+        if (MaximaPestanaHabilitada < PestanaActiva + 1)
+        {
+            MaximaPestanaHabilitada = PestanaActiva + 1;
+        }
+        if (PestanaActiva < NombresPestanas.Length - 1)
+        {
+            PestanaActiva++;
+        }
+    }
+    private void FinalizarOnboarding()
+    {
+        // Cuando el backend confirme OnboardingCompletado = true, redirige al Dashboard:
+        // Navigation.NavigateTo("dashboard-empresa", replace: true);
+    }
+}

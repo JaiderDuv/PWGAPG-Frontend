@@ -26,7 +26,7 @@
         {
             <div class="form-group-sm">
                 <label class="auth-label">NIT *</label>
-                <InputText @bind-Value="modelo.Nit" class="form-control" placeholder="Ej: 900123456-1" />
+                <InputText @bind-Value="modelo.Nit" class="form-control" placeholder="Ej: 900123456" />
                 @if (mensajeErrorNit != null)
                 {
                     <span class="text-danger msg-error">@mensajeErrorNit</span>
@@ -146,8 +146,8 @@
         }
 
         <!-- Botón enviar -->
-        <button type="submit" class="btn-solid btn-full">
-            Crear Cuenta
+        <button type="submit" class="btn-solid btn-full" disabled="@enviando">
+            @(enviando ? "Creando cuenta..." : "Crear Cuenta")
         </button>
 
         <!-- Redirección a Iniciar Sesión -->
@@ -172,12 +172,33 @@
     {
         mostrarPassword = !mostrarPassword;
     }
+    private string ExtraerMensajeError(string cuerpoJson)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(cuerpoJson);
+            if (doc.RootElement.TryGetProperty("mensaje", out var mensaje))
+            {
+                return mensaje.GetString() ?? "No se pudo completar el registro.";
+            }
+        }
+        catch
+        {
+            // Si no es un JSON con la forma esperada, cae al mensaje genérico de abajo.
+        }
+
+        return "No se pudo completar el registro. Verifica los datos e intenta de nuevo.";
+    }
 
     private bool registroExitoso = false;
+    private bool enviando = false;
     private string? mensajeErrorGeneral;
 
     private async Task ManejarRegistro()
     {
+        if (enviando) return; // evita doble envío si ya hay una petición en curso
+        enviando = true;
+
         mensajeErrorNit = null;
         mensajeErrorRazonSocial = null;
         mensajeErrorGeneral = null;
@@ -235,7 +256,6 @@
             };
             resp = await Http.PostAsJsonAsync("api/usuarios/registro-no-formalizado", payload);
         }
-
         if (resp.IsSuccessStatusCode)
         {
             registroExitoso = true;
@@ -245,7 +265,9 @@
         }
         else
         {
-            mensajeErrorGeneral = "No se pudo completar el registro. Verifica los datos e intenta de nuevo.";
+            var cuerpoError = await resp.Content.ReadAsStringAsync();
+            mensajeErrorGeneral = ExtraerMensajeError(cuerpoError);
+            enviando = false;
         }
     }
 }

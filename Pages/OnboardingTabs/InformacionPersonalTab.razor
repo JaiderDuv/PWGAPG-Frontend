@@ -1,0 +1,294 @@
+﻿@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Components
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<EditForm Model="@duenio" OnValidSubmit="@GuardarTodo">
+    <DataAnnotationsValidator />
+
+    <h3 class="onboarding-subtitulo">Dueño del negocio</h3>
+
+    <div class="foto-perfil-container">
+        <label class="foto-perfil-label" for="fotoDuenio">
+            @if (!string.IsNullOrEmpty(duenio.FotoPerfilBase64))
+            {
+                <img src="@duenio.FotoPerfilBase64" class="foto-perfil-preview" />
+            }
+            else
+            {
+                <div class="foto-perfil-placeholder">+</div>
+            }
+        </label>
+        <InputFile id="fotoDuenio" OnChange="@(e => CargarFoto(e, duenio))" class="foto-perfil-input" accept="image/*" />
+        <span class="foto-perfil-texto">Foto de perfil (opcional)</span>
+    </div>
+
+    <div class="onb-grid">
+        <div class="form-group-sm">
+            <label class="auth-label">Nombres *</label>
+            <InputText @bind-Value="duenio.Nombres" class="form-control" />
+            <ValidationMessage For="@(() => duenio.Nombres)" class="text-danger msg-error" />
+        </div>
+
+        <div class="form-group-sm">
+            <label class="auth-label">Apellidos *</label>
+            <InputText @bind-Value="duenio.Apellidos" class="form-control" />
+            <ValidationMessage For="@(() => duenio.Apellidos)" class="text-danger msg-error" />
+        </div>
+
+        <div class="form-group-sm">
+            <label class="auth-label">Tipo de Documento *</label>
+            <InputSelect @bind-Value="duenio.TipoDocumento" class="form-select">
+                <option value="">-- Seleccione --</option>
+                <option value="CC">Cédula de Ciudadanía</option>
+                <option value="CE">Cédula de Extranjería</option>
+                <option value="PP">Pasaporte</option>
+                <option value="PEP">Permiso Especial de Permanencia</option>
+            </InputSelect>
+            <ValidationMessage For="@(() => duenio.TipoDocumento)" class="text-danger msg-error" />
+        </div>
+
+        <div class="form-group-sm">
+            <label class="auth-label">Número de Documento *</label>
+            <InputText @bind-Value="duenio.NumeroDocumento" class="form-control" />
+            <ValidationMessage For="@(() => duenio.NumeroDocumento)" class="text-danger msg-error" />
+        </div>
+
+        <div class="form-group-sm">
+            <label class="auth-label">Teléfono *</label>
+            <InputText @bind-Value="duenio.Telefono" class="form-control" />
+            <ValidationMessage For="@(() => duenio.Telefono)" class="text-danger msg-error" />
+        </div>
+
+        <div class="form-group-sm">
+            <label class="auth-label">Correo Electrónico *</label>
+            <InputText @bind-Value="duenio.CorreoElectronico" class="form-control" type="email" />
+            <ValidationMessage For="@(() => duenio.CorreoElectronico)" class="text-danger msg-error" />
+        </div>
+    </div>
+
+    <hr class="onb-divider" />
+
+    <div class="socios-header">
+        <h3 class="onboarding-subtitulo">Socios del negocio (opcional)</h3>
+        <button type="button" class="btn-outline" @onclick="AbrirFormularioNuevoSocio">+ Añadir socio</button>
+    </div>
+
+    @if (socios.Any())
+    {
+        <div class="socios-lista">
+            @foreach (var socio in socios)
+            {
+                <div class="socio-item">
+                    <div class="socio-info">
+                        <strong>@socio.Nombres @socio.Apellidos</strong>
+                        <span>@socio.TipoDocumento @socio.NumeroDocumento · @socio.CorreoElectronico</span>
+                    </div>
+                    <div class="socio-acciones">
+                        <button type="button" class="btn-mini-editar" @onclick="() => EditarSocio(socio)">Editar</button>
+                        <button type="button" class="btn-mini-eliminar" @onclick="() => PedirEliminarSocio(socio)">Eliminar</button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="text-muted">Aún no has añadido socios.</p>
+    }
+
+    @if (mensajeErrorGeneral != null)
+    {
+        <div class="text-danger msg-error">@mensajeErrorGeneral</div>
+    }
+
+    <div class="onboarding-acciones">
+        <button type="submit" class="btn-solid btn-full">Guardar y continuar</button>
+    </div>
+</EditForm>
+
+@if (mostrarFormularioSocio)
+{
+    <div class="confirm-overlay">
+        <div class="socio-modal">
+            <h3 class="onboarding-subtitulo">@(socioEditando != null ? "Editar socio" : "Nuevo socio")</h3>
+
+            <EditForm Model="@socioTemporal" OnValidSubmit="@GuardarSocio">
+                <DataAnnotationsValidator />
+
+                <div class="foto-perfil-container">
+                    <label class="foto-perfil-label" for="fotoSocio">
+                        @if (!string.IsNullOrEmpty(socioTemporal.FotoPerfilBase64))
+                        {
+                            <img src="@socioTemporal.FotoPerfilBase64" class="foto-perfil-preview" />
+                        }
+                        else
+                        {
+                            <div class="foto-perfil-placeholder">+</div>
+                        }
+                    </label>
+                    <InputFile id="fotoSocio" OnChange="@(e => CargarFoto(e, socioTemporal))" class="foto-perfil-input" accept="image/*" />
+                </div>
+
+                <div class="onb-grid">
+                    <div class="form-group-sm">
+                        <label class="auth-label">Nombres *</label>
+                        <InputText @bind-Value="socioTemporal.Nombres" class="form-control" />
+                        <ValidationMessage For="@(() => socioTemporal.Nombres)" class="text-danger msg-error" />
+                    </div>
+                    <div class="form-group-sm">
+                        <label class="auth-label">Apellidos *</label>
+                        <InputText @bind-Value="socioTemporal.Apellidos" class="form-control" />
+                        <ValidationMessage For="@(() => socioTemporal.Apellidos)" class="text-danger msg-error" />
+                    </div>
+                    <div class="form-group-sm">
+                        <label class="auth-label">Tipo de Documento *</label>
+                        <InputSelect @bind-Value="socioTemporal.TipoDocumento" class="form-select">
+                            <option value="">-- Seleccione --</option>
+                            <option value="CC">Cédula de Ciudadanía</option>
+                            <option value="CE">Cédula de Extranjería</option>
+                            <option value="PP">Pasaporte</option>
+                            <option value="PEP">Permiso Especial de Permanencia</option>
+                        </InputSelect>
+                        <ValidationMessage For="@(() => socioTemporal.TipoDocumento)" class="text-danger msg-error" />
+                    </div>
+                    <div class="form-group-sm">
+                        <label class="auth-label">Número de Documento *</label>
+                        <InputText @bind-Value="socioTemporal.NumeroDocumento" class="form-control" />
+                        <ValidationMessage For="@(() => socioTemporal.NumeroDocumento)" class="text-danger msg-error" />
+                    </div>
+                    <div class="form-group-sm">
+                        <label class="auth-label">Teléfono *</label>
+                        <InputText @bind-Value="socioTemporal.Telefono" class="form-control" />
+                        <ValidationMessage For="@(() => socioTemporal.Telefono)" class="text-danger msg-error" />
+                    </div>
+                    <div class="form-group-sm">
+                        <label class="auth-label">Correo Electrónico *</label>
+                        <InputText @bind-Value="socioTemporal.CorreoElectronico" class="form-control" type="email" />
+                        <ValidationMessage For="@(() => socioTemporal.CorreoElectronico)" class="text-danger msg-error" />
+                    </div>
+                </div>
+
+                <div class="confirm-acciones" style="margin-top: 16px;">
+                    <button type="button" class="btn-outline" @onclick="CerrarFormularioSocio">Cancelar</button>
+                    <button type="submit" class="btn-solid">Guardar socio</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<ConfirmDialog Visible="@mostrarConfirmEliminar"
+               Mensaje="¿Estás seguro de eliminar a este socio?"
+               OnConfirmar="ConfirmarEliminarSocio"
+               OnCancelar="() => mostrarConfirmEliminar = false" />
+
+@code {
+    [Parameter] public EventCallback OnGuardado { get; set; }
+
+    private SocioDTO duenio = new();
+    private List<SocioDTO> socios = new();
+
+    private bool mostrarFormularioSocio = false;
+    private SocioDTO socioTemporal = new();
+    private SocioDTO? socioEditando = null;
+
+    private bool mostrarConfirmEliminar = false;
+    private SocioDTO? socioAEliminar = null;
+
+    private string? mensajeErrorGeneral;
+
+    private void AbrirFormularioNuevoSocio()
+    {
+        socioEditando = null;
+        socioTemporal = new SocioDTO();
+        mostrarFormularioSocio = true;
+    }
+
+    private void EditarSocio(SocioDTO socio)
+    {
+        socioEditando = socio;
+        socioTemporal = new SocioDTO
+        {
+            Id = socio.Id,
+            FotoPerfilBase64 = socio.FotoPerfilBase64,
+            Nombres = socio.Nombres,
+            Apellidos = socio.Apellidos,
+            TipoDocumento = socio.TipoDocumento,
+            NumeroDocumento = socio.NumeroDocumento,
+            Telefono = socio.Telefono,
+            CorreoElectronico = socio.CorreoElectronico
+        };
+        mostrarFormularioSocio = true;
+    }
+
+    private void GuardarSocio()
+    {
+        if (socioEditando != null)
+        {
+            var index = socios.FindIndex(s => s.Id == socioEditando.Id);
+            if (index >= 0) socios[index] = socioTemporal;
+        }
+        else
+        {
+            socios.Add(socioTemporal);
+        }
+
+        CerrarFormularioSocio();
+    }
+
+    private void CerrarFormularioSocio()
+    {
+        mostrarFormularioSocio = false;
+        socioEditando = null;
+    }
+
+    private void PedirEliminarSocio(SocioDTO socio)
+    {
+        socioAEliminar = socio;
+        mostrarConfirmEliminar = true;
+    }
+
+    private void ConfirmarEliminarSocio()
+    {
+        if (socioAEliminar != null)
+        {
+            socios.Remove(socioAEliminar);
+        }
+        mostrarConfirmEliminar = false;
+        socioAEliminar = null;
+    }
+
+    private async Task CargarFoto(InputFileChangeEventArgs e, SocioDTO destino)
+    {
+        var archivo = e.File;
+        if (archivo == null) return;
+
+        using var stream = archivo.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024); // 2 MB máx
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        var base64 = Convert.ToBase64String(ms.ToArray());
+        destino.FotoPerfilBase64 = $"data:{archivo.ContentType};base64,{base64}";
+    }
+
+    private async Task GuardarTodo()
+    {
+        mensajeErrorGeneral = null;
+
+        var payload = new
+        {
+            Duenio = duenio,
+            Socios = socios
+        };
+
+        // Cuando el backend tenga el endpoint listo, descomenta esto:
+        // var resp = await Http.PostAsJsonAsync("api/onboarding/socios", payload);
+        // if (!resp.IsSuccessStatusCode)
+        // {
+        //     mensajeErrorGeneral = "No se pudo guardar la información. Intenta de nuevo.";
+        //     return;
+        // }
+
+        await OnGuardado.InvokeAsync();
+    }
+}
