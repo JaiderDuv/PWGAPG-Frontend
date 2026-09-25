@@ -40,8 +40,9 @@
 
         try
         {
-            var url = $"api/usuarios/validar-token?token={Uri.EscapeDataString(Token)}";
-            using var respuesta = await Http.GetAsync(url);
+            using var respuesta = await Http.PostAsJsonAsync(
+                "api/usuarios/validar-token",
+                new { Token });
             var resultado = await respuesta.Content.ReadFromJsonAsync<RespuestaConfirmacion>();
 
             cuentaConfirmada = respuesta.IsSuccessStatusCode && resultado?.Exito == true;
