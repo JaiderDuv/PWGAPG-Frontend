@@ -12,7 +12,10 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 var apiUrl = builder.Configuration["ApiSettings:BaseUrl"]!;
 builder.Services.AddHttpClient<IAuthService, AuthService>(c => c.BaseAddress = new Uri(apiUrl));
 builder.Services.AddScoped<AuthService>(sp => (AuthService)sp.GetRequiredService<IAuthService>());
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiUrl) });
+builder.Services.AddTransient<BearerAuthorizationHandler>();
+builder.Services.AddHttpClient("Api", c => c.BaseAddress = new Uri(apiUrl))
+    .AddHttpMessageHandler<BearerAuthorizationHandler>();
+builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("Api"));
 
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();

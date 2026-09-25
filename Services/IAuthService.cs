@@ -12,6 +12,7 @@ namespace PWGAPG_Frontend.Services
         event Action? OnChange;
 
         Task<LoginResponseDto?> Login(LoginDTO dto);
+        Task<bool> RenovarSesionAsync();
         Task CerrarSesionAsync();
     }
 }

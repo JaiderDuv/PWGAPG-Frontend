@@ -1,6 +1,7 @@
 ﻿using Microsoft.JSInterop;
 using PWGAPG_Frontend.Models;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace PWGAPG_Frontend.Services
 {
@@ -8,6 +9,7 @@ namespace PWGAPG_Frontend.Services
     {
         private readonly HttpClient _httpClient;
         private readonly IJSRuntime _jsRuntime;
+        private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
         public bool IsAuthenticated { get; private set; } = false;
         public string NombreEmpresa { get; private set; } = string.Empty;
@@ -24,18 +26,15 @@ namespace PWGAPG_Frontend.Services
 
         public async Task<LoginResponseDto?> Login(LoginDTO dto)
         {
-            var resp = await _httpClient.PostAsJsonAsync("api/auth/login", dto); // confirma la ruta exacta en tu AuthController
+            var resp = await _httpClient.PostAsJsonAsync("api/auth/login", dto);
             if (!resp.IsSuccessStatusCode) return null;
 
             var resultado = await resp.Content.ReadFromJsonAsync<LoginResponseDto>();
 
-            if (resultado is { Exito: true })
+            if (resultado is { Exito: true } &&
+                !string.IsNullOrWhiteSpace(resultado.AccessToken ?? resultado.Token))
             {
-                IsAuthenticated = true;
-                NombreEmpresa = resultado.NombreEmprendimiento ?? string.Empty;
-                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", resultado.Token ?? resultado.AccessToken);
-                NotifyStateChanged();
-                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "nombreEmpresa", NombreEmpresa);
+                await GuardarSesionAsync(resultado);
             }
 
             return resultado;
@@ -43,18 +42,139 @@ namespace PWGAPG_Frontend.Services
 
         public async Task InicializarAsync()
         {
-            var token = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            if (!string.IsNullOrWhiteSpace(token))
+            var accessToken = await ObtenerAccessTokenAsync();
+            var refreshToken = await ObtenerRefreshTokenAsync();
+
+            if (TokenVigente(accessToken) && await ValidarSesionAsync(accessToken) != false)
             {
                 IsAuthenticated = true;
                 NombreEmpresa = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "nombreEmpresa") ?? string.Empty;
                 NotifyStateChanged();
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(refreshToken))
+            {
+                await RenovarSesionAsync();
+                return;
+            }
+
+            await LimpiarSesionAsync();
+        }
+
+        public async Task<bool> RenovarSesionAsync()
+        {
+            await _refreshLock.WaitAsync();
+            try
+            {
+                var refreshToken = await ObtenerRefreshTokenAsync();
+                if (string.IsNullOrWhiteSpace(refreshToken))
+                {
+                    await LimpiarSesionAsync();
+                    return false;
+                }
+
+                try
+                {
+                    using var response = await _httpClient.PostAsJsonAsync(
+                        "api/auth/refresh", new { Token = refreshToken });
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        await LimpiarSesionAsync();
+                        return false;
+                    }
+
+                    var session = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
+                    if (session is not { Exito: true } || string.IsNullOrWhiteSpace(session.AccessToken ?? session.Token))
+                    {
+                        await LimpiarSesionAsync();
+                        return false;
+                    }
+
+                    await GuardarSesionAsync(session);
+                    return true;
+                }
+                catch (HttpRequestException)
+                {
+                    return false;
+                }
+            }
+            finally
+            {
+                _refreshLock.Release();
             }
         }
 
         public async Task CerrarSesionAsync()
         {
+            var refreshToken = await ObtenerRefreshTokenAsync();
+            if (!string.IsNullOrWhiteSpace(refreshToken))
+            {
+                try
+                {
+                    await _httpClient.PostAsJsonAsync("api/auth/logout", new { Token = refreshToken });
+                }
+                catch (HttpRequestException)
+                {
+                    // La sesión local se elimina aunque el servidor no esté disponible.
+                }
+            }
+
+            await LimpiarSesionAsync();
+        }
+
+        public async Task<string?> ObtenerAccessTokenAsync()
+        {
+            return await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+        }
+
+        private async Task<string?> ObtenerRefreshTokenAsync()
+        {
+            return await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "refreshToken");
+        }
+
+        private async Task<bool?> ValidarSesionAsync(string? accessToken)
+        {
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                return false;
+            }
+
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, "api/auth/me");
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+                    "Bearer", accessToken);
+                using var response = await _httpClient.SendAsync(request);
+                return response.IsSuccessStatusCode;
+            }
+            catch (HttpRequestException)
+            {
+                return null;
+            }
+        }
+
+        private async Task GuardarSesionAsync(LoginResponseDto resultado)
+        {
+            var accessToken = resultado.AccessToken ?? resultado.Token;
+            IsAuthenticated = true;
+            NombreEmpresa = resultado.NombreEmprendimiento ?? string.Empty;
+            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", accessToken);
+
+            if (!string.IsNullOrWhiteSpace(resultado.RefreshToken))
+            {
+                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "refreshToken", resultado.RefreshToken);
+            }
+
+            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "nombreEmpresa", NombreEmpresa);
+            NotifyStateChanged();
+        }
+
+        private async Task LimpiarSesionAsync()
+        {
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
+            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "refreshToken");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "nombreEmpresa");
 
             IsAuthenticated = false;
@@ -63,6 +183,42 @@ namespace PWGAPG_Frontend.Services
             UrlFotoPerfil = "images/default-avatar.png";
 
             NotifyStateChanged();
+        }
+
+        private static bool TokenVigente(string? token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return false;
+            }
+
+            try
+            {
+                var sections = token.Split('.');
+                if (sections.Length != 3)
+                {
+                    return false;
+                }
+
+                var payload = sections[1].Replace('-', '+').Replace('_', '/');
+                payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+                using var document = JsonDocument.Parse(Convert.FromBase64String(payload));
+                return document.RootElement.TryGetProperty("exp", out var expiration) &&
+                    expiration.TryGetInt64(out var unixExpiration) &&
+                    DateTimeOffset.FromUnixTimeSeconds(unixExpiration) > DateTimeOffset.UtcNow.AddSeconds(30);
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return false;
+            }
         }
 
         private void NotifyStateChanged() => OnChange?.Invoke();
