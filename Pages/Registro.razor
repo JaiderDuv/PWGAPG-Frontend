@@ -253,11 +253,11 @@
             }
         }
 
-        // Nombre del Emprendimiento: no es obligatorio, pero si se llena, no puede pasar de 100 caracteres
-        if (!string.IsNullOrEmpty(modelo.NombreEmprendimiento) && modelo.NombreEmprendimiento.Length > 100)
+        // Nombre del Emprendimiento: no es obligatorio, pero si se llena, no puede pasar de 150 caracteres
+        if (!string.IsNullOrEmpty(modelo.NombreEmprendimiento) && modelo.NombreEmprendimiento.Length > 150)
         {
             var nombreField = editContext!.Field(nameof(modelo.NombreEmprendimiento));
-            messageStore?.Add(nombreField, "El nombre del emprendimiento no puede superar 100 caracteres.");
+            messageStore?.Add(nombreField, "El nombre del emprendimiento no puede superar 150 caracteres.");
         }
 
         editContext?.NotifyValidationStateChanged();
