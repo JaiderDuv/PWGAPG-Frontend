@@ -2,13 +2,17 @@
 @using System.ComponentModel.DataAnnotations
 @using PWGAPG_Frontend.Models
 @using System.Net.Http.Json
+@implements IDisposable
 @inject NavigationManager Navigation
 @inject HttpClient Http
 
 <div class="auth-card-registro">
-    <h2 class="auth-titulo">Registro de Emprendimiento</h2>
+    <h2 class="text-2xl font-bold text-gray-800 text-center">Registro Emprendedor</h2>
+    <p class="text-sm text-gray-600 text-center mb-4">
+        Los campos marcados con un asterisco (<span class="text-red-500 font-bold">*</span>) son obligatorios.
+    </p>
 
-    <EditForm Model="@modelo" OnValidSubmit="@ManejarRegistro">
+    <EditForm EditContext="@editContext" OnSubmit="@ManejarRegistro">
         <DataAnnotationsValidator />
 
         <!-- 1. Formalizado -->
@@ -27,19 +31,13 @@
             <div class="form-group-sm">
                 <label class="auth-label">NIT *</label>
                 <InputText @bind-Value="modelo.Nit" class="form-control" placeholder="Ej: 900123456" />
-                @if (mensajeErrorNit != null)
-                {
-                    <span class="text-danger msg-error">@mensajeErrorNit</span>
-                }
+                <ValidationMessage For="@(() => modelo.Nit)" class="text-danger msg-error" />
             </div>
 
             <div class="form-group-sm">
                 <label class="auth-label">Razón Social *</label>
                 <InputText @bind-Value="modelo.RazonSocial" class="form-control" placeholder="Ej: Mi Empresa S.A.S." />
-                @if (mensajeErrorRazonSocial != null)
-                {
-                    <span class="text-danger msg-error">@mensajeErrorRazonSocial</span>
-                }
+                <ValidationMessage For="@(() => modelo.RazonSocial)" class="text-danger msg-error" />
             </div>
         }
 
@@ -75,7 +73,12 @@
             <label class="auth-label">
                 Nombre del Emprendimiento <span class="auth-label-opcional">(Opcional, puedes completarlo después)</span>
             </label>
-            <InputText @bind-Value="modelo.NombreEmprendimiento" class="form-control" placeholder="Nombre comercial de tu marca" />
+            <InputText Value="@modelo.NombreEmprendimiento"
+                       ValueChanged="OnNombreEmprendimientoChanged"
+                       ValueExpression="@(() => modelo.NombreEmprendimiento)"
+                       class="form-control"
+                       placeholder="Nombre comercial de tu marca" />
+            <ValidationMessage For="@(() => modelo.NombreEmprendimiento)" class="text-danger msg-error" />
         </div>
 
         <!-- 8. Categoría Negocio -->
@@ -135,12 +138,12 @@
 
         @if (mensajeErrorGeneral != null)
         {
-            <div class="text-danger msg-error">@mensajeErrorGeneral</div>
+            <div class="text-danger msg-error mb-3 text-center">@mensajeErrorGeneral</div>
         }
-        
+
         @if (registroExitoso)
         {
-            <div class="alerta-exito">
+            <div class="alerta-exito mb-3 text-center">
                 Se registró correctamente, para continuar primero verifique la cuenta en su correo.
             </div>
         }
@@ -162,16 +165,183 @@
 
 @code {
     private RegistroDTO modelo = new RegistroDTO();
-    private string? mensajeErrorNit;
-    private string? mensajeErrorRazonSocial;
+    private EditContext? editContext;
+    private ValidationMessageStore? messageStore;
 
     private bool mostrarPassword = false;
     private string tipoCampoPassword => mostrarPassword ? "text" : "password";
+
+    private bool registroExitoso = false;
+    private bool enviando = false;
+    private string? mensajeErrorGeneral;
+
+    private bool nitTocado = false;
+    private bool razonSocialTocada = false;
+
+    protected override void OnInitialized()
+    {
+        editContext = new EditContext(modelo);
+        messageStore = new ValidationMessageStore(editContext);
+
+        editContext.OnFieldChanged += ManejarCampoCambiado;
+    }
+
+    private void ManejarCampoCambiado(object? sender, FieldChangedEventArgs e)
+    {
+        if (e.FieldIdentifier.FieldName == nameof(modelo.Formalizado))
+        {
+            nitTocado = false;
+            razonSocialTocada = false;
+
+            RevalidarErrores();
+            return;
+        }
+
+        if (e.FieldIdentifier.FieldName == nameof(modelo.Nit))
+        {
+            nitTocado = true;
+        }
+
+        if (e.FieldIdentifier.FieldName == nameof(modelo.RazonSocial))
+        {
+            razonSocialTocada = true;
+        }
+
+
+        RevalidarErrores();
+    }
+
+    private void ValidarNombreEmprendimiento()
+    {
+        RevalidarErrores();
+    }
+
+    private void OnNombreEmprendimientoChanged(string? valor)
+    {
+        modelo.NombreEmprendimiento = valor;
+        ValidarNombreEmprendimiento();
+    }
+
+    private void RevalidarErrores(bool forzarValidacionTodos = false)
+    {
+        messageStore?.Clear();
+
+        // Solo manejamos manualmente en la ValidationMessageStore las reglas
+        // condicionales dinámicas (NIT y Razón Social según Formalizado)
+        if (modelo.Formalizado)
+        {
+            if (nitTocado || forzarValidacionTodos)
+            {
+                var nitField = editContext!.Field(nameof(modelo.Nit));
+                if (string.IsNullOrWhiteSpace(modelo.Nit))
+                {
+                    messageStore?.Add(nitField, "El NIT es obligatorio para empresas formalizadas.");
+                }
+                else if (!System.Text.RegularExpressions.Regex.IsMatch(modelo.Nit, @"^\d{9,10}$"))
+                {
+                    messageStore?.Add(nitField, "El NIT debe contener únicamente entre 9 y 10 dígitos numéricos.");
+                }
+            }
+
+            if (razonSocialTocada || forzarValidacionTodos)
+            {
+                var razonField = editContext!.Field(nameof(modelo.RazonSocial));
+                if (string.IsNullOrWhiteSpace(modelo.RazonSocial))
+                {
+                    messageStore?.Add(razonField, "La Razón Social es obligatoria para empresas formalizadas.");
+                }
+            }
+        }
+
+        // Nombre del Emprendimiento: no es obligatorio, pero si se llena, no puede pasar de 100 caracteres
+        if (!string.IsNullOrEmpty(modelo.NombreEmprendimiento) && modelo.NombreEmprendimiento.Length > 100)
+        {
+            var nombreField = editContext!.Field(nameof(modelo.NombreEmprendimiento));
+            messageStore?.Add(nombreField, "El nombre del emprendimiento no puede superar 100 caracteres.");
+        }
+
+        editContext?.NotifyValidationStateChanged();
+    }
+
+    private async Task ManejarRegistro()
+    {
+        if (enviando) return;
+
+        RevalidarErrores(forzarValidacionTodos: true);
+
+        if (!editContext!.Validate())
+        {
+            return;
+        }
+
+        enviando = true;
+        mensajeErrorGeneral = null;
+
+        try
+        {
+            HttpResponseMessage resp;
+
+            if (modelo.Formalizado)
+            {
+                var payload = new
+                {
+                    Formalizado = modelo.Formalizado,
+                    Nit = modelo.Nit,
+                    RazonSocial = modelo.RazonSocial,
+                    CorreoElectronico = modelo.CorreoElectronico,
+                    TipoDocumento = modelo.TipoDocumento,
+                    DocumentoIdentidadUe = modelo.DocumentoIdentidadUe,
+                    NombreEmprendimiento = modelo.NombreEmprendimiento,
+                    CategoriaNegocio = modelo.CategoriaNegocio,
+                    TelefonoContacto = modelo.TelefonoContacto,
+                    CorreoElectronicoContacto = modelo.CorreoElectronicoContacto,
+                    HashContrasena = modelo.HashContrasena
+                };
+                resp = await Http.PostAsJsonAsync("api/usuarios/registro-formalizado", payload);
+            }
+            else
+            {
+                var payload = new
+                {
+                    Formalizado = modelo.Formalizado,
+                    CorreoElectronico = modelo.CorreoElectronico,
+                    TipoDocumento = modelo.TipoDocumento,
+                    DocumentoIdentidadUe = modelo.DocumentoIdentidadUe,
+                    NombreEmprendimiento = modelo.NombreEmprendimiento,
+                    CategoriaNegocio = modelo.CategoriaNegocio,
+                    TelefonoContacto = modelo.TelefonoContacto,
+                    CorreoElectronicoContacto = modelo.CorreoElectronicoContacto,
+                    HashContrasena = modelo.HashContrasena
+                };
+                resp = await Http.PostAsJsonAsync("api/usuarios/registro-no-formalizado", payload);
+            }
+
+            if (resp.IsSuccessStatusCode)
+            {
+                registroExitoso = true;
+                StateHasChanged();
+                await Task.Delay(3000);
+                Navigation.NavigateTo("login");
+            }
+            else
+            {
+                var cuerpoError = await resp.Content.ReadAsStringAsync();
+                mensajeErrorGeneral = ExtraerMensajeError(cuerpoError);
+                enviando = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeErrorGeneral = $"Error de conexión al procesar la solicitud: {ex.Message}";
+            enviando = false;
+        }
+    }
 
     private void AlternarVisibilidadPassword()
     {
         mostrarPassword = !mostrarPassword;
     }
+
     private string ExtraerMensajeError(string cuerpoJson)
     {
         try
@@ -182,92 +352,15 @@
                 return mensaje.GetString() ?? "No se pudo completar el registro.";
             }
         }
-        catch
-        {
-            // Si no es un JSON con la forma esperada, cae al mensaje genérico de abajo.
-        }
-
+        catch { }
         return "No se pudo completar el registro. Verifica los datos e intenta de nuevo.";
     }
 
-    private bool registroExitoso = false;
-    private bool enviando = false;
-    private string? mensajeErrorGeneral;
-
-    private async Task ManejarRegistro()
+    public void Dispose()
     {
-        if (enviando) return; // evita doble envío si ya hay una petición en curso
-        enviando = true;
-
-        mensajeErrorNit = null;
-        mensajeErrorRazonSocial = null;
-        mensajeErrorGeneral = null;
-
-        if (modelo.Formalizado)
+        if (editContext != null)
         {
-            bool hayError = false;
-            if (string.IsNullOrWhiteSpace(modelo.Nit))
-            {
-                mensajeErrorNit = "El NIT es obligatorio si el negocio está formalizado.";
-                hayError = true;
-            }
-            if (string.IsNullOrWhiteSpace(modelo.RazonSocial))
-            {
-                mensajeErrorRazonSocial = "La Razón Social es obligatoria si el negocio está formalizado.";
-                hayError = true;
-            }
-
-            if (hayError) return;
-        }
-
-        HttpResponseMessage resp;
-
-        if (modelo.Formalizado)
-        {
-            var payload = new
-            {
-                Formalizado = modelo.Formalizado,
-                Nit = modelo.Nit,
-                RazonSocial = modelo.RazonSocial,
-                CorreoElectronico = modelo.CorreoElectronico,
-                TipoDocumento = modelo.TipoDocumento,
-                DocumentoIdentidadUe = modelo.DocumentoIdentidadUe,
-                NombreEmprendimiento = modelo.NombreEmprendimiento,
-                CategoriaNegocio = modelo.CategoriaNegocio,
-                TelefonoContacto = modelo.TelefonoContacto,
-                CorreoElectronicoContacto = modelo.CorreoElectronicoContacto,
-                HashContrasena = modelo.HashContrasena
-            };
-            resp = await Http.PostAsJsonAsync("api/usuarios/registro-formalizado", payload);
-        }
-        else
-        {
-            var payload = new
-            {
-                Formalizado = modelo.Formalizado,
-                CorreoElectronico = modelo.CorreoElectronico,
-                TipoDocumento = modelo.TipoDocumento,
-                DocumentoIdentidadUe = modelo.DocumentoIdentidadUe,
-                NombreEmprendimiento = modelo.NombreEmprendimiento,
-                CategoriaNegocio = modelo.CategoriaNegocio,
-                TelefonoContacto = modelo.TelefonoContacto,
-                CorreoElectronicoContacto = modelo.CorreoElectronicoContacto,
-                HashContrasena = modelo.HashContrasena
-            };
-            resp = await Http.PostAsJsonAsync("api/usuarios/registro-no-formalizado", payload);
-        }
-        if (resp.IsSuccessStatusCode)
-        {
-            registroExitoso = true;
-            StateHasChanged();
-            await Task.Delay(3000);
-            Navigation.NavigateTo("login");
-        }
-        else
-        {
-            var cuerpoError = await resp.Content.ReadAsStringAsync();
-            mensajeErrorGeneral = ExtraerMensajeError(cuerpoError);
-            enviando = false;
+            editContext.OnFieldChanged -= ManejarCampoCambiado;
         }
     }
 }
