@@ -1,0 +1,171 @@
+﻿@page "/editar-perfil-usuario"
+@attribute [Authorize]
+@using PWGAPG_Frontend.Models
+@inject PWGAPG_Frontend.Services.PerfilService PerfilService
+@inject NavigationManager Navigation
+
+<PageTitle>Editar perfil de usuario | Chef Metrics</PageTitle>
+
+<div class="perfil-edicion-shell">
+    <div class="perfil-edicion-heading">
+        <div>
+            <span class="perfil-kicker">CUENTA</span>
+            <h1>Editar perfil de usuario</h1>
+            <p>Revisa y actualiza tu información personal. Los datos se cargan automáticamente.</p>
+        </div>
+        <button type="button" class="btn-outline perfil-cancelar" @onclick="VolverAlDashboard">
+            Cancelar
+        </button>
+    </div>
+
+    @if (cargando)
+    {
+        <section class="perfil-cargando-card" aria-live="polite">
+            <div class="perfil-spinner" aria-hidden="true"></div>
+            <h2>Cargando tu información</h2>
+            <p>Estamos consultando los datos actuales de tu cuenta.</p>
+        </section>
+    }
+    else
+    {
+        <EditForm Model="perfil" OnSubmit="GuardarAsync" class="perfil-formulario">
+            <div class="perfil-formulario-topline">
+                <div>
+                    <h2>Bienvenido Usuario</h2>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(mensajeError))
+            {
+                <div class="perfil-alerta perfil-alerta-error" role="alert">@mensajeError</div>
+            }
+
+            @if (guardado)
+            {
+                <div class="perfil-alerta perfil-alerta-exito" role="status">
+                    @(mensajeExito ?? "Los cambios se guardaron correctamente.")
+                </div>
+            }
+
+            <section class="perfil-seccion">
+                <div class="perfil-seccion-heading">
+                </div>
+            </section>
+
+            <section class="perfil-seccion">
+                <div class="perfil-seccion-heading">
+                    <span>Información del titular</span>
+                </div>
+
+                <div class="perfil-grid">
+                    <div class="form-group">
+                        <label class="auth-label">Foto de perfil</label>
+                        <PWGAPG_Frontend.Components.ImageUpload @bind-ImagenBase64="perfil.FotoPerfilUrl"
+                                                                Texto="Toca el círculo para cambiar tu foto" />
+                    </div>
+                    <div class="form-group">
+                        <label class="auth-label" for="nombres">Nombres</label>
+                        <InputText id="nombres" @bind-Value="perfil.Nombres" type="text" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label class="auth-label" for="apellidos">Apellidos</label>
+                        <InputText id="apellidos" @bind-Value="perfil.Apellidos" type="text" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label class="auth-label" for="tipo-documento">Tipo de documento</label>
+                        <InputSelect id="tipo-documento" @bind-Value="perfil.TipoDocumento" class="form-select">
+                            <option value="">Selecciona una opción</option>
+                            <option value="CC">Cédula de ciudadanía</option>
+                            <option value="CE">Cédula de extranjería</option>
+                            <option value="PP">Pasaporte</option>
+                            <option value="PEP">Permiso especial de permanencia</option>
+                        </InputSelect>
+                    </div>
+                    <div class="form-group">
+                        <label class="auth-label" for="numero-documento">Documento de identidad</label>
+                        <InputText id="numero-documento" @bind-Value="perfil.NumeroDocumento" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label class="auth-label" for="telefono-contacto">Teléfono de contacto</label>
+                        <InputText id="telefono-contacto" @bind-Value="perfil.TelefonoContacto" type="tel" class="form-control" />
+                    </div>
+                </div>
+            </section>
+
+            <div class="perfil-formulario-acciones">
+                <button type="button" class="btn-outline" @onclick="VolverAlDashboard">Cancelar</button>
+                <button type="submit" class="btn-solid" disabled="@procesando">
+                    @(procesando ? "Guardando..." : "Guardar cambios")
+                </button>
+            </div>
+        </EditForm>
+    }
+</div>
+
+@code {
+    private PerfilUsuarioDto perfil = new();
+    private bool cargando = true;
+    private bool procesando;
+    private bool guardado;
+    private string? mensajeError;
+    private string? mensajeExito;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var resultado = await PerfilService.ObtenerPerfilUsuarioAsync();
+            if (resultado.Success && resultado.Data is not null)
+            {
+                // Autocompletar con lo guardado en BD para edición a primera vista.
+                perfil = resultado.Data;
+            }
+            else
+            {
+                mensajeError = resultado.Message ?? "No se pudo cargar la información del perfil.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            mensajeError = "No fue posible conectar con el servidor.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task GuardarAsync()
+    {
+        procesando = true;
+        guardado = false;
+        mensajeError = null;
+        mensajeExito = null;
+
+        try
+        {
+            var resultado = await PerfilService.ActualizarPerfilUsuarioAsync(perfil);
+            if (!resultado.Success)
+            {
+                mensajeError = resultado.Message ?? "No se pudieron guardar los cambios.";
+                return;
+            }
+
+            guardado = true;
+            mensajeExito = resultado.Data?.Mensaje ?? "Los cambios se guardaron correctamente.";
+        }
+        catch (HttpRequestException)
+        {
+            mensajeError = "No fue posible conectar con el servidor.";
+        }
+        finally
+        {
+            procesando = false;
+        }
+    }
+
+    private void VolverAlDashboard()
+    {
+        Navigation.NavigateTo("dashboard-empresa");
+    }
+}

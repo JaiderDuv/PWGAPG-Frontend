@@ -34,6 +34,14 @@
                             Mi perfil
                         </NavLink>
 
+                        <NavLink class="dropdown-item-custom" href="editar-perfil" @onclick="() => mostrarMenu = false">
+                            Editar Emprendimiento
+                        </NavLink>
+
+                        <NavLink class="dropdown-item-custom" href="editar-perfil-usuario" @onclick="() => mostrarMenu = false">
+                            Editar Usuario
+                        </NavLink>
+
                         <button type="button" class="dropdown-item-custom cerrar-sesion" @onclick="CerrarSesion">
                             Cerrar Sesión
                         </button>
@@ -68,7 +76,6 @@
         mostrarMenu = !mostrarMenu;
     }
 
-    // CAMBIO AQUI: Se convierte a async Task y usa await
     private async Task CerrarSesion()
     {
         mostrarMenu = false;

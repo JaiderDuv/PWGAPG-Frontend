@@ -1,0 +1,531 @@
+@page "/editar-perfil"
+@attribute [Authorize]
+@using System.Net
+@using PWGAPG_Frontend.Models
+@inject PWGAPG_Frontend.Services.PerfilService PerfilService
+@inject PWGAPG_Frontend.Services.AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Editar perfil | Chef Metrics</PageTitle>
+
+<div class="perfil-edicion-shell">
+    <div class="perfil-edicion-heading">
+        <div>
+            <span class="perfil-kicker">CUENTA Y NEGOCIO</span>
+            <h1>Editar perfil</h1>
+            <p>Revisa y actualiza la información guardada de tu emprendimiento.</p>
+        </div>
+        <button type="button" class="btn-outline perfil-cancelar" @onclick="VolverAlDashboard">
+            Cancelar
+        </button>
+    </div>
+
+    @if (fase == FaseEdicion.ConfirmarIdentidad)
+    {
+        <section class="perfil-verificacion-card">
+            <div class="perfil-verificacion-icon" aria-hidden="true">✓</div>
+            <span class="perfil-kicker">PASO 1 DE 2</span>
+            <h2>Confirma tu identidad</h2>
+            <p>Por seguridad, ingresa la contraseña actual de tu cuenta antes de consultar o modificar tus datos.</p>
+
+            <EditForm Model="confirmacion" OnValidSubmit="ConfirmarIdentidadAsync">
+                <DataAnnotationsValidator />
+                <div class="form-group">
+                    <label class="auth-label" for="password-edicion">Contraseña actual</label>
+                    <div class="campo-password-container">
+                        <InputText id="password-edicion"
+                                   @bind-Value="confirmacion.Password"
+                                   type="@(mostrarPassword ? "text" : "password")"
+                                   class="form-control input-password"
+                                   autocomplete="off" />
+                        <button type="button"
+                                class="btn-ojo-password"
+                                @onclick="AlternarPassword"
+                                aria-label="@(mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña")"
+                                title="@(mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña")">
+                            @if (mostrarPassword)
+                            {
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                                    <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.133 13.133 0 0 1 1.173 8z" />
+                                    <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z" />
+                                </svg>
+                            }
+                            else
+                            {
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                                    <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z" />
+                                    <path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z" />
+                                    <path d="m3.35 5.47-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.709.709zm10.296 8.884-12-12 .708-.708 12 12-.708.707z" />
+                                </svg>
+                            }
+                        </button>
+                    </div>
+                    <ValidationMessage For="@(() => confirmacion.Password)" class="text-danger msg-error" />
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(mensajeError))
+                {
+                    <div class="perfil-alerta perfil-alerta-error" role="alert">@mensajeError</div>
+                }
+
+                <button type="submit" class="btn-solid btn-full" disabled="@procesando">
+                    @(procesando ? "Verificando..." : "Continuar")
+                </button>
+            </EditForm>
+        </section>
+    }
+    else if (fase == FaseEdicion.Cargando)
+    {
+        <section class="perfil-cargando-card" aria-live="polite">
+            <div class="perfil-spinner" aria-hidden="true"></div>
+            <h2>Cargando tu información</h2>
+            <p>Estamos consultando los datos actuales de tu cuenta.</p>
+        </section>
+    }
+    else
+    {
+        <EditForm Model="perfil" OnValidSubmit="GuardarAsync" class="perfil-formulario">
+            <DataAnnotationsValidator />
+
+            <div class="perfil-formulario-topline">
+                <div>
+                    <span class="perfil-kicker">PASO 2 DE 2</span>
+                    <h2>Información editable</h2>
+                </div>
+                <span class="perfil-sello">Datos cargados desde tu cuenta</span>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(mensajeError))
+            {
+                <div class="perfil-alerta perfil-alerta-error" role="alert">@mensajeError</div>
+            }
+
+            @if (guardado)
+            {
+                <div class="perfil-alerta perfil-alerta-exito" role="status">
+                    @(mensajeExito ?? "Los cambios se guardaron correctamente.")
+                </div>
+            }
+
+            <section class="perfil-seccion">
+                <div class="perfil-seccion-heading">
+                    <div>
+                        <span class="perfil-seccion-numero">01</span>
+                        <h3>Datos de la cuenta</h3>
+                    </div>
+                    <span>Identidad y contacto principal</span>
+                </div>
+
+                <div class="perfil-grid">
+                    <div class="form-group">
+                        <label class="auth-label" for="correo-cuenta">Correo de la cuenta</label>
+                        <InputText id="correo-cuenta"
+                                   @bind-Value="perfil.CorreoCuenta"
+                                   type="email"
+                                   class="form-control perfil-campo-readonly"
+                                   readonly="readonly" />
+                        <ValidationMessage For="@(() => perfil.CorreoCuenta)" class="text-danger msg-error" />
+                    </div>
+                    <div class="form-group">
+                        <label class="auth-label" for="correo-contacto">Correo electrónico de contacto</label>
+                        <InputText id="correo-contacto" @bind-Value="perfil.CorreoContacto" type="email" class="form-control" />
+                        <ValidationMessage For="@(() => perfil.CorreoContacto)" class="text-danger msg-error" />
+                    </div>
+                </div>
+            </section>
+
+            <section class="perfil-seccion">
+                <div class="perfil-seccion-heading">
+                    <div>
+                        <span class="perfil-seccion-numero">02</span>
+                        <h3>Datos del emprendimiento</h3>
+                    </div>
+                    <span>Información comercial</span>
+                </div>
+                <div class="perfil-grid">
+                    <div class="form-group perfil-switch-group">
+                        <label class="auth-label" for="formalizado">¿Está formalizado?</label>
+                        <InputSelect id="formalizado" @bind-Value="perfil.Formalizado" class="form-select">
+                            <option value="false">No</option>
+                            <option value="true">Sí</option>
+                        </InputSelect>
+                    </div>
+                    <div class="form-group">
+                        <label class="auth-label" for="nombre-emprendimiento">Nombre del emprendimiento</label>
+                        <InputText id="nombre-emprendimiento" @bind-Value="perfil.NombreEmprendimiento" class="form-control" />
+                        <ValidationMessage For="@(() => perfil.NombreEmprendimiento)" class="text-danger msg-error" />
+                    </div>
+                    <div class="form-group">
+                        <label class="auth-label" for="categoria">Categoría del negocio</label>
+                        <InputSelect id="categoria" @bind-Value="perfil.CategoriaNegocio" class="form-select">
+                            <option value="">Selecciona una categoría</option>
+                            <option value="Gastronomía">Gastronomía</option>
+                            <option value="Repostería">Repostería</option>
+                            <option value="Cafetería">Cafetería</option>
+                            <option value="Productos Frescos">Productos frescos</option>
+                            <option value="Otros">Otros</option>
+                        </InputSelect>
+                        <ValidationMessage For="@(() => perfil.CategoriaNegocio)" class="text-danger msg-error" />
+                    </div>
+                    @if (perfil.Formalizado)
+                    {
+                        <div class="form-group">
+                            <label class="auth-label" for="nit">NIT</label>
+                            <InputText id="nit" @bind-Value="perfil.Nit" class="form-control" />
+                            <ValidationMessage For="@(() => perfil.Nit)" class="text-danger msg-error" />
+                        </div>
+                        <div class="form-group">
+                            <label class="auth-label" for="razon-social">Razón social</label>
+                            <InputText id="razon-social" @bind-Value="perfil.RazonSocial" class="form-control" />
+                            <ValidationMessage For="@(() => perfil.RazonSocial)" class="text-danger msg-error" />
+                        </div>
+                        <div class="form-group">
+                            <label class="auth-label" for="rues">RUES</label>
+                            <InputText id="rues" @bind-Value="perfil.Rues" class="form-control" />
+                            <ValidationMessage For="@(() => perfil.Rues)" class="text-danger msg-error" />
+                        </div>
+                    }
+                    <div class="form-group">
+                        <label class="auth-label" for="correo-empresa">Correo electrónico de la empresa</label>
+                        <InputText id="correo-empresa" @bind-Value="perfil.CorreoEmpresa" type="email" class="form-control" />
+                        <ValidationMessage For="@(() => perfil.CorreoEmpresa)" class="text-danger msg-error" />
+                    </div>
+                    <div class="form-group perfil-switch-group">
+                        <label class="auth-label" for="sitio-fisico">¿Tiene sitio físico?</label>
+                        <InputSelect id="sitio-fisico" @bind-Value="perfil.TieneSitioFisico" class="form-select">
+                            <option value="false">No</option>
+                            <option value="true">Sí</option>
+                        </InputSelect>
+                    </div>
+                    @if (perfil.TieneSitioFisico)
+                    {
+                        <div class="form-group perfil-direccion-group">
+                            <label class="auth-label" for="direccion">Dirección del sitio físico</label>
+                            <InputText id="direccion" @bind-Value="perfil.Direccion" class="form-control" />
+                            <ValidationMessage For="@(() => perfil.Direccion)" class="text-danger msg-error" />
+                        </div>
+                    }
+                    <div class="form-group perfil-switch-group">
+                        <label class="auth-label" for="formalizado">¿Esta formalizado?</label>
+                        <InputSelect id="formalizado" @bind-Value="perfil.Formalizado" class="form-select">
+                            <option value="false">No</option>
+                            <option value="true">Sí</option>
+                        </InputSelect>
+                    </div>
+
+                </div>
+            </section>
+
+            <section class="perfil-seccion">
+                <div class="perfil-seccion-heading">
+                    <div>
+                        <span class="perfil-seccion-numero">03</span>
+                        <h3>Socios del negocio</h3>
+                    </div>
+                    <button type="button" class="btn-outline btn-small" @onclick="IniciarNuevoSocio">+ Agregar socio</button>
+                </div>
+
+                @if (perfil.Socios.Count == 0)
+                {
+                    <div class="perfil-empty-state">No hay socios registrados. Esta sección es opcional.</div>
+                }
+                else
+                {
+                    <div class="perfil-socios-lista">
+                        @foreach (var socio in perfil.Socios)
+                        {
+                            <div class="perfil-socio-row">
+                                <div>
+                                    <strong>@socio.Nombres @socio.Apellidos</strong>
+                                    <span>@socio.TipoDocumento @socio.NumeroDocumento · @socio.CorreoElectronico</span>
+                                </div>
+                                <div class="perfil-socio-acciones">
+                                    <button type="button" class="btn-texto" @onclick="() => EditarSocio(socio)">Editar</button>
+                                    <button type="button" class="btn-texto btn-texto-peligro" @onclick="() => EliminarSocio(socio)">Eliminar</button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (socioEnEdicion is not null)
+                {
+                    <div class="perfil-socio-editor">
+                        <div class="perfil-socio-editor-heading">
+                            <strong>@(socioEditando ? "Editar socio" : "Nuevo socio")</strong>
+                            <button type="button" class="btn-texto" @onclick="CancelarSocio">Cancelar</button>
+                        </div>
+                        <div class="perfil-grid">
+                            <div class="form-group">
+                                <label class="auth-label">Nombres</label>
+                                <InputText @bind-Value="socioEnEdicion.Nombres" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label class="auth-label">Apellidos</label>
+                                <InputText @bind-Value="socioEnEdicion.Apellidos" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label class="auth-label">Tipo de documento</label>
+                                <InputSelect @bind-Value="socioEnEdicion.TipoDocumento" class="form-select">
+                                    <option value="">Selecciona una opción</option>
+                                    <option value="CC">Cédula de ciudadanía</option>
+                                    <option value="CE">Cédula de extranjería</option>
+                                    <option value="PP">Pasaporte</option>
+                                </InputSelect>
+                            </div>
+                            <div class="form-group">
+                                <label class="auth-label">Documento</label>
+                                <InputText @bind-Value="socioEnEdicion.NumeroDocumento" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label class="auth-label">Teléfono</label>
+                                <InputText @bind-Value="socioEnEdicion.Telefono" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label class="auth-label">Correo electrónico</label>
+                                <InputText @bind-Value="socioEnEdicion.CorreoElectronico" type="email" class="form-control" />
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(mensajeSocio))
+                        {
+                            <div class="text-danger msg-error">@mensajeSocio</div>
+                        }
+                        <button type="button" class="btn-solid btn-small" @onclick="GuardarSocio">Guardar socio</button>
+                    </div>
+                }
+            </section>
+
+            <div class="perfil-formulario-acciones">
+                <button type="button" class="btn-outline" @onclick="VolverAlDashboard">Cancelar</button>
+                <button type="submit" class="btn-solid" disabled="@procesando">
+                    @(procesando ? "Guardando..." : "Guardar cambios")
+                </button>
+            </div>
+        </EditForm>
+    }
+</div>
+
+@code {
+    private enum FaseEdicion
+    {
+        ConfirmarIdentidad,
+        Cargando,
+        Formulario
+    }
+
+    private FaseEdicion fase = FaseEdicion.ConfirmarIdentidad;
+    private ConfirmarEdicionPerfilDto confirmacion = new();
+    private PerfilEmprendedorDto perfil = new();
+    private SocioNegocioDto? socioEnEdicion;
+    private bool socioEditando;
+    private bool mostrarPassword;
+    private bool procesando;
+    private bool guardado;
+    private string? editToken;
+    private string? mensajeError;
+    private string? mensajeExito;
+    private string? mensajeSocio;
+
+    protected override void OnInitialized()
+    {
+        confirmacion = new ConfirmarEdicionPerfilDto();
+        editToken = null;
+        fase = FaseEdicion.ConfirmarIdentidad;
+    }
+
+    private void AlternarPassword() => mostrarPassword = !mostrarPassword;
+
+    private async Task ConfirmarIdentidadAsync()
+    {
+        procesando = true;
+        mensajeError = null;
+
+        try
+        {
+            var resultado = await PerfilService.ConfirmarIdentidadAsync(confirmacion);
+            if (!resultado.Success || string.IsNullOrWhiteSpace(resultado.Data?.EditToken))
+            {
+                mensajeError = resultado.Message ?? "No se pudo validar la contraseña actual.";
+                return;
+            }
+
+            editToken = resultado.Data.EditToken;
+            fase = FaseEdicion.Cargando;
+            var perfilResultado = await PerfilService.ObtenerPerfilAsync(editToken);
+            if (!perfilResultado.Success || perfilResultado.Data is null)
+            {
+                fase = FaseEdicion.ConfirmarIdentidad;
+                mensajeError = perfilResultado.Message ?? "No se pudo cargar la información del perfil.";
+                return;
+            }
+
+            perfil = perfilResultado.Data;
+            fase = FaseEdicion.Formulario;
+        }
+        catch (HttpRequestException)
+        {
+            mensajeError = "No fue posible conectar con el servidor.";
+        }
+        finally
+        {
+            procesando = false;
+        }
+    }
+
+    private async Task GuardarAsync()
+    {
+        if (string.IsNullOrWhiteSpace(editToken))
+        {
+            fase = FaseEdicion.ConfirmarIdentidad;
+            mensajeError = "La autorización de edición expiró. Confirma nuevamente tu identidad.";
+            return;
+        }
+
+        if (perfil.Formalizado)
+        {
+            if (string.IsNullOrWhiteSpace(perfil.Nit))
+            {
+                mensajeError = "El NIT es obligatorio si el negocio está formalizado.";
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(perfil.RazonSocial))
+            {
+                mensajeError = "La razón social es obligatoria si el negocio está formalizado.";
+                return;
+            }
+        }
+        else
+        {
+            perfil.Nit = string.Empty;
+            perfil.RazonSocial = string.Empty;
+            perfil.Rues = string.Empty;
+        }
+
+        if (perfil.TieneSitioFisico && string.IsNullOrWhiteSpace(perfil.Direccion))
+        {
+            mensajeError = "La dirección es obligatoria si el negocio tiene sitio físico.";
+            return;
+        }
+
+        if (!perfil.TieneSitioFisico)
+        {
+            perfil.Direccion = string.Empty;
+        }
+
+        procesando = true;
+        guardado = false;
+        mensajeError = null;
+        mensajeExito = null;
+
+        try
+        {
+            var resultado = await PerfilService.ActualizarPerfilAsync(perfil, editToken);
+            if (!resultado.Success)
+            {
+                if (resultado.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    editToken = null;
+                    fase = FaseEdicion.ConfirmarIdentidad;
+                    mensajeError = "La autorización de edición expiró. Confirma nuevamente tu identidad.";
+                    return;
+                }
+
+                mensajeError = resultado.Message ?? "No se pudieron guardar los cambios.";
+                return;
+            }
+
+            if (resultado.Data?.RequiereConfirmacionCorreo == true)
+            {
+                await AuthService.CerrarSesionAsync();
+                Navigation.NavigateTo("login?correoPendiente=true", replace: true);
+                return;
+            }
+
+            guardado = true;
+            mensajeExito = resultado.Data?.Mensaje;
+            Navigation.NavigateTo("/", replace: true);
+        }
+        catch (HttpRequestException)
+        {
+            mensajeError = "No fue posible conectar con el servidor.";
+        }
+        finally
+        {
+            procesando = false;
+        }
+    }
+
+    private void IniciarNuevoSocio()
+    {
+        socioEditando = false;
+        socioEnEdicion = new SocioNegocioDto();
+        mensajeSocio = null;
+    }
+
+    private void EditarSocio(SocioNegocioDto socio)
+    {
+        socioEditando = true;
+        socioEnEdicion = new SocioNegocioDto
+        {
+            Id = socio.Id,
+            Nombres = socio.Nombres,
+            Apellidos = socio.Apellidos,
+            TipoDocumento = socio.TipoDocumento,
+            NumeroDocumento = socio.NumeroDocumento,
+            Telefono = socio.Telefono,
+            CorreoElectronico = socio.CorreoElectronico
+        };
+        mensajeSocio = null;
+    }
+
+    private void GuardarSocio()
+    {
+        if (socioEnEdicion is null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(socioEnEdicion.Nombres) ||
+            string.IsNullOrWhiteSpace(socioEnEdicion.Apellidos) ||
+            string.IsNullOrWhiteSpace(socioEnEdicion.TipoDocumento) ||
+            string.IsNullOrWhiteSpace(socioEnEdicion.NumeroDocumento) ||
+            string.IsNullOrWhiteSpace(socioEnEdicion.Telefono) ||
+            string.IsNullOrWhiteSpace(socioEnEdicion.CorreoElectronico))
+        {
+            mensajeSocio = "Completa todos los campos del socio.";
+            return;
+        }
+
+        if (socioEditando && socioEnEdicion.Id.HasValue)
+        {
+            var indice = perfil.Socios.FindIndex(s => s.Id == socioEnEdicion.Id);
+            if (indice >= 0)
+            {
+                perfil.Socios[indice] = socioEnEdicion;
+            }
+        }
+        else
+        {
+            perfil.Socios.Add(socioEnEdicion);
+        }
+
+        socioEnEdicion = null;
+        mensajeSocio = null;
+    }
+
+    private void CancelarSocio()
+    {
+        socioEnEdicion = null;
+        mensajeSocio = null;
+    }
+
+    private void EliminarSocio(SocioNegocioDto socio)
+    {
+        perfil.Socios.Remove(socio);
+    }
+
+    private void VolverAlDashboard()
+    {
+        Navigation.NavigateTo("dashboard-empresa");
+    }
+}
