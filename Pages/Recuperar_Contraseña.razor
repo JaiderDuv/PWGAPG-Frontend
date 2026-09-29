@@ -23,14 +23,16 @@
 
         @if (mensajeEnviado)
         {
-            <div class="alerta-exito">
+            <div class="alerta-box alerta-exito">
                 ¡Correo enviado con éxito! Revisa tu bandeja de entrada.
             </div>
         }
 
         @if (mensajeError != null)
         {
-            <div class="text-danger msg-error">@mensajeError</div>
+            <div class="alerta-box alerta-error">
+                @mensajeError
+            </div>
         }
 
         <!-- Botones en bloque full-width como Iniciar Sesión -->

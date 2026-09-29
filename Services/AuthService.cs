@@ -13,6 +13,7 @@ namespace PWGAPG_Frontend.Services
 
         public bool IsAuthenticated { get; private set; } = false;
         public string NombreEmpresa { get; private set; } = string.Empty;
+        public bool OnboardingCompletado { get; private set; } = false;
         public string DescripcionEmpresa { get; private set; } = string.Empty;
         public string UrlFotoPerfil { get; private set; } = "images/default-avatar.png";
 
@@ -26,40 +27,67 @@ namespace PWGAPG_Frontend.Services
 
         public async Task<LoginResponseDto?> Login(LoginDTO dto)
         {
-            var resp = await _httpClient.PostAsJsonAsync("api/auth/login", dto);
-            if (!resp.IsSuccessStatusCode) return null;
-
-            var resultado = await resp.Content.ReadFromJsonAsync<LoginResponseDto>();
-
-            if (resultado is { Exito: true } &&
-                !string.IsNullOrWhiteSpace(resultado.AccessToken ?? resultado.Token))
+            try
             {
-                await GuardarSesionAsync(resultado);
-            }
+                var resp = await _httpClient.PostAsJsonAsync("api/auth/login", dto);
 
-            return resultado;
+                LoginResponseDto? resultado = null;
+                try
+                {
+                    resultado = await resp.Content.ReadFromJsonAsync<LoginResponseDto>();
+                }
+                catch
+                {
+                    // El cuerpo no es un LoginResponseDto (por ejemplo, un 400 de validación o vacío)
+                }
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    return new LoginResponseDto
+                    {
+                        Exito = false,
+                        Mensaje = string.IsNullOrWhiteSpace(resultado?.Mensaje)
+                            ? "Correo o contraseña incorrectos."
+                            : resultado!.Mensaje
+                    };
+                }
+
+                if (resultado is { Exito: true })
+                {
+                    IsAuthenticated = true;
+                    NombreEmpresa = resultado.NombreEmprendimiento ?? string.Empty;
+                    OnboardingCompletado = resultado.OnboardingCompletado;
+                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", resultado.Token ?? resultado.AccessToken);
+                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "nombreEmpresa", NombreEmpresa);
+                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "onboardingCompletado", OnboardingCompletado.ToString());
+                    NotifyStateChanged();
+                }
+
+                return resultado;
+            }
+            catch (HttpRequestException)
+            {
+                return new LoginResponseDto
+                {
+                    Exito = false,
+                    Mensaje = "No se pudo conectar con el servidor. Intenta de nuevo más tarde."
+                };
+            }
         }
 
         public async Task InicializarAsync()
         {
-            var accessToken = await ObtenerAccessTokenAsync();
-            var refreshToken = await ObtenerRefreshTokenAsync();
-
-            if (TokenVigente(accessToken) && await ValidarSesionAsync(accessToken) != false)
+            var token = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+            if (!string.IsNullOrWhiteSpace(token))
             {
                 IsAuthenticated = true;
                 NombreEmpresa = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "nombreEmpresa") ?? string.Empty;
+
+                var onboardingGuardado = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "onboardingCompletado");
+                OnboardingCompletado = onboardingGuardado == "True";
+
                 NotifyStateChanged();
-                return;
             }
-
-            if (!string.IsNullOrWhiteSpace(refreshToken))
-            {
-                await RenovarSesionAsync();
-                return;
-            }
-
-            await LimpiarSesionAsync();
         }
 
         public async Task<bool> RenovarSesionAsync()
@@ -176,11 +204,13 @@ namespace PWGAPG_Frontend.Services
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "refreshToken");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "nombreEmpresa");
+            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "onboardingCompletado");
 
             IsAuthenticated = false;
             NombreEmpresa = string.Empty;
             DescripcionEmpresa = string.Empty;
             UrlFotoPerfil = "images/default-avatar.png";
+            OnboardingCompletado = false;
 
             NotifyStateChanged();
         }

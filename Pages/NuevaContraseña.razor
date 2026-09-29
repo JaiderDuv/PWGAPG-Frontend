@@ -1,4 +1,4 @@
-﻿@page "/nueva-contraseña"
+﻿@page "/nueva-contrasena"
 @using System.ComponentModel.DataAnnotations
 @using System.Net.Http.Json
 @using PWGAPG_Frontend.Models
@@ -8,10 +8,15 @@
 <div class="auth-card-login">
     <h2 class="auth-titulo">Restablecer Contraseña</h2>
     <p class="auth-subtitulo">Ingresa y confirma tu nueva contraseña</p>
+    <p class="auth-subtitulo">
+        Los campos marcados con un asterisco (<span class="text-red-500 font-bold">*</span>) son obligatorios.
+    </p>
 
     @if (mensajeError != null)
     {
-        <div class="text-danger msg-error">@mensajeError</div>
+        <div class="alerta-box alerta-error">
+            @mensajeError
+        </div>
     }
 
     <EditForm Model="@modelo" OnValidSubmit="@ManejarCambioPassword">
@@ -63,7 +68,7 @@
                     </svg>
                 </button>
             </div>
-            <ValidationMessage For="@(() => modelo.ConfirmarPassword)" class="text-danger msg-error" />
+            <ValidationMessage For="@(() => modelo.ConfirmarPassword)" class="alerta-box alerta-error" />
         </div>
 
         <!-- Botones de Acción -->
