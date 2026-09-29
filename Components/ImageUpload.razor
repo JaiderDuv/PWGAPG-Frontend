@@ -11,10 +11,14 @@
             <div class="img-upload-placeholder @FormaClass">+</div>
         }
     </label>
-    <InputFile id="@InputId" OnChange="CargarImagen" class="img-upload-input" accept="image/*" />
+    <InputFile id="@InputId" OnChange="CargarImagen" class="img-upload-input" accept="image/*" @key="inputKey" />
     @if (!string.IsNullOrEmpty(Texto))
     {
         <span class="img-upload-texto">@Texto</span>
+    }
+    @if (!string.IsNullOrEmpty(mensajeError))
+    {
+        <div class="text-danger msg-error" role="alert">@mensajeError</div>
     }
 </div>
 
@@ -27,10 +31,29 @@
 
     private string FormaClass => Forma == "cuadrado" ? "img-upload-cuadrado" : "img-upload-circular";
 
+    private string? mensajeError;
+    private Guid inputKey = Guid.NewGuid();
+    private static readonly string[] ExtensionesPermitidas = { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp" };
+
     private async Task CargarImagen(InputFileChangeEventArgs e)
     {
+        mensajeError = null;
         var archivo = e.File;
         if (archivo == null) return;
+
+        var extension = System.IO.Path.GetExtension(archivo.Name).ToLowerInvariant();
+        var esImagenPorTipo = archivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+        var esImagenPorExtension = ExtensionesPermitidas.Contains(extension);
+
+        if (!esImagenPorTipo || !esImagenPorExtension)
+        {
+            mensajeError = "No es una imagen";
+            // Dejar el campo vacío: limpiar cualquier previsualización previa.
+            await ImagenBase64Changed.InvokeAsync(string.Empty);
+            // Reiniciar el input para permitir reintentar con otro archivo.
+            inputKey = Guid.NewGuid();
+            return;
+        }
 
         using var stream = archivo.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024); // 2 MB máx
         using var ms = new MemoryStream();

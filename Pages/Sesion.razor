@@ -32,6 +32,13 @@
         </div>
     }
 
+    @if (CorreoPendiente)
+    {
+        <div class="alert-exito">
+            <span>El correo de la cuenta cambió. Confirma el nuevo correo antes de iniciar sesión.</span>
+        </div>
+    }
+
     <EditForm Model="@modelo" OnValidSubmit="@ManejarLogin">
         <DataAnnotationsValidator />
 
@@ -103,6 +110,9 @@
     [SupplyParameterFromQuery(Name = "passwordCambiada")]
     public bool PasswordCambiada { get; set; }
 
+    [SupplyParameterFromQuery(Name = "correoPendiente")]
+    public bool CorreoPendiente { get; set; }
+
     private LoginDTO modelo = new LoginDTO();
     private bool mostrarPassword = false;
     private string tipoCampoPassword => mostrarPassword ? "text" : "password";
@@ -114,7 +124,6 @@
 
     protected override void OnInitialized()
     {
-        // Bloquea el acceso al login si ya iniciaste sesión
         if (AuthService.IsAuthenticated)
         {
             Navigation.NavigateTo("dashboard-empresa", replace: true);

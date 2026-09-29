@@ -21,6 +21,7 @@ public sealed class BearerAuthorizationHandler : DelegatingHandler
 
         if (response.StatusCode != HttpStatusCode.Unauthorized ||
             request.RequestUri?.AbsolutePath.Contains("/api/auth/", StringComparison.OrdinalIgnoreCase) == true ||
+            request.RequestUri?.AbsolutePath.Contains("/api/perfil/confirmar-identidad", StringComparison.OrdinalIgnoreCase) == true ||
             !await _authService.RenovarSesionAsync())
         {
             return response;
