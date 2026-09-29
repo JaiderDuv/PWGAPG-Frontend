@@ -62,7 +62,7 @@
 .btn-enviar {
     width: 100%;
     padding: 12px;
-    background-color: #D97706;
+    background-color: #CC955A;
     color: #ffffff;
     border: none;
     border-radius: 8px;
@@ -73,7 +73,7 @@
 }
 
     .btn-enviar:hover {
-        background-color: #B45309;
+        background-color: #A15F2B;
     }
 
 .btn-cancelar {
@@ -81,7 +81,7 @@
     padding: 11px;
     background-color: transparent;
     color: #D97706;
-    border: 2px solid #D97706;
+    border: 2px solid #CC955A;
     border-radius: 8px;
     font-weight: 600;
     font-size: 0.95rem;
@@ -91,7 +91,8 @@
 }
 
     .btn-cancelar:hover {
-        background-color: #FFFBEB;
+        background-color: #CC955A;
+        color: #ffffff;
     }
 
 .alerta-exito {

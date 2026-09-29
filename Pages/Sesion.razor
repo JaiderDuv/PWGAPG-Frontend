@@ -21,7 +21,7 @@
         </div>
     }
 
-    <!-- Mensaje 2: Cambio de Contraseña de Éxito (NUEVO) -->
+    <!-- Mensaje 2: Cambio de Contraseña Exitoso -->
     @if (PasswordCambiada)
     {
         <div class="alert-exito">
@@ -66,7 +66,7 @@
                     }
                 </button>
             </div>
-            <ValidationMessage For="@(() => modelo.Password)" class="text-danger msg-error" />
+            <ValidationMessage For="@(() => modelo.Password)" class="alerta-box alerta-errorr" />
         </div>
 
         <div class="recuperar-container">
@@ -75,13 +75,16 @@
             </NavLink>
         </div>
 
+        <!-- Muestra el error de autenticación y opción de reenvío si no está verificado -->
         @if (mensajeErrorLogin != null)
         {
-            <div class="text-danger msg-error">@mensajeErrorLogin</div>
+            <div class="alerta-box alerta-error">
+                <div>@mensajeErrorLogin</div>
+            </div>
         }
 
-        <button type="submit" class="btn-solid btn-full">
-            Iniciar Sesión
+        <button type="submit" class="btn-solid btn-full" disabled="@enviando">
+            @(enviando ? "Iniciando sesión..." : "Iniciar Sesión")
         </button>
     </EditForm>
 
@@ -99,13 +102,15 @@
     [SupplyParameterFromQuery(Name = "confirmado")]
     public bool CuentaConfirmada { get; set; }
 
-    // NUEVA PROPIEDAD
     [SupplyParameterFromQuery(Name = "passwordCambiada")]
     public bool PasswordCambiada { get; set; }
 
     private LoginDTO modelo = new LoginDTO();
     private bool mostrarPassword = false;
     private string tipoCampoPassword => mostrarPassword ? "text" : "password";
+
+    private string? mensajeErrorLogin;
+    private bool enviando = false;
 
     private void AlternarVisibilidadPassword()
     {
@@ -114,28 +119,36 @@
 
     protected override void OnInitialized()
     {
-        // Bloquea el acceso al login si ya iniciaste sesión
         if (AuthService.IsAuthenticated)
         {
             Navigation.NavigateTo("dashboard-empresa", replace: true);
         }
     }
 
-    private string? mensajeErrorLogin;
-
     private async Task ManejarLogin()
     {
+        if (enviando) return;
+        enviando = true;
         mensajeErrorLogin = null;
 
-        var resultado = await AuthService.Login(modelo);
+        try
+        {
+            modelo.CorreoElectronico = modelo.CorreoElectronico.Trim();
 
-        if (resultado is { Exito: true })
-        {
-            Navigation.NavigateTo("dashboard-empresa");
+            var resultado = await AuthService.Login(modelo);
+
+            if (resultado is { Exito: true })
+            {
+                Navigation.NavigateTo("dashboard-empresa");
+            }
+            else
+            {
+                mensajeErrorLogin = resultado?.Mensaje ?? "Correo o contraseña incorrectos.";
+            }
         }
-        else
+        finally
         {
-            mensajeErrorLogin = resultado?.Mensaje ?? "Correo o contraseña incorrectos.";
+            enviando = false;
         }
     }
 }

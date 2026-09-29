@@ -15,7 +15,42 @@
     <EditForm EditContext="@editContext" OnSubmit="@ManejarRegistro">
         <DataAnnotationsValidator />
 
-        <!-- 1. Formalizado -->
+        <!-- 1. Nombres y Apellidos -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+            <div class="form-group-sm">
+                <label class="auth-label">Nombres del Emprendedor *</label>
+                <InputText @bind-Value="modelo.Nombres" class="form-control" placeholder="Ej: Juan Carlos" />
+                <ValidationMessage For="@(() => modelo.Nombres)" class="text-danger msg-error" />
+            </div>
+
+            <div class="form-group-sm">
+                <label class="auth-label">Apellidos del Emprendedor *</label>
+                <InputText @bind-Value="modelo.Apellidos" class="form-control" placeholder="Ej: Pérez Gómez" />
+                <ValidationMessage For="@(() => modelo.Apellidos)" class="text-danger msg-error" />
+            </div>
+        </div>
+
+        <!-- 2. Tipo de Documento -->
+        <div class="form-group-sm">
+            <label class="auth-label">Tipo de Documento *</label>
+            <InputSelect @bind-Value="modelo.TipoDocumento" class="form-select">
+                <option value="">-- Seleccione una opción --</option>
+                <option value="CC">Cédula de Ciudadanía</option>
+                <option value="CE">Cédula de Extranjería</option>
+                <option value="PP">Pasaporte</option>
+                <option value="PEP">Permiso Especial de Permanencia</option>
+            </InputSelect>
+            <ValidationMessage For="@(() => modelo.TipoDocumento)" class="text-danger msg-error" />
+        </div>
+
+        <!-- 3. Documento de Identidad -->
+        <div class="form-group-sm">
+            <label class="auth-label">Documento de Identidad *</label>
+            <InputText @bind-Value="modelo.DocumentoIdentidadUe" class="form-control" placeholder="Número de documento" />
+            <ValidationMessage For="@(() => modelo.DocumentoIdentidadUe)" class="text-danger msg-error" />
+        </div>
+
+        <!-- 4. Formalizado -->
         <div class="form-group-sm">
             <label class="auth-label">¿Tu emprendimiento está formalizado? *</label>
             <InputSelect @bind-Value="modelo.Formalizado" class="form-select" TValue="bool">
@@ -25,7 +60,7 @@
             <ValidationMessage For="@(() => modelo.Formalizado)" class="text-danger msg-error" />
         </div>
 
-        <!-- 2 y 3. NIT y Razón Social -->
+        <!-- 5 y 6. NIT y Razón Social -->
         @if (modelo.Formalizado)
         {
             <div class="form-group-sm">
@@ -41,34 +76,14 @@
             </div>
         }
 
-        <!-- 4. Correo Electrónico de la cuenta -->
+        <!-- 7. Correo Electrónico de la cuenta -->
         <div class="form-group-sm">
             <label class="auth-label">Correo Electrónico de la Cuenta *</label>
             <InputText @bind-Value="modelo.CorreoElectronico" class="form-control" type="email" placeholder="correo@ejemplo.com" />
             <ValidationMessage For="@(() => modelo.CorreoElectronico)" class="text-danger msg-error" />
         </div>
 
-        <!-- 5. Tipo de Documento -->
-        <div class="form-group-sm">
-            <label class="auth-label">Tipo de Documento *</label>
-            <InputSelect @bind-Value="modelo.TipoDocumento" class="form-select">
-                <option value="">-- Seleccione una opción --</option>
-                <option value="CC">Cédula de Ciudadanía</option>
-                <option value="CE">Cédula de Extranjería</option>
-                <option value="PP">Pasaporte</option>
-                <option value="PEP">Permiso Especial de Permanencia</option>
-            </InputSelect>
-            <ValidationMessage For="@(() => modelo.TipoDocumento)" class="text-danger msg-error" />
-        </div>
-
-        <!-- 6. Documento de Identidad -->
-        <div class="form-group-sm">
-            <label class="auth-label">Documento de Identidad *</label>
-            <InputText @bind-Value="modelo.DocumentoIdentidadUe" class="form-control" placeholder="Número de documento" />
-            <ValidationMessage For="@(() => modelo.DocumentoIdentidadUe)" class="text-danger msg-error" />
-        </div>
-
-        <!-- 7. Nombre del Emprendimiento -->
+        <!-- 8. Nombre del Emprendimiento -->
         <div class="form-group-sm">
             <label class="auth-label">
                 Nombre del Emprendimiento <span class="auth-label-opcional">(Opcional, puedes completarlo después)</span>
@@ -81,59 +96,80 @@
             <ValidationMessage For="@(() => modelo.NombreEmprendimiento)" class="text-danger msg-error" />
         </div>
 
-        <!-- 8. Categoría Negocio -->
+        <!-- 9. Categoría Negocio -->
         <div class="form-group-sm">
             <label class="auth-label">Categoría del Negocio *</label>
             <InputSelect @bind-Value="modelo.CategoriaNegocio" class="form-select">
                 <option value="">-- Seleccione una categoría --</option>
-                <option value="Gastronomía">Gastronomía</option>
                 <option value="Repostería">Repostería</option>
                 <option value="Cafetería">Cafetería</option>
-                <option value="Productos Frescos">Productos Frescos</option>
                 <option value="Otros">Otros</option>
             </InputSelect>
             <ValidationMessage For="@(() => modelo.CategoriaNegocio)" class="text-danger msg-error" />
         </div>
 
-        <!-- 9. Teléfono Contacto -->
+        <!-- 10. Teléfono Contacto -->
         <div class="form-group-sm">
             <label class="auth-label">Teléfono de Contacto *</label>
             <InputText @bind-Value="modelo.TelefonoContacto" class="form-control" placeholder="Ej: 3001234567" />
             <ValidationMessage For="@(() => modelo.TelefonoContacto)" class="text-danger msg-error" />
         </div>
 
-        <!-- 10. Correo Electrónico de Contacto -->
+        <!-- 11. Correo Electrónico de Contacto -->
         <div class="form-group-sm">
             <label class="auth-label">Correo Electrónico de Contacto *</label>
             <InputText @bind-Value="modelo.CorreoElectronicoContacto" class="form-control" type="email" placeholder="contacto@negocio.com" />
             <ValidationMessage For="@(() => modelo.CorreoElectronicoContacto)" class="text-danger msg-error" />
         </div>
 
-        <!-- 11. Contraseña -->
-        <div class="form-group">
+        <!-- 12. Contraseña -->
+        <div class="form-group-sm">
             <label class="auth-label">Contraseña *</label>
             <div class="campo-password-container">
-                <InputText @bind-Value="modelo.HashContrasena" type="@tipoCampoPassword" class="form-control input-password" placeholder="••••••••" />
+                <InputText @bind-Value="modelo.HashContrasena" type="@tipoCampoPassword1" class="form-control input-password" placeholder="••••••••" />
 
-                <button type="button" class="btn-ojo-password" @onclick="AlternarVisibilidadPassword">
-                    @if (mostrarPassword)
-                    {
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <button type="button" class="btn-ojo-password" @onclick="AlternarVisibilidad1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        @if (mostrarPassword1)
+                        {
                             <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z" />
                             <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z" />
-                        </svg>
-                    }
-                    else
-                    {
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        }
+                        else
+                        {
                             <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z" />
                             <path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z" />
                             <path d="M3.35 5.47c-.18.16-.353.322-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.709.709zm10.296 8.884-12-12 .708-.708 12 12-.708.707z" />
-                        </svg>
-                    }
+                        }
+                    </svg>
                 </button>
             </div>
             <ValidationMessage For="@(() => modelo.HashContrasena)" class="text-danger msg-error" />
+        </div>
+
+        <!-- 13. Confirmar Contraseña -->
+        <div class="form-group-sm">
+            <label class="auth-label">Confirmar Contraseña *</label>
+            <div class="campo-password-container">
+                <InputText @bind-Value="modelo.ConfirmarContrasena" type="@tipoCampoPassword2" class="form-control input-password" placeholder="••••••••" />
+
+                <button type="button" class="btn-ojo-password" @onclick="AlternarVisibilidad2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        @if (mostrarPassword2)
+                        {
+                            <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z" />
+                            <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z" />
+                        }
+                        else
+                        {
+                            <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z" />
+                            <path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z" />
+                            <path d="M3.35 5.47c-.18.16-.353.322-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.709.709zm10.296 8.884-12-12 .708-.708 12 12-.708.707z" />
+                        }
+                    </svg>
+                </button>
+            </div>
+            <ValidationMessage For="@(() => modelo.ConfirmarContrasena)" class="text-danger msg-error" />
         </div>
 
         @if (mensajeErrorGeneral != null)
@@ -168,8 +204,11 @@
     private EditContext? editContext;
     private ValidationMessageStore? messageStore;
 
-    private bool mostrarPassword = false;
-    private string tipoCampoPassword => mostrarPassword ? "text" : "password";
+    private bool mostrarPassword1 = false;
+    private bool mostrarPassword2 = false;
+
+    private string tipoCampoPassword1 => mostrarPassword1 ? "text" : "password";
+    private string tipoCampoPassword2 => mostrarPassword2 ? "text" : "password";
 
     private bool registroExitoso = false;
     private bool enviando = false;
@@ -207,7 +246,6 @@
             razonSocialTocada = true;
         }
 
-
         RevalidarErrores();
     }
 
@@ -226,8 +264,6 @@
     {
         messageStore?.Clear();
 
-        // Solo manejamos manualmente en la ValidationMessageStore las reglas
-        // condicionales dinámicas (NIT y Razón Social según Formalizado)
         if (modelo.Formalizado)
         {
             if (nitTocado || forzarValidacionTodos)
@@ -253,7 +289,6 @@
             }
         }
 
-        // Nombre del Emprendimiento: no es obligatorio, pero si se llena, no puede pasar de 150 caracteres
         if (!string.IsNullOrEmpty(modelo.NombreEmprendimiento) && modelo.NombreEmprendimiento.Length > 150)
         {
             var nombreField = editContext!.Field(nameof(modelo.NombreEmprendimiento));
@@ -281,40 +316,28 @@
         {
             HttpResponseMessage resp;
 
-            if (modelo.Formalizado)
+            var payload = new
             {
-                var payload = new
-                {
-                    Formalizado = modelo.Formalizado,
-                    Nit = modelo.Nit,
-                    RazonSocial = modelo.RazonSocial,
-                    CorreoElectronico = modelo.CorreoElectronico,
-                    TipoDocumento = modelo.TipoDocumento,
-                    DocumentoIdentidadUe = modelo.DocumentoIdentidadUe,
-                    NombreEmprendimiento = modelo.NombreEmprendimiento,
-                    CategoriaNegocio = modelo.CategoriaNegocio,
-                    TelefonoContacto = modelo.TelefonoContacto,
-                    CorreoElectronicoContacto = modelo.CorreoElectronicoContacto,
-                    HashContrasena = modelo.HashContrasena
-                };
-                resp = await Http.PostAsJsonAsync("api/usuarios/registro-formalizado", payload);
-            }
-            else
-            {
-                var payload = new
-                {
-                    Formalizado = modelo.Formalizado,
-                    CorreoElectronico = modelo.CorreoElectronico,
-                    TipoDocumento = modelo.TipoDocumento,
-                    DocumentoIdentidadUe = modelo.DocumentoIdentidadUe,
-                    NombreEmprendimiento = modelo.NombreEmprendimiento,
-                    CategoriaNegocio = modelo.CategoriaNegocio,
-                    TelefonoContacto = modelo.TelefonoContacto,
-                    CorreoElectronicoContacto = modelo.CorreoElectronicoContacto,
-                    HashContrasena = modelo.HashContrasena
-                };
-                resp = await Http.PostAsJsonAsync("api/usuarios/registro-no-formalizado", payload);
-            }
+                Nombres = modelo.Nombres,
+                Apellidos = modelo.Apellidos,
+                Formalizado = modelo.Formalizado,
+                Nit = modelo.Formalizado ? modelo.Nit : null,
+                RazonSocial = modelo.Formalizado ? modelo.RazonSocial : null,
+                CorreoElectronico = modelo.CorreoElectronico,
+                TipoDocumento = modelo.TipoDocumento,
+                DocumentoIdentidadUe = modelo.DocumentoIdentidadUe,
+                NombreEmprendimiento = modelo.NombreEmprendimiento ?? string.Empty,
+                CategoriaNegocio = modelo.CategoriaNegocio,
+                TelefonoContacto = modelo.TelefonoContacto,
+                CorreoElectronicoContacto = modelo.CorreoElectronicoContacto,
+                HashContrasena = modelo.HashContrasena
+            };
+
+            var endpoint = modelo.Formalizado
+                ? "api/usuarios/registro-formalizado"
+                : "api/usuarios/registro-no-formalizado";
+
+            resp = await Http.PostAsJsonAsync(endpoint, payload);
 
             if (resp.IsSuccessStatusCode)
             {
@@ -337,22 +360,39 @@
         }
     }
 
-    private void AlternarVisibilidadPassword()
-    {
-        mostrarPassword = !mostrarPassword;
-    }
+    private void AlternarVisibilidad1() => mostrarPassword1 = !mostrarPassword1;
+    private void AlternarVisibilidad2() => mostrarPassword2 = !mostrarPassword2;
 
     private string ExtraerMensajeError(string cuerpoJson)
     {
         try
         {
             using var doc = System.Text.Json.JsonDocument.Parse(cuerpoJson);
-            if (doc.RootElement.TryGetProperty("mensaje", out var mensaje))
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("mensaje", out var mensaje))
             {
                 return mensaje.GetString() ?? "No se pudo completar el registro.";
             }
+
+            if (root.TryGetProperty("errors", out var errores) &&
+                errores.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                foreach (var campo in errores.EnumerateObject())
+                {
+                    foreach (var texto in campo.Value.EnumerateArray())
+                    {
+                        var valor = texto.GetString();
+                        if (!string.IsNullOrWhiteSpace(valor))
+                        {
+                            return valor;
+                        }
+                    }
+                }
+            }
         }
         catch { }
+
         return "No se pudo completar el registro. Verifica los datos e intenta de nuevo.";
     }
 
