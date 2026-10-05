@@ -17,6 +17,7 @@
 
         @if (AuthService.IsAuthenticated)
         {
+            <NavLink class="nav-link" href="insumos">Insumos</NavLink>
             <div class="user-profile-menu">
                 <button type="button" class="avatar-btn" @onclick="ToggleMenu">
                     <span>@(string.IsNullOrWhiteSpace(AuthService.NombreEmpresa) ? "E" : AuthService.NombreEmpresa.Substring(0, 1).ToUpper())</span>
@@ -30,16 +31,12 @@
                             <span class="dropdown-user-role">Emprendedor</span>
                         </div>
 
-                        <NavLink class="dropdown-item-custom" href="mi-perfil" @onclick="() => mostrarMenu = false">
-                            Mi perfil
+                        <NavLink class="dropdown-item-custom" href="editar-perfil-usuario" @onclick="() => mostrarMenu = false">
+                            Mi Perfil
                         </NavLink>
 
                         <NavLink class="dropdown-item-custom" href="editar-perfil" @onclick="() => mostrarMenu = false">
-                            Editar Emprendimiento
-                        </NavLink>
-
-                        <NavLink class="dropdown-item-custom" href="editar-perfil-usuario" @onclick="() => mostrarMenu = false">
-                            Editar Usuario
+                            Mi Emprendimiento
                         </NavLink>
 
                         <button type="button" class="dropdown-item-custom cerrar-sesion" @onclick="CerrarSesion">

@@ -1,6 +1,7 @@
 @page "/editar-perfil"
 @attribute [Authorize]
 @using System.Net
+@using System.ComponentModel.DataAnnotations
 @using PWGAPG_Frontend.Models
 @inject PWGAPG_Frontend.Services.PerfilService PerfilService
 @inject PWGAPG_Frontend.Services.AuthService AuthService
@@ -220,77 +221,67 @@
                 <div class="perfil-seccion-heading">
                     <div>
                         <span class="perfil-seccion-numero">03</span>
-                        <h3>Socios del negocio</h3>
+                        <h3>Empleados del negocio</h3>
                     </div>
-                    <button type="button" class="btn-outline btn-small" @onclick="IniciarNuevoSocio">+ Agregar socio</button>
+                    <button type="button" class="btn-outline btn-small" @onclick="IniciarNuevoEmpleado">+ Invitar empleado</button>
                 </div>
 
-                @if (perfil.Socios.Count == 0)
+                @if (!string.IsNullOrWhiteSpace(rolesError))
                 {
-                    <div class="perfil-empty-state">No hay socios registrados. Esta sección es opcional.</div>
+                    <div class="perfil-alerta perfil-alerta-error" role="alert">@rolesError</div>
+                }
+
+                @if (perfil.Empleados.Count == 0)
+                {
+                    <div class="perfil-empty-state">No hay empleados registrados. Invita por correo a quienes trabajan en tu negocio y asígnales un rol.</div>
                 }
                 else
                 {
                     <div class="perfil-socios-lista">
-                        @foreach (var socio in perfil.Socios)
+                        @foreach (var empleado in perfil.Empleados)
                         {
                             <div class="perfil-socio-row">
                                 <div>
-                                    <strong>@socio.Nombres @socio.Apellidos</strong>
-                                    <span>@socio.TipoDocumento @socio.NumeroDocumento · @socio.CorreoElectronico</span>
+                                    <strong>@empleado.CorreoInvitado</strong>
+                                    <span>@NombreRol(empleado) · @(string.IsNullOrWhiteSpace(empleado.EstadoInvitacion) ? "pendiente" : empleado.EstadoInvitacion)</span>
                                 </div>
                                 <div class="perfil-socio-acciones">
-                                    <button type="button" class="btn-texto" @onclick="() => EditarSocio(socio)">Editar</button>
-                                    <button type="button" class="btn-texto btn-texto-peligro" @onclick="() => EliminarSocio(socio)">Eliminar</button>
+                                    <button type="button" class="btn-texto" @onclick="() => EditarEmpleado(empleado)">Editar</button>
+                                    <button type="button" class="btn-texto btn-texto-peligro" @onclick="() => EliminarEmpleado(empleado)">Eliminar</button>
                                 </div>
                             </div>
                         }
                     </div>
                 }
 
-                @if (socioEnEdicion is not null)
+                @if (empleadoEnEdicion is not null)
                 {
                     <div class="perfil-socio-editor">
                         <div class="perfil-socio-editor-heading">
-                            <strong>@(socioEditando ? "Editar socio" : "Nuevo socio")</strong>
-                            <button type="button" class="btn-texto" @onclick="CancelarSocio">Cancelar</button>
+                            <strong>@(empleadoEditando ? "Editar empleado" : "Nuevo empleado")</strong>
+                            <button type="button" class="btn-texto" @onclick="CancelarEmpleado">Cancelar</button>
                         </div>
                         <div class="perfil-grid">
                             <div class="form-group">
-                                <label class="auth-label">Nombres</label>
-                                <InputText @bind-Value="socioEnEdicion.Nombres" class="form-control" />
+                                <label class="auth-label">Correo del empleado</label>
+                                <InputText @bind-Value="empleadoEnEdicion.CorreoInvitado" type="email" class="form-control" placeholder="empleado@correo.com" />
                             </div>
                             <div class="form-group">
-                                <label class="auth-label">Apellidos</label>
-                                <InputText @bind-Value="socioEnEdicion.Apellidos" class="form-control" />
-                            </div>
-                            <div class="form-group">
-                                <label class="auth-label">Tipo de documento</label>
-                                <InputSelect @bind-Value="socioEnEdicion.TipoDocumento" class="form-select">
-                                    <option value="">Selecciona una opción</option>
-                                    <option value="CC">Cédula de ciudadanía</option>
-                                    <option value="CE">Cédula de extranjería</option>
-                                    <option value="PP">Pasaporte</option>
+                                <label class="auth-label">Rol</label>
+                                <InputSelect @bind-Value="empleadoEnEdicion.RolId" class="form-select">
+                                    <option value="0">Selecciona un rol</option>
+                                    @foreach (var rol in roles)
+                                    {
+                                        <option value="@rol.Id">@rol.Nombre</option>
+                                    }
                                 </InputSelect>
                             </div>
-                            <div class="form-group">
-                                <label class="auth-label">Documento</label>
-                                <InputText @bind-Value="socioEnEdicion.NumeroDocumento" class="form-control" />
-                            </div>
-                            <div class="form-group">
-                                <label class="auth-label">Teléfono</label>
-                                <InputText @bind-Value="socioEnEdicion.Telefono" class="form-control" />
-                            </div>
-                            <div class="form-group">
-                                <label class="auth-label">Correo electrónico</label>
-                                <InputText @bind-Value="socioEnEdicion.CorreoElectronico" type="email" class="form-control" />
-                            </div>
                         </div>
-                        @if (!string.IsNullOrWhiteSpace(mensajeSocio))
+                        @if (!string.IsNullOrWhiteSpace(mensajeEmpleado))
                         {
-                            <div class="text-danger msg-error">@mensajeSocio</div>
+                            <div class="text-danger msg-error">@mensajeEmpleado</div>
                         }
-                        <button type="button" class="btn-solid btn-small" @onclick="GuardarSocio">Guardar socio</button>
+                        <button type="button" class="btn-solid btn-small" @onclick="GuardarEmpleado">Guardar empleado</button>
                     </div>
                 }
             </section>
@@ -316,15 +307,17 @@
     private FaseEdicion fase = FaseEdicion.ConfirmarIdentidad;
     private ConfirmarEdicionPerfilDto confirmacion = new();
     private PerfilEmprendedorDto perfil = new();
-    private SocioNegocioDto? socioEnEdicion;
-    private bool socioEditando;
+    private EmpleadoDto? empleadoEnEdicion;
+    private bool empleadoEditando;
+    private List<RolDto> roles = new();
     private bool mostrarPassword;
     private bool procesando;
     private bool guardado;
     private string? editToken;
     private string? mensajeError;
     private string? mensajeExito;
-    private string? mensajeSocio;
+    private string? mensajeEmpleado;
+    private string? rolesError;
 
     protected override void OnInitialized()
     {
@@ -361,6 +354,7 @@
 
             perfil = perfilResultado.Data;
             fase = FaseEdicion.Formulario;
+            await CargarRolesAsync();
         }
         catch (HttpRequestException)
         {
@@ -455,73 +449,122 @@
         }
     }
 
-    private void IniciarNuevoSocio()
+    private async Task CargarRolesAsync()
     {
-        socioEditando = false;
-        socioEnEdicion = new SocioNegocioDto();
-        mensajeSocio = null;
+        rolesError = null;
+
+        try
+        {
+            var resultado = await PerfilService.ObtenerRolesAsync();
+            if (resultado.Success && resultado.Data is not null)
+            {
+                roles = resultado.Data;
+            }
+            else
+            {
+                rolesError = resultado.Message ?? "No se pudieron cargar los roles de empleado.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            rolesError = "No fue posible cargar los roles de empleado.";
+        }
     }
 
-    private void EditarSocio(SocioNegocioDto socio)
+    private string NombreRol(EmpleadoDto empleado)
     {
-        socioEditando = true;
-        socioEnEdicion = new SocioNegocioDto
+        if (!string.IsNullOrWhiteSpace(empleado.NombreRol))
         {
-            Id = socio.Id,
-            Nombres = socio.Nombres,
-            Apellidos = socio.Apellidos,
-            TipoDocumento = socio.TipoDocumento,
-            NumeroDocumento = socio.NumeroDocumento,
-            Telefono = socio.Telefono,
-            CorreoElectronico = socio.CorreoElectronico
+            return empleado.NombreRol;
+        }
+
+        return roles.FirstOrDefault(r => r.Id == empleado.RolId)?.Nombre ?? "Rol sin asignar";
+    }
+
+    private void IniciarNuevoEmpleado()
+    {
+        empleadoEditando = false;
+        empleadoEnEdicion = new EmpleadoDto();
+        mensajeEmpleado = null;
+    }
+
+    private void EditarEmpleado(EmpleadoDto empleado)
+    {
+        empleadoEditando = true;
+        empleadoEnEdicion = new EmpleadoDto
+        {
+            Id = empleado.Id,
+            CorreoInvitado = empleado.CorreoInvitado,
+            RolId = empleado.RolId,
+            NombreRol = empleado.NombreRol,
+            EstadoInvitacion = empleado.EstadoInvitacion
         };
-        mensajeSocio = null;
+        mensajeEmpleado = null;
     }
 
-    private void GuardarSocio()
+    private void GuardarEmpleado()
     {
-        if (socioEnEdicion is null)
+        if (empleadoEnEdicion is null)
         {
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(socioEnEdicion.Nombres) ||
-            string.IsNullOrWhiteSpace(socioEnEdicion.Apellidos) ||
-            string.IsNullOrWhiteSpace(socioEnEdicion.TipoDocumento) ||
-            string.IsNullOrWhiteSpace(socioEnEdicion.NumeroDocumento) ||
-            string.IsNullOrWhiteSpace(socioEnEdicion.Telefono) ||
-            string.IsNullOrWhiteSpace(socioEnEdicion.CorreoElectronico))
+        var correo = empleadoEnEdicion.CorreoInvitado.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(correo))
         {
-            mensajeSocio = "Completa todos los campos del socio.";
+            mensajeEmpleado = "El correo del empleado es obligatorio.";
             return;
         }
 
-        if (socioEditando && socioEnEdicion.Id.HasValue)
+        if (!new EmailAddressAttribute().IsValid(correo))
         {
-            var indice = perfil.Socios.FindIndex(s => s.Id == socioEnEdicion.Id);
+            mensajeEmpleado = "Ingresa un correo válido para el empleado.";
+            return;
+        }
+
+        if (empleadoEnEdicion.RolId <= 0)
+        {
+            mensajeEmpleado = "Selecciona el rol del empleado.";
+            return;
+        }
+
+        var repetido = perfil.Empleados.Any(e =>
+            string.Equals(e.CorreoInvitado.Trim(), correo, StringComparison.OrdinalIgnoreCase) &&
+            e.Id != empleadoEnEdicion.Id);
+        if (repetido)
+        {
+            mensajeEmpleado = "Ya invitaste a ese correo en tu negocio.";
+            return;
+        }
+
+        empleadoEnEdicion.CorreoInvitado = correo;
+
+        if (empleadoEditando && empleadoEnEdicion.Id.HasValue)
+        {
+            var indice = perfil.Empleados.FindIndex(e => e.Id == empleadoEnEdicion.Id);
             if (indice >= 0)
             {
-                perfil.Socios[indice] = socioEnEdicion;
+                perfil.Empleados[indice] = empleadoEnEdicion;
             }
         }
         else
         {
-            perfil.Socios.Add(socioEnEdicion);
+            perfil.Empleados.Add(empleadoEnEdicion);
         }
 
-        socioEnEdicion = null;
-        mensajeSocio = null;
+        empleadoEnEdicion = null;
+        mensajeEmpleado = null;
     }
 
-    private void CancelarSocio()
+    private void CancelarEmpleado()
     {
-        socioEnEdicion = null;
-        mensajeSocio = null;
+        empleadoEnEdicion = null;
+        mensajeEmpleado = null;
     }
 
-    private void EliminarSocio(SocioNegocioDto socio)
+    private void EliminarEmpleado(EmpleadoDto empleado)
     {
-        perfil.Socios.Remove(socio);
+        perfil.Empleados.Remove(empleado);
     }
 
     private void VolverAlDashboard()

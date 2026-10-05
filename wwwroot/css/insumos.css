@@ -1,0 +1,143 @@
+.insumos-shell {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+}
+
+.insumos-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.insumos-heading h1 {
+    margin: 4px 0;
+}
+
+.insumos-heading p {
+    color: #6c757d;
+    margin: 0;
+}
+
+.insumos-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.insumos-buscador {
+    flex: 1 1 220px;
+    min-width: 200px;
+}
+
+.insumos-toolbar .form-select {
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 130px;
+}
+
+.insumos-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: #495057;
+    padding: 6px 4px;
+}
+
+.insumos-check-modal {
+    margin: 8px 0 0;
+}
+
+.insumos-tabla-wrap {
+    overflow-x: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.insumos-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+}
+
+.insumos-tabla thead th {
+    background: #f1f3f5;
+    text-align: left;
+    padding: 10px 12px;
+    white-space: nowrap;
+}
+
+.insumos-tabla tbody td {
+    padding: 10px 12px;
+    border-top: 1px solid #e9ecef;
+}
+
+.insumos-fila {
+    cursor: pointer;
+}
+
+.insumos-fila:hover {
+    background: #f8f9fa;
+}
+
+.insumos-fila-inactiva {
+    opacity: 0.65;
+}
+
+.insumos-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.insumos-badge-activo {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.insumos-badge-inactivo {
+    background: #e2e3e5;
+    color: #41464b;
+}
+
+.insumos-th-acciones {
+    text-align: right;
+}
+
+.insumos-acciones {
+    white-space: nowrap;
+    text-align: right;
+}
+
+.insumos-paginacion {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.insumos-bloqueo-acciones {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+@media (max-width: 640px) {
+    .insumos-heading {
+        flex-direction: column;
+    }
+
+    .insumos-acciones .btn-mini-editar {
+        display: none;
+    }
+}
