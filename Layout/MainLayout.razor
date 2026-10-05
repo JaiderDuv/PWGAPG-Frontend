@@ -19,8 +19,20 @@
         {
             <NavLink class="nav-link" href="insumos">Insumos</NavLink>
             <div class="user-profile-menu">
-                <button type="button" class="avatar-btn" @onclick="ToggleMenu">
-                    <span>@(string.IsNullOrWhiteSpace(AuthService.NombreEmpresa) ? "E" : AuthService.NombreEmpresa.Substring(0, 1).ToUpper())</span>
+                <button type="button" class="avatar-btn">
+                    @if (!string.IsNullOrEmpty(AuthService.UrlFotoPerfil) && AuthService.UrlFotoPerfil != "images/default-avatar.png")
+                    {
+                        <img src="@AuthService.UrlFotoPerfil" alt="Foto perfil" class="avatar-img" />
+                    }
+                    else
+                    {
+                        <span>@(string.IsNullOrWhiteSpace(AuthService.NombreEmpresa) ? "E" : AuthService.NombreEmpresa.Substring(0, 1).ToUpper())</span>
+                    }
+                </button>
+                <button type="button" class="hamburger-btn" @onclick="ToggleMenu" aria-label="Abrir menú de usuario">
+                    <span class="hamburger-bar"></span>
+                    <span class="hamburger-bar"></span>
+                    <span class="hamburger-bar"></span>
                 </button>
 
                 @if (mostrarMenu)
@@ -66,6 +78,23 @@
     protected override void OnInitialized()
     {
         AuthService.OnChange += StateHasChanged;
+        Navigation.LocationChanged += OnLocationChanged;
+        VerificarOnboardingPendiente();
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        VerificarOnboardingPendiente();
+    }
+
+    private void VerificarOnboardingPendiente()
+    {
+        if (AuthService.IsAuthenticated &&
+            !AuthService.OnboardingCompletado &&
+            !Navigation.Uri.Contains("/onboarding", StringComparison.OrdinalIgnoreCase))
+        {
+            Navigation.NavigateTo("onboarding", replace: true);
+        }
     }
 
     private void ToggleMenu()
@@ -83,5 +112,6 @@
     public void Dispose()
     {
         AuthService.OnChange -= StateHasChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 }

@@ -87,6 +87,18 @@
         {
             <div class="alerta-box alerta-error">
                 <div>@mensajeErrorLogin</div>
+                @if (cuentaNoVerificada)
+                {
+                    <div style="margin-top: 8px;">
+                        <button type="button" class="btn-link-reenvio" style="background: none; border: none; color: #D97706; cursor: pointer; text-decoration: underline; padding: 0; font-size: 0.9rem;" @onclick="SolicitarNuevoCorreoVerificacion" disabled="@enviandoReenvio">
+                            @(enviandoReenvio ? "Enviando..." : "¿No recibiste el correo? Solicitar un nuevo correo de verificación")
+                        </button>
+                        @if (!string.IsNullOrEmpty(mensajeReenvio))
+                        {
+                            <div style="margin-top: 4px; font-size: 0.9rem;">@mensajeReenvio</div>
+                        }
+                    </div>
+                }
             </div>
         }
 
@@ -121,6 +133,9 @@
 
     private string? mensajeErrorLogin;
     private bool enviando = false;
+    private bool cuentaNoVerificada = false;
+    private bool enviandoReenvio = false;
+    private string? mensajeReenvio;
 
     private void AlternarVisibilidadPassword()
     {
@@ -135,11 +150,30 @@
         }
     }
 
+    private async Task SolicitarNuevoCorreoVerificacion()
+    {
+        if (enviandoReenvio) return;
+        enviandoReenvio = true;
+        mensajeReenvio = null;
+        try
+        {
+            modelo.CorreoElectronico = modelo.CorreoElectronico.Trim();
+            var (exito, mensaje) = await AuthService.ReenviarVerificacionAsync(modelo.CorreoElectronico);
+            mensajeReenvio = mensaje;
+        }
+        finally
+        {
+            enviandoReenvio = false;
+        }
+    }
+
     private async Task ManejarLogin()
     {
         if (enviando) return;
         enviando = true;
         mensajeErrorLogin = null;
+        cuentaNoVerificada = false;
+        mensajeReenvio = null;
 
         try
         {
@@ -149,11 +183,19 @@
 
             if (resultado is { Exito: true })
             {
-                Navigation.NavigateTo("dashboard-empresa");
+                if (AuthService.OnboardingCompletado)
+                {
+                    Navigation.NavigateTo("dashboard-empresa");
+                }
+                else
+                {
+                    Navigation.NavigateTo("onboarding", replace: true);
+                }
             }
             else
             {
                 mensajeErrorLogin = resultado?.Mensaje ?? "Correo o contraseña incorrectos.";
+                cuentaNoVerificada = mensajeErrorLogin.Contains("no ha sido verificada", StringComparison.OrdinalIgnoreCase);
             }
         }
         finally

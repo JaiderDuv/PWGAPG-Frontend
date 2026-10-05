@@ -1,8 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace PWGAPG_Frontend.Models
 {
-    public class SocioDTO
+    public class DuenioDTO
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
 

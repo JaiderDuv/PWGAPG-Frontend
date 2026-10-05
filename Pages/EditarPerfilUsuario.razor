@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @using PWGAPG_Frontend.Models
 @inject PWGAPG_Frontend.Services.PerfilService PerfilService
+@inject PWGAPG_Frontend.Services.AuthService AuthService
 @inject NavigationManager Navigation
 
 <PageTitle>Editar perfil de usuario | Chef Metrics</PageTitle>
@@ -153,6 +154,9 @@
 
             guardado = true;
             mensajeExito = resultado.Data?.Mensaje ?? "Los cambios se guardaron correctamente.";
+
+            // Refresca la foto de perfil en la barra superior sin recargar.
+            AuthService.ActualizarFotoPerfil(perfil.FotoPerfilUrl);
         }
         catch (HttpRequestException)
         {

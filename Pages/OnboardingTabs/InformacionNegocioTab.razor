@@ -18,20 +18,35 @@
         </div>
 
         <div class="form-group-sm">
-            <label class="auth-label">NIT</label>
-            <InputText @bind-Value="negocio.Nit" class="form-control" placeholder="Si aplica" />
+            <label class="auth-label">¿Tu emprendimiento está formalizado? *</label>
+            <InputSelect @bind-Value="negocio.Formalizado" class="form-select" TValue="bool">
+                <option value="false">No</option>
+                <option value="true">Sí</option>
+            </InputSelect>
         </div>
 
-        <div class="form-group-sm">
-            <label class="auth-label">Razón Social</label>
-            <InputText @bind-Value="negocio.RazonSocial" class="form-control" placeholder="Si aplica" />
-        </div>
+        @if (negocio.Formalizado)
+        {
+            <div class="form-group-sm">
+                <label class="auth-label">NIT</label>
+                <InputText @bind-Value="negocio.Nit" class="form-control" placeholder="Si aplica" />
+            </div>
 
-        <div class="form-group-sm">
-            <label class="auth-label">RUES *</label>
-            <InputText @bind-Value="negocio.Rues" class="form-control" placeholder="Número de registro RUES" />
-            <ValidationMessage For="@(() => negocio.Rues)" class="text-danger msg-error" />
-        </div>
+            <div class="form-group-sm">
+                <label class="auth-label">Razón Social</label>
+                <InputText @bind-Value="negocio.RazonSocial" class="form-control" placeholder="Si aplica" />
+            </div>
+
+            <div class="form-group-sm">
+                <label class="auth-label">RUES *</label>
+                <InputText @bind-Value="negocio.Rues" class="form-control" placeholder="Número de registro RUES" />
+                <ValidationMessage For="@(() => negocio.Rues)" class="text-danger msg-error" />
+                @if (mensajeErrorRues != null)
+                {
+                    <span class="text-danger msg-error">@mensajeErrorRues</span>
+                }
+            </div>
+        }
 
         <div class="form-group-sm">
             <label class="auth-label">Correo Electrónico de la Empresa *</label>
@@ -82,16 +97,57 @@
     private NegocioDTO negocio = new();
     private string? mensajeErrorDireccion;
     private string? mensajeErrorGeneral;
+    private string? mensajeErrorRues;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Autocompleta el formulario con los datos ya registrados del negocio.
+        try
+        {
+            var datos = await Http.GetFromJsonAsync<OnboardingNegocioDto>("api/onboarding/datos-negocio");
+            if (datos is not null)
+            {
+                negocio.NombreEmpresa = datos.NombreEmprendimiento ?? string.Empty;
+                negocio.Nit = datos.Nit;
+                negocio.RazonSocial = datos.RazonSocial;
+                negocio.Rues = datos.Rues ?? string.Empty;
+                negocio.CorreoEmpresa = datos.CorreoEmpresa ?? string.Empty;
+                negocio.TelefonoEmpresa = datos.TelefonoContacto ?? string.Empty;
+                negocio.TieneSitioFisico = datos.TieneSitioFisico;
+                negocio.Direccion = datos.Direccion;
+                negocio.Formalizado = string.Equals(datos.TipoFormalizacion, "formalizado", StringComparison.OrdinalIgnoreCase);
+            }
+        }
+        catch
+        {
+            // Si falla la red o no hay datos, se deja el formulario vacío.
+        }
+    }
 
     private async Task GuardarYContinuar()
     {
         mensajeErrorDireccion = null;
         mensajeErrorGeneral = null;
+        mensajeErrorRues = null;
 
         if (negocio.TieneSitioFisico && string.IsNullOrWhiteSpace(negocio.Direccion))
         {
             mensajeErrorDireccion = "La dirección es obligatoria si tienes sitio físico.";
             return;
+        }
+
+        if (negocio.Formalizado && string.IsNullOrWhiteSpace(negocio.Rues))
+        {
+            mensajeErrorRues = "El RUES es obligatorio para negocios formalizados.";
+            return;
+        }
+
+        if (!negocio.Formalizado)
+        {
+            // Los datos de formalización (NIT/Razón Social/RUES) no aplican: no se enviarán.
+            negocio.Nit = null;
+            negocio.RazonSocial = null;
+            negocio.Rues = null;
         }
 
         // Cuando el backend tenga el endpoint listo, descomenta esto:

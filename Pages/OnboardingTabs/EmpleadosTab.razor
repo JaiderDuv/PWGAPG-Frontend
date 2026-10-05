@@ -10,10 +10,20 @@
 
 <div class="socios-header">
     <span></span>
-    <button type="button" class="btn-outline" @onclick="AbrirFormularioNuevoEmpleado">+ Añadir empleado</button>
+    @if (negocioFormalizado)
+    {
+        <button type="button" class="btn-outline" @onclick="AbrirFormularioNuevoEmpleado">+ Añadir empleado</button>
+    }
 </div>
 
-@if (empleados.Any())
+@if (!negocioFormalizado)
+{
+    <div class="perfil-alerta perfil-alerta-error" role="alert">
+        Solo los negocios formalizados pueden añadir empleados. Completa la formalización (NIT/RUES) en la pestaña "Información del Negocio".
+    </div>
+}
+
+@if (negocioFormalizado && empleados.Any())
 {
     <div class="socios-lista">
         @foreach (var empleado in empleados)
@@ -31,7 +41,7 @@
         }
     </div>
 }
-else
+else if (negocioFormalizado)
 {
     <p class="text-muted">Aún no has añadido empleados.</p>
 }
@@ -134,9 +144,26 @@ else
     private EmpleadoDTO? empleadoAEliminar = null;
 
     private string? mensajeErrorGeneral;
+    private bool negocioFormalizado = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Si el negocio no está formalizado, no se pueden añadir empleados.
+        try
+        {
+            var datos = await Http.GetFromJsonAsync<OnboardingNegocioDto>("api/onboarding/datos-negocio");
+            negocioFormalizado = datos is not null &&
+                string.Equals(datos.TipoFormalizacion, "formalizado", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            negocioFormalizado = false;
+        }
+    }
 
     private void AbrirFormularioNuevoEmpleado()
     {
+        if (!negocioFormalizado) return;
         empleadoEditando = null;
         empleadoTemporal = new EmpleadoDTO();
         mostrarFormularioEmpleado = true;

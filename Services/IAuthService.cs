@@ -14,5 +14,7 @@ namespace PWGAPG_Frontend.Services
         Task<LoginResponseDto?> Login(LoginDTO dto);
         Task<bool> RenovarSesionAsync();
         Task CerrarSesionAsync();
+
+        Task<(bool exito, string mensaje)> ReenviarVerificacionAsync(string correo);
     }
 }

@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace PWGAPG_Frontend.Models;
 
@@ -67,38 +67,6 @@ public class RolDto
     public string Nombre { get; set; } = string.Empty;
 }
 
-public class SocioNegocioDto
-{
-    public int? Id { get; set; }
-
-    [Required(ErrorMessage = "Los nombres del socio son obligatorios.")]
-    [StringLength(100)]
-    public string Nombres { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "Los apellidos del socio son obligatorios.")]
-    [StringLength(100)]
-    public string Apellidos { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "Selecciona el tipo de documento del socio.")]
-    [StringLength(5)]
-    public string TipoDocumento { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "El documento del socio es obligatorio.")]
-    [StringLength(20)]
-    public string NumeroDocumento { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "El teléfono del socio es obligatorio.")]
-    [Phone(ErrorMessage = "Ingresa un teléfono válido.")]
-    [StringLength(20)]
-    public string Telefono { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "El correo del socio es obligatorio.")]
-    [EmailAddress(ErrorMessage = "Ingresa un correo válido.")]
-    [StringLength(255)]
-    public string CorreoElectronico { get; set; } = string.Empty;
-}
-
-// Perfil de usuario: edición libre, sin validaciones. Se autocompleta al abrir.
 public class PerfilUsuarioDto
 {
     public string? FotoPerfilUrl { get; set; }
@@ -128,3 +96,5 @@ public class ActualizarPerfilResultadoDto
     public bool RequiereConfirmacionCorreo { get; set; }
     public string Mensaje { get; set; } = string.Empty;
 }
+
+
