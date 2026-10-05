@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @inject PWGAPG_Frontend.Services.AuthService AuthService
+@inject PWGAPG_Frontend.Services.PerfilService PerfilService
 @inject NavigationManager Navigation
 @implements IDisposable
 
@@ -105,6 +106,8 @@
     private async Task CerrarSesion()
     {
         mostrarMenu = false;
+        // Si había un permiso de edición de perfil activo, se revoca primero.
+        await PerfilService.RevocarPermisoAsync();
         await AuthService.CerrarSesionAsync();
         Navigation.NavigateTo("/", replace: true);
     }

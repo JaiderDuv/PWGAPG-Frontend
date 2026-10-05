@@ -1,0 +1,158 @@
+@page "/insumos/{id:int}/historial"
+@attribute [Authorize]
+@using PWGAPG_Frontend.Models
+@inject PWGAPG_Frontend.Services.InsumoService InsumoService
+@inject NavigationManager Navigation
+
+<PageTitle>Historial de precios | Chef Metrics</PageTitle>
+
+<div class="insumos-shell">
+    <button type="button" class="btn-outline" @onclick='() => Navigation.NavigateTo("insumos")'>
+        ← Volver a insumos
+    </button>
+
+    @if (cargando)
+    {
+        <section class="perfil-cargando-card" aria-live="polite" style="margin-top: 16px;">
+            <div class="perfil-spinner" aria-hidden="true"></div>
+            <h2>Cargando historial</h2>
+            <p>Estamos consultando los precios del insumo.</p>
+        </section>
+    }
+    else if (!string.IsNullOrWhiteSpace(mensajeError))
+    {
+        <div class="perfil-alerta perfil-alerta-error" role="alert" style="margin-top: 16px;">@mensajeError</div>
+    }
+    else if (historial is not null)
+    {
+        <div class="insumos-heading" style="margin-top: 16px;">
+            <div>
+                <span class="perfil-kicker">HISTORIAL DE PRECIOS</span>
+                <h1>@historial.Nombre</h1>
+                <p>
+                    Precio actual: <strong>$@historial.PrecioActual.ToString("N2")</strong>
+                    @(string.IsNullOrWhiteSpace(historial.ProveedorActual) ? "" : $"· {historial.ProveedorActual}")
+                </p>
+            </div>
+        </div>
+
+        <section class="insumos-toolbar">
+            <input class="form-control insumos-buscador"
+                   placeholder="Filtrar por proveedor..."
+                   value="@filtroProveedor"
+                   @oninput="OnFiltroProveedorInput" />
+        </section>
+
+        @if (!gruposFiltrados.Any())
+        {
+            <p class="text-muted">No hay registros para el filtro indicado.</p>
+        }
+        else
+        {
+            @foreach (var grupo in gruposFiltrados)
+            {
+                <h3 class="insumos-grupo-titulo">@grupo.Proveedor</h3>
+                <div class="insumos-tabla-wrap" style="margin-bottom: 20px;">
+                    <table class="insumos-tabla">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Precio</th>
+                                <th>Variación vs. anterior</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entrada in grupo.Entradas)
+                            {
+                                <tr>
+                                    <td>@entrada.Fecha.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td><strong>$@entrada.Precio.ToString("N2")</strong></td>
+                                    <td>@BadgeVariacion(entrada)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private HistorialPreciosDto? historial;
+    private bool cargando = true;
+    private string? mensajeError;
+    private string filtroProveedor = string.Empty;
+
+    private List<GrupoProveedor> gruposFiltrados => (historial?.Precios ?? new())
+        .GroupBy(e => string.IsNullOrWhiteSpace(e.Proveedor) ? "Sin proveedor" : e.Proveedor.Trim())
+        .Select(g => new GrupoProveedor(
+            g.Key,
+            g.OrderByDescending(e => e.Fecha)
+             .Where(e => string.IsNullOrWhiteSpace(filtroProveedor) ||
+                 (e.Proveedor?.Contains(filtroProveedor.Trim(), StringComparison.OrdinalIgnoreCase) ?? false))
+             .ToList()))
+        .Where(g => g.Entradas.Count > 0)
+        .OrderBy(g => g.Proveedor)
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var resultado = await InsumoService.ObtenerHistorialPreciosAsync(Id);
+            if (resultado.Success && resultado.Data is not null)
+            {
+                historial = resultado.Data;
+            }
+            else if (resultado.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                mensajeError = resultado.Message ?? "No se encontró el insumo solicitado.";
+            }
+            else
+            {
+                mensajeError = resultado.Message ?? "No se pudo cargar el historial de precios.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            mensajeError = "No fue posible conectar con el servidor.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private void OnFiltroProveedorInput(ChangeEventArgs e)
+    {
+        filtroProveedor = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private static RenderFragment BadgeVariacion(HistorialPrecioDto entrada) => builder =>
+    {
+        if (entrada.VariacionPorcentual is null || entrada.EsSubida is null)
+        {
+            var texto = entrada.VariacionPorcentual is null
+                ? "Precio más antiguo"
+                : "Sin cambios";
+            builder.OpenElement(0, "span");
+            builder.AddAttribute(1, "class", "insumos-badge insumos-badge-neutro");
+            builder.AddContent(2, texto);
+            builder.CloseElement();
+            return;
+        }
+
+        var subida = entrada.EsSubida.Value;
+        var signo = entrada.VariacionPorcentual.Value > 0 ? "+" : "";
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class",
+            $"insumos-badge {(subida ? "insumos-badge-subida" : "insumos-badge-bajada")}");
+        builder.AddContent(2, $"{(subida ? "▲" : "▼")} {signo}{entrada.VariacionPorcentual.Value:N2}%");
+        builder.CloseElement();
+    };
+
+    private sealed record GrupoProveedor(string Proveedor, List<HistorialPrecioDto> Entradas);
+}

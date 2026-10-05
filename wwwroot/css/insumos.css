@@ -33,6 +33,11 @@
     min-width: 200px;
 }
 
+.insumos-categoria {
+    flex: 0 1 170px;
+    min-width: 150px;
+}
+
 .insumos-toolbar .form-select {
     flex: 0 1 auto;
     width: auto;
@@ -109,6 +114,46 @@
 
 .insumos-th-acciones {
     text-align: right;
+}
+
+.btn-mini-historial {
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    background-color: #E0E7FF;
+    color: #3730A3;
+}
+
+.insumos-heading-acciones {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.insumos-grupo-titulo {
+    font-size: 1rem;
+    margin: 4px 0 8px;
+    color: #343a40;
+}
+
+/* Variación de precio: sube = rojo, baja = verde. */
+.insumos-badge-subida {
+    background: #FEE2E2;
+    color: #B91C1C;
+}
+
+.insumos-badge-bajada {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.insumos-badge-neutro {
+    background: #E2E3E5;
+    color: #41464B;
 }
 
 .insumos-acciones {

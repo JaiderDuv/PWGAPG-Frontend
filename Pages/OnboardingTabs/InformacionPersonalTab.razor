@@ -41,10 +41,10 @@
             <label class="auth-label">Tipo de Documento *</label>
             <InputSelect @bind-Value="duenio.TipoDocumento" class="form-select">
                 <option value="">-- Seleccione --</option>
-                <option value="CC">Cédula de Ciudadanía</option>
-                <option value="CE">Cédula de Extranjería</option>
-                <option value="PP">Pasaporte</option>
-                <option value="PEP">Permiso Especial de Permanencia</option>
+            <option value="CC">Cédula de Ciudadanía</option>
+            <option value="CE">Cédula de Extranjería</option>
+            <option value="TI">Tarjeta de Identidad</option>
+            <option value="PA">Pasaporte</option>
             </InputSelect>
             <ValidationMessage For="@(() => duenio.TipoDocumento)" class="text-danger msg-error" />
         </div>

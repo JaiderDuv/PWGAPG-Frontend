@@ -20,6 +20,7 @@ public sealed class InsumoService
         string ordenarPor = "nombre",
         string direccion = "asc",
         string? unidadMedida = null,
+        string? categoria = null,
         bool incluirInactivos = true,
         int pagina = 1,
         int tamanoPagina = 50)
@@ -32,6 +33,11 @@ public sealed class InsumoService
         if (!string.IsNullOrWhiteSpace(busqueda))
         {
             url += $"&busqueda={Uri.EscapeDataString(busqueda.Trim())}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(categoria))
+        {
+            url += $"&categoria={Uri.EscapeDataString(categoria.Trim())}";
         }
 
         using var response = await _httpClient.GetAsync(url);
@@ -87,6 +93,34 @@ public sealed class InsumoService
         return await CrearResultadoAsync<EliminarInsumoInfo>(response);
     }
 
+    public async Task<InsumoApiResult<HistorialPreciosDto>> ObtenerHistorialPreciosAsync(int id)
+    {
+        using var response = await _httpClient.GetAsync($"api/insumos/{id}/historial-precios");
+        return await CrearResultadoAsync<HistorialPreciosDto>(response);
+    }
+
+    public async Task<InsumoApiResult<HistorialGeneralDto>> ObtenerHistorialGeneralAsync(
+        string? nombre, string? proveedor)
+    {
+        var url = "api/insumos/historial-precios";
+        var query = new List<string>();
+        if (!string.IsNullOrWhiteSpace(nombre))
+        {
+            query.Add($"nombre={Uri.EscapeDataString(nombre.Trim())}");
+        }
+        if (!string.IsNullOrWhiteSpace(proveedor))
+        {
+            query.Add($"proveedor={Uri.EscapeDataString(proveedor.Trim())}");
+        }
+        if (query.Count > 0)
+        {
+            url += "?" + string.Join("&", query);
+        }
+
+        using var response = await _httpClient.GetAsync(url);
+        return await CrearResultadoAsync<HistorialGeneralDto>(response);
+    }
+
     private static async Task<InsumoApiResult<T>> CrearResultadoAsync<T>(
         HttpResponseMessage response)
     {
@@ -117,6 +151,14 @@ public sealed class InsumoService
             return null;
         }
 
+        // Si no es JSON (ej. página HTML de error del servidor), no se muestra
+        // el cuerpo crudo en la interfaz: se usa el mensaje por defecto.
+        var recortado = body.TrimStart();
+        if (!recortado.StartsWith("{") && !recortado.StartsWith("["))
+        {
+            return null;
+        }
+
         try
         {
             using var document = JsonDocument.Parse(body);
@@ -132,7 +174,7 @@ public sealed class InsumoService
         }
         catch (JsonException)
         {
-            return body;
+            return null;
         }
 
         return null;
