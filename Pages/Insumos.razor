@@ -1,0 +1,833 @@
+@page "/insumos"
+@attribute [Authorize]
+@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Components
+@inject PWGAPG_Frontend.Services.InsumoService InsumoService
+@implements IDisposable
+
+<PageTitle>Mis insumos | Chef Metrics</PageTitle>
+
+<div class="insumos-shell">
+    <div class="insumos-heading">
+        <div>
+            <span class="perfil-kicker">INVENTARIO</span>
+            <h1>Insumos</h1>
+            <p>Materia prima de tu negocio (leche, huevos, harina...). Los cambios se reflejan al instante.</p>
+        </div>
+        <button type="button" class="btn-solid" @onclick="AbrirModalNuevo">+ Nuevo insumo</button>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(mensajeExito))
+    {
+        <div class="perfil-alerta perfil-alerta-exito" role="status">@mensajeExito</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(mensajeError))
+    {
+        <div class="perfil-alerta perfil-alerta-error" role="alert">@mensajeError</div>
+    }
+    @if (bloqueoEliminar is not null)
+    {
+        <div class="perfil-alerta perfil-alerta-error" role="alert">
+            @bloqueoEliminar.Mensaje
+            <div class="insumos-bloqueo-acciones">
+                <button type="button" class="btn-outline" @onclick="CerrarBloqueo">Mantener activo</button>
+                <button type="button" class="btn-solid" @onclick="DesactivarEnUso" disabled="@procesando">
+                    @(procesando ? "Desactivando..." : "Desactivarlo en su lugar")
+                </button>
+            </div>
+        </div>
+    }
+
+    <section class="insumos-toolbar">
+        <input class="form-control insumos-buscador"
+               placeholder="Buscar por nombre o proveedor..."
+               value="@textoBusqueda"
+               @oninput="OnBusquedaInput" />
+
+        <select class="form-select" value="@unidadFiltro" @onchange="OnUnidadFiltroChanged" title="Filtrar por unidad">
+            <option value="">Todas las unidades</option>
+            <optgroup label="Peso">
+                <option value="mg">mg</option>
+                <option value="g">g</option>
+                <option value="gr">gr</option>
+                <option value="kg">kg</option>
+            </optgroup>
+            <optgroup label="Volumen">
+                <option value="ml">ml</option>
+                <option value="l">l</option>
+                <option value="lt">lt</option>
+                <option value="oz">oz</option>
+            </optgroup>
+            <optgroup label="Otros">
+                <option value="lb">lb</option>
+                <option value="u">u</option>
+                <option value="und">und</option>
+                <option value="unidad">unidad</option>
+                <option value="unidades">unidades</option>
+                <option value="taza">taza</option>
+                <option value="tazas">tazas</option>
+                <option value="cda">cda</option>
+                <option value="cdta">cdta</option>
+                <option value="pza">pza</option>
+                <option value="pieza">pieza</option>
+                <option value="piezas">piezas</option>
+                <option value="paquete">paquete</option>
+                <option value="caja">caja</option>
+                <option value="lata">lata</option>
+                <option value="botella">botella</option>
+                <option value="bolsa">bolsa</option>
+                <option value="docena">docena</option>
+                <option value="atado">atado</option>
+            </optgroup>
+        </select>
+
+        <select class="form-select" value="@ordenarPor" @onchange="OnOrdenChanged" title="Ordenar por">
+            <option value="nombre">Nombre</option>
+            <option value="costo">Costo</option>
+            <option value="merma">% Merma</option>
+            <option value="fecha">Fecha</option>
+        </select>
+
+        <select class="form-select" value="@direccion" @onchange="OnDireccionChanged" title="Dirección">
+            <option value="asc">Ascendente</option>
+            <option value="desc">Descendente</option>
+        </select>
+
+        <label class="insumos-check">
+            <input type="checkbox" checked="@incluirInactivos" @onchange="OnIncluirInactivosChanged" />
+            Incluir inactivos
+        </label>
+    </section>
+
+    @if (cargando)
+    {
+        <section class="perfil-cargando-card" aria-live="polite">
+            <div class="perfil-spinner" aria-hidden="true"></div>
+            <h2>Cargando insumos</h2>
+            <p>Estamos consultando tu inventario.</p>
+        </section>
+    }
+    else if (!insumos.Any())
+    {
+        <p class="text-muted">No hay insumos para mostrar. Usa «Nuevo insumo» para registrar el primero.</p>
+    }
+    else
+    {
+        <div class="insumos-tabla-wrap">
+            <table class="insumos-tabla">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Unidad</th>
+                        <th>Costo</th>
+                        <th>% Merma</th>
+                        <th>Proveedor</th>
+                        <th>Estado</th>
+                        <th>Recetas</th>
+                        <th class="insumos-th-acciones">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var insumo in insumos)
+                    {
+                        <tr class="insumos-fila @(insumo.Activo ? "" : "insumos-fila-inactiva")"
+                            @onclick="() => AbrirModalEditar(insumo)"
+                            title="Clic para editar">
+                            <td><strong>@insumo.Nombre</strong></td>
+                            <td>@insumo.UnidadMedida</td>
+                            <td>$@insumo.CostoUnitario.ToString("N2")</td>
+                            <td>@insumo.PorcentajeMerma.ToString("N2")%</td>
+                            <td>@(string.IsNullOrWhiteSpace(insumo.Proveedor) ? "—" : insumo.Proveedor)</td>
+                            <td>
+                                <span class="insumos-badge @(insumo.Activo ? "insumos-badge-activo" : "insumos-badge-inactivo")">
+                                    @(insumo.Activo ? "Activo" : "Inactivo")
+                                </span>
+                            </td>
+                            <td>@(insumo.NumeroRecetas > 0 ? insumo.NumeroRecetas.ToString() : "—")</td>
+                            <td class="insumos-acciones" @onclick:stopPropagation="true">
+                                <button type="button" class="btn-mini-editar" @onclick="() => AbrirModalEditar(insumo)">Editar</button>
+                                <button type="button" class="btn-mini-eliminar" @onclick="() => PedirEliminar(insumo)" aria-label="Eliminar @insumo.Nombre">🗑</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="insumos-paginacion">
+            <button type="button" class="btn-outline" disabled="@(pagina <= 1 || cargando)" @onclick="PaginaAnterior">← Anterior</button>
+            <span>Página @pagina de @totalPaginas · @total insumos</span>
+            <button type="button" class="btn-outline" disabled="@(pagina >= totalPaginas || cargando)" @onclick="PaginaSiguiente">Siguiente →</button>
+        </div>
+    }
+</div>
+
+@if (mostrarModal)
+{
+    <div class="confirm-overlay">
+        <div class="socio-modal">
+            <h3 class="onboarding-subtitulo">@(esEdicion ? "Editar insumo" : "Nuevo insumo")</h3>
+
+            <EditForm Model="@form" OnSubmit="@GuardarFormulario">
+                <div class="form-group-sm">
+                    <label class="auth-label">Nombre *</label>
+                    <InputText @bind-Value="form.Nombre" class="form-control" placeholder="Ej.: Harina" />
+                    @if (errores.TryGetValue(nameof(form.Nombre), out var errNombre))
+                    {
+                        <span class="text-danger msg-error">@errNombre</span>
+                    }
+                </div>
+
+                <div class="onb-grid">
+                    <div class="form-group-sm">
+                        <label class="auth-label">Unidad de medida *</label>
+                        <InputSelect @bind-Value="form.UnidadMedida" class="form-select">
+                            <option value="">Selecciona...</option>
+                            <optgroup label="Peso">
+                                <option value="mg">mg</option>
+                                <option value="g">g</option>
+                                <option value="gr">gr</option>
+                                <option value="kg">kg</option>
+                            </optgroup>
+                            <optgroup label="Volumen">
+                                <option value="ml">ml</option>
+                                <option value="l">l</option>
+                                <option value="lt">lt</option>
+                                <option value="oz">oz</option>
+                            </optgroup>
+                            <optgroup label="Otros">
+                                <option value="lb">lb</option>
+                                <option value="u">u</option>
+                                <option value="und">und</option>
+                                <option value="unidad">unidad</option>
+                                <option value="unidades">unidades</option>
+                                <option value="taza">taza</option>
+                                <option value="tazas">tazas</option>
+                                <option value="cda">cda</option>
+                                <option value="cdta">cdta</option>
+                                <option value="pza">pza</option>
+                                <option value="pieza">pieza</option>
+                                <option value="piezas">piezas</option>
+                                <option value="paquete">paquete</option>
+                                <option value="caja">caja</option>
+                                <option value="lata">lata</option>
+                                <option value="botella">botella</option>
+                                <option value="bolsa">bolsa</option>
+                                <option value="docena">docena</option>
+                                <option value="atado">atado</option>
+                            </optgroup>
+                        </InputSelect>
+                        @if (errores.TryGetValue(nameof(form.UnidadMedida), out var errUnidad))
+                        {
+                            <span class="text-danger msg-error">@errUnidad</span>
+                        }
+                    </div>
+
+                    <div class="form-group-sm">
+                        <label class="auth-label">% Merma (0-100) *</label>
+                        <InputNumber @bind-Value="form.PorcentajeMerma" class="form-control" min="0" max="100" step="any" placeholder="Ej.: 0" />
+                        @if (errores.TryGetValue(nameof(form.PorcentajeMerma), out var errMerma))
+                        {
+                            <span class="text-danger msg-error">@errMerma</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="onb-grid">
+                    <div class="form-group-sm">
+                        <label class="auth-label">Costo unitario *</label>
+                        <InputNumber @bind-Value="form.CostoUnitario" class="form-control" min="0" step="any" placeholder="Ej.: 2500" />
+                        @if (errores.TryGetValue(nameof(form.CostoUnitario), out var errCosto))
+                        {
+                            <span class="text-danger msg-error">@errCosto</span>
+                        }
+                    </div>
+
+                    <div class="form-group-sm">
+                        <label class="auth-label">Proveedor @(esEdicion ? "(obligatorio si cambias el precio)" : "(opcional)")</label>
+                        <InputText @bind-Value="form.Proveedor" class="form-control" placeholder="Ej.: Distribuidora Andina" />
+                        @if (errores.TryGetValue(nameof(form.Proveedor), out var errProv))
+                        {
+                            <span class="text-danger msg-error">@errProv</span>
+                        }
+                    </div>
+                </div>
+
+                @if (esEdicion)
+                {
+                    <label class="insumos-check insumos-check-modal">
+                        <InputCheckbox @bind-Value="form.Activo" />
+                        Insumo activo
+                    </label>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(errorGeneralModal))
+                {
+                    <div class="text-danger msg-error">@errorGeneralModal</div>
+                }
+
+                <div class="confirm-acciones" style="margin-top: 16px;">
+                    <button type="button" class="btn-outline" @onclick="CerrarModal">Cancelar</button>
+                    <button type="submit" class="btn-solid" disabled="@procesando">
+                        @(procesando ? "Guardando..." : "Guardar")
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<ConfirmDialog Visible="@mostrarConfirmEliminar"
+               Mensaje="@($"¿Eliminar el insumo «{insumoAEliminar?.Nombre}»? Esta acción no se puede deshacer.")"
+               OnConfirmar="ConfirmarEliminar"
+               OnCancelar="() => mostrarConfirmEliminar = false" />
+
+@code {
+    private List<InsumoApiDto> insumos = new();
+    private int total;
+    private int pagina = 1;
+    private const int TamanoPagina = 20;
+    private int totalPaginas => Math.Max(1, (int)Math.Ceiling(total / (double)TamanoPagina));
+
+    private string textoBusqueda = string.Empty;
+    private string unidadFiltro = string.Empty;
+    private string ordenarPor = "nombre";
+    private string direccion = "asc";
+    private bool incluirInactivos = true;
+
+    private bool cargando = true;
+    private bool procesando;
+    private string? mensajeExito;
+    private string? mensajeError;
+    private BloqueoEliminar? bloqueoEliminar;
+
+    private bool mostrarModal;
+    private bool esEdicion;
+    private InsumoApiDto? insumoEditando;
+    private InsumoFormModel form = new();
+    private Dictionary<string, string> errores = new();
+    private string? errorGeneralModal;
+
+    private bool mostrarConfirmEliminar;
+    private InsumoApiDto? insumoAEliminar;
+
+    // Debounce del buscador: espera a que el usuario deje de escribir
+    // antes de llamar al servidor (ver explicación al final del archivo).
+    private CancellationTokenSource? debounceCts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        cargando = true;
+        mensajeError = null;
+
+        try
+        {
+            var resultado = await InsumoService.ListarAsync(
+                textoBusqueda, ordenarPor, direccion, unidadFiltro, incluirInactivos, pagina, TamanoPagina);
+
+            if (resultado.Success && resultado.Data is not null)
+            {
+                insumos = resultado.Data.Datos;
+                total = resultado.Data.Total;
+            }
+            else
+            {
+                mensajeError = resultado.Message ?? "No se pudieron cargar los insumos.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            mensajeError = "No fue posible conectar con el servidor.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    // --- Búsqueda con debounce (400 ms) ---
+    private async Task OnBusquedaInput(ChangeEventArgs e)
+    {
+        textoBusqueda = e.Value?.ToString() ?? string.Empty;
+
+        debounceCts?.Cancel();
+        debounceCts?.Dispose();
+        debounceCts = new CancellationTokenSource();
+        var token = debounceCts.Token;
+
+        try
+        {
+            await Task.Delay(400, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return; // El usuario siguió escribiendo: se descarta esta búsqueda.
+        }
+
+        pagina = 1;
+        await CargarAsync();
+        StateHasChanged();
+    }
+
+    private async Task OnUnidadFiltroChanged(ChangeEventArgs e)
+    {
+        unidadFiltro = e.Value?.ToString() ?? string.Empty;
+        pagina = 1;
+        await CargarAsync();
+    }
+
+    private async Task OnOrdenChanged(ChangeEventArgs e)
+    {
+        ordenarPor = e.Value?.ToString() ?? "nombre";
+        pagina = 1;
+        await CargarAsync();
+    }
+
+    private async Task OnDireccionChanged(ChangeEventArgs e)
+    {
+        direccion = e.Value?.ToString() ?? "asc";
+        pagina = 1;
+        await CargarAsync();
+    }
+
+    private async Task OnIncluirInactivosChanged(ChangeEventArgs e)
+    {
+        incluirInactivos = e.Value is bool b && b;
+        pagina = 1;
+        await CargarAsync();
+    }
+
+    private async Task PaginaAnterior()
+    {
+        if (pagina > 1)
+        {
+            pagina--;
+            await CargarAsync();
+        }
+    }
+
+    private async Task PaginaSiguiente()
+    {
+        if (pagina < totalPaginas)
+        {
+            pagina++;
+            await CargarAsync();
+        }
+    }
+
+    // --- Modal nuevo/editar ---
+    private void AbrirModalNuevo()
+    {
+        esEdicion = false;
+        insumoEditando = null;
+        form = new InsumoFormModel { Activo = true };
+        errores.Clear();
+        errorGeneralModal = null;
+        mostrarModal = true;
+    }
+
+    private void AbrirModalEditar(InsumoApiDto insumo)
+    {
+        esEdicion = true;
+        insumoEditando = insumo;
+        form = new InsumoFormModel
+        {
+            Nombre = insumo.Nombre,
+            UnidadMedida = insumo.UnidadMedida,
+            CostoUnitario = insumo.CostoUnitario,
+            PorcentajeMerma = insumo.PorcentajeMerma,
+            Proveedor = insumo.Proveedor ?? string.Empty,
+            Activo = insumo.Activo
+        };
+        errores.Clear();
+        errorGeneralModal = null;
+        mostrarModal = true;
+    }
+
+    private void CerrarModal()
+    {
+        mostrarModal = false;
+        insumoEditando = null;
+    }
+
+    private bool ValidarFormulario()
+    {
+        errores.Clear();
+
+        if (string.IsNullOrWhiteSpace(form.Nombre))
+        {
+            errores[nameof(form.Nombre)] = "El nombre es obligatorio.";
+        }
+        else if (form.Nombre.Trim().Length > 150)
+        {
+            errores[nameof(form.Nombre)] = "El nombre no puede superar los 150 caracteres.";
+        }
+
+        if (string.IsNullOrWhiteSpace(form.UnidadMedida))
+        {
+            errores[nameof(form.UnidadMedida)] = "Selecciona una unidad de medida.";
+        }
+
+        if (form.CostoUnitario is null)
+        {
+            errores[nameof(form.CostoUnitario)] = "El costo unitario es obligatorio (usa 0 si no aplica).";
+        }
+        else if (form.CostoUnitario.Value < 0)
+        {
+            errores[nameof(form.CostoUnitario)] = "El costo no puede ser negativo.";
+        }
+
+        if (form.PorcentajeMerma is null)
+        {
+            errores[nameof(form.PorcentajeMerma)] = "El % de merma es obligatorio (puede ser 0).";
+        }
+        else if (form.PorcentajeMerma.Value < 0 || form.PorcentajeMerma.Value > 100)
+        {
+            errores[nameof(form.PorcentajeMerma)] = "La merma debe estar entre 0 y 100 (solo números).";
+        }
+
+        if (!string.IsNullOrWhiteSpace(form.Proveedor) && form.Proveedor.Trim().Length > 150)
+        {
+            errores[nameof(form.Proveedor)] = "El proveedor no puede superar los 150 caracteres.";
+        }
+
+        // Regla del BackEnd: cambiar el precio exige enviar el proveedor.
+        if (esEdicion && insumoEditando is not null &&
+            form.CostoUnitario.HasValue && form.CostoUnitario.Value != insumoEditando.CostoUnitario &&
+            string.IsNullOrWhiteSpace(form.Proveedor))
+        {
+            errores[nameof(form.Proveedor)] = "Para cambiar el precio debes indicar el proveedor.";
+        }
+
+        return errores.Count == 0;
+    }
+
+    private async Task GuardarFormulario()
+    {
+        LimpiarMensajes();
+        errorGeneralModal = null;
+
+        if (!ValidarFormulario())
+        {
+            return;
+        }
+
+        procesando = true;
+        try
+        {
+            if (esEdicion && insumoEditando is not null)
+            {
+                await GuardarEdicionAsync();
+            }
+            else
+            {
+                await GuardarNuevoAsync();
+            }
+        }
+        catch (HttpRequestException)
+        {
+            errorGeneralModal = "No fue posible conectar con el servidor.";
+        }
+        finally
+        {
+            procesando = false;
+        }
+    }
+
+    private async Task GuardarNuevoAsync()
+    {
+        var request = new CrearInsumoRequest
+        {
+            Nombre = form.Nombre.Trim(),
+            UnidadMedida = form.UnidadMedida.Trim().ToLowerInvariant(),
+            CostoUnitario = form.CostoUnitario!.Value,
+            PorcentajeMerma = form.PorcentajeMerma!.Value,
+            Proveedor = string.IsNullOrWhiteSpace(form.Proveedor) ? null : form.Proveedor.Trim()
+        };
+
+        var resultado = await InsumoService.CrearAsync(request);
+        if (!resultado.Success || resultado.Data is null)
+        {
+            errorGeneralModal = resultado.Message ?? "No se pudo crear el insumo.";
+            return;
+        }
+
+        // Actualización local: se inserta sin recargar toda la lista.
+        var creado = resultado.Data;
+        total++;
+        if (pagina == 1 && CoincideConFiltros(creado))
+        {
+            insumos.Add(creado);
+            OrdenarLocal();
+            if (insumos.Count > TamanoPagina)
+            {
+                insumos.RemoveAt(insumos.Count - 1);
+            }
+        }
+
+        CerrarModal();
+        mensajeExito = $"El insumo «{creado.Nombre}» fue guardado correctamente.";
+    }
+
+    private async Task GuardarEdicionAsync()
+    {
+        var original = insumoEditando!;
+        var request = new ActualizarInsumoRequest();
+
+        if (!string.Equals(form.Nombre.Trim(), original.Nombre, StringComparison.Ordinal))
+        {
+            request.Nombre = form.Nombre.Trim();
+        }
+        if (!string.Equals(form.UnidadMedida.Trim(), original.UnidadMedida, StringComparison.OrdinalIgnoreCase))
+        {
+            request.UnidadMedida = form.UnidadMedida.Trim().ToLowerInvariant();
+        }
+        if (form.CostoUnitario!.Value != original.CostoUnitario)
+        {
+            request.CostoUnitario = form.CostoUnitario.Value;
+            request.Proveedor = form.Proveedor.Trim();
+        }
+        else if ((form.Proveedor ?? string.Empty).Trim() != (original.Proveedor ?? string.Empty))
+        {
+            request.Proveedor = string.IsNullOrWhiteSpace(form.Proveedor) ? null : form.Proveedor.Trim();
+        }
+        if (form.PorcentajeMerma!.Value != original.PorcentajeMerma)
+        {
+            request.PorcentajeMerma = form.PorcentajeMerma.Value;
+        }
+        if (form.Activo != original.Activo)
+        {
+            request.Activo = form.Activo;
+        }
+
+        if (request.Nombre is null && request.UnidadMedida is null && request.CostoUnitario is null &&
+            request.PorcentajeMerma is null && request.Proveedor is null && request.Activo is null)
+        {
+            CerrarModal();
+            mensajeExito = "No había cambios para guardar.";
+            return;
+        }
+
+        // El proveedor se envía como null para limpiarlo solo si el usuario lo vació.
+        // Como el BackEnd exige proveedor al cambiar precio, ese caso ya va con valor.
+        var resultado = await InsumoService.ActualizarParcialAsync(original.Id, request);
+        if (!resultado.Success || resultado.Data is null)
+        {
+            errorGeneralModal = resultado.Message ?? "No se pudo actualizar el insumo.";
+            return;
+        }
+
+        // Actualización local: se reemplaza en su posición.
+        var actualizado = resultado.Data;
+        var index = insumos.FindIndex(i => i.Id == actualizado.Id);
+        if (index >= 0)
+        {
+            if (!actualizado.Activo && !incluirInactivos)
+            {
+                insumos.RemoveAt(index);
+                total--;
+            }
+            else
+            {
+                insumos[index] = actualizado;
+            }
+        }
+
+        CerrarModal();
+        mensajeExito = $"El insumo «{actualizado.Nombre}» fue actualizado correctamente.";
+    }
+
+    // --- Eliminar ---
+    private void PedirEliminar(InsumoApiDto insumo)
+    {
+        LimpiarMensajes();
+        insumoAEliminar = insumo;
+        mostrarConfirmEliminar = true;
+    }
+
+    private async Task ConfirmarEliminar()
+    {
+        mostrarConfirmEliminar = false;
+        if (insumoAEliminar is null)
+        {
+            return;
+        }
+
+        LimpiarMensajes();
+        procesando = true;
+        try
+        {
+            var resultado = await InsumoService.EliminarAsync(insumoAEliminar.Id);
+            if (resultado.Success)
+            {
+                insumos.RemoveAll(i => i.Id == insumoAEliminar.Id);
+                total--;
+                mensajeExito = $"El insumo «{insumoAEliminar.Nombre}» fue eliminado correctamente.";
+                insumoAEliminar = null;
+            }
+            else if (resultado.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                // En uso: no se elimina; se explica y se ofrece desactivar.
+                bloqueoEliminar = new BloqueoEliminar(
+                    insumoAEliminar,
+                    resultado.Message ?? "El insumo está en uso y no se puede eliminar.",
+                    resultado.NumeroRecetas);
+            }
+            else if (resultado.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                insumos.RemoveAll(i => i.Id == insumoAEliminar.Id);
+                mensajeError = "Ese insumo ya no existe. Se actualizó la lista.";
+            }
+            else
+            {
+                mensajeError = resultado.Message ?? "No se pudo eliminar el insumo.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            mensajeError = "No fue posible conectar con el servidor.";
+        }
+        finally
+        {
+            procesando = false;
+        }
+    }
+
+    private void CerrarBloqueo()
+    {
+        bloqueoEliminar = null;
+        insumoAEliminar = null;
+    }
+
+    private async Task DesactivarEnUso()
+    {
+        if (bloqueoEliminar is null)
+        {
+            return;
+        }
+
+        LimpiarMensajes();
+        procesando = true;
+        try
+        {
+            var objetivo = bloqueoEliminar.Insumo;
+            var resultado = await InsumoService.ActualizarParcialAsync(
+                objetivo.Id, new ActualizarInsumoRequest { Activo = false });
+
+            if (!resultado.Success || resultado.Data is null)
+            {
+                mensajeError = resultado.Message ?? "No se pudo desactivar el insumo.";
+                return;
+            }
+
+            var index = insumos.FindIndex(i => i.Id == objetivo.Id);
+            if (index >= 0)
+            {
+                if (incluirInactivos)
+                {
+                    insumos[index] = resultado.Data;
+                }
+                else
+                {
+                    insumos.RemoveAt(index);
+                    total--;
+                }
+            }
+
+            mensajeExito = $"El insumo «{objetivo.Nombre}» se desactivó (sigue asociado a {bloqueoEliminar.NumeroRecetas} receta(s), por eso no se eliminó).";
+            bloqueoEliminar = null;
+            insumoAEliminar = null;
+        }
+        catch (HttpRequestException)
+        {
+            mensajeError = "No fue posible conectar con el servidor.";
+        }
+        finally
+        {
+            procesando = false;
+        }
+    }
+
+    // --- Utilidades de actualización local ---
+    private bool CoincideConFiltros(InsumoApiDto insumo)
+    {
+        if (!string.IsNullOrWhiteSpace(unidadFiltro) &&
+            !string.Equals(insumo.UnidadMedida, unidadFiltro, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!incluirInactivos && !insumo.Activo)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(textoBusqueda))
+        {
+            var termino = textoBusqueda.Trim();
+            if (!insumo.Nombre.Contains(termino, StringComparison.OrdinalIgnoreCase) &&
+                !(insumo.Proveedor?.Contains(termino, StringComparison.OrdinalIgnoreCase) ?? false))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void OrdenarLocal()
+    {
+        Comparison<InsumoApiDto> comparacion = ordenarPor switch
+        {
+            "costo" => (a, b) => a.CostoUnitario.CompareTo(b.CostoUnitario),
+            "merma" => (a, b) => a.PorcentajeMerma.CompareTo(b.PorcentajeMerma),
+            "fecha" => (a, b) => a.FechaActualizacion.CompareTo(b.FechaActualizacion),
+            _ => (a, b) => string.Compare(a.Nombre, b.Nombre, StringComparison.OrdinalIgnoreCase)
+        };
+
+        insumos.Sort(comparacion);
+        if (direccion == "desc")
+        {
+            insumos.Reverse();
+        }
+    }
+
+    private void LimpiarMensajes()
+    {
+        mensajeExito = null;
+        mensajeError = null;
+        bloqueoEliminar = null;
+    }
+
+    public void Dispose()
+    {
+        debounceCts?.Cancel();
+        debounceCts?.Dispose();
+    }
+
+    private sealed record BloqueoEliminar(InsumoApiDto Insumo, string Mensaje, int NumeroRecetas);
+
+    private sealed class InsumoFormModel
+    {
+        public string Nombre { get; set; } = string.Empty;
+        public string UnidadMedida { get; set; } = string.Empty;
+        public decimal? CostoUnitario { get; set; }
+        public decimal? PorcentajeMerma { get; set; }
+        public string Proveedor { get; set; } = string.Empty;
+        public bool Activo { get; set; } = true;
+    }
+}
+
+@* NOTA — Qué es Debounce (explicación pedida):
+   El buscador filtra mientras escribes, pero NO llama al servidor en cada
+   tecla. Cada pulsación reinicia un temporizador de 400 ms
+   (CancellationTokenSource + Task.Delay en OnBusquedaInput); solo cuando el
+   usuario deja de escribir por 400 ms se hace UNA petición GET /api/insumos.
+   Así se evita saturar el BackEnd con peticiones intermedias inútiles
+   (p. ej. "h", "ha", "har", "hari", "harin", "harina" = 6 peticiones)
+   y la lista se sigue actualizando en tiempo real. *@

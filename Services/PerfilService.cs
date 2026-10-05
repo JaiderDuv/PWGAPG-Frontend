@@ -58,6 +58,13 @@ public sealed class PerfilService
         return await CrearResultadoAsync<ActualizarPerfilResultadoDto>(response);
     }
 
+    // Catálogo de roles para el desplegable de empleados.
+    public async Task<PerfilApiResult<List<RolDto>>> ObtenerRolesAsync()
+    {
+        using var response = await _httpClient.GetAsync("api/perfil/roles");
+        return await CrearResultadoAsync<List<RolDto>>(response);
+    }
+
     private static HttpRequestMessage CrearRequest(
         HttpMethod method,
         string url,

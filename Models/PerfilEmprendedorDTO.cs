@@ -42,7 +42,29 @@ public class PerfilEmprendedorDto
     [StringLength(255)]
     public string Direccion { get; set; } = string.Empty;
 
-    public List<SocioNegocioDto> Socios { get; set; } = new();
+    public List<EmpleadoDto> Empleados { get; set; } = new();
+}
+
+// Sección 03 del formulario: empleados del negocio (tabla Empleado del BackEnd).
+// La tabla no tiene nombres/apellidos/teléfono: solo correo invitado + rol + estado.
+public class EmpleadoDto
+{
+    // Null => invitación nueva (el servidor la crea como "pendiente").
+    public int? Id { get; set; }
+
+    public string CorreoInvitado { get; set; } = string.Empty;
+
+    public int RolId { get; set; }
+
+    // Solo lectura (lo devuelve el GET).
+    public string? NombreRol { get; set; }
+    public string? EstadoInvitacion { get; set; }
+}
+
+public class RolDto
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
 }
 
 public class SocioNegocioDto
