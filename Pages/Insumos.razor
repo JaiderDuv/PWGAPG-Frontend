@@ -3,6 +3,7 @@
 @using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Components
 @inject PWGAPG_Frontend.Services.InsumoService InsumoService
+@inject NavigationManager Navigation
 @implements IDisposable
 
 <PageTitle>Mis insumos | Chef Metrics</PageTitle>
@@ -14,7 +15,10 @@
             <h1>Insumos</h1>
             <p>Materia prima de tu negocio (leche, huevos, harina...). Los cambios se reflejan al instante.</p>
         </div>
-        <button type="button" class="btn-solid" @onclick="AbrirModalNuevo">+ Nuevo insumo</button>
+        <div class="insumos-heading-acciones">
+            <button type="button" class="btn-outline" @onclick='() => Navigation.NavigateTo("insumos/historial")'>Historial de precios</button>
+            <button type="button" class="btn-solid" @onclick="AbrirModalNuevo">+ Nuevo insumo</button>
+        </div>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(mensajeExito))
@@ -46,46 +50,27 @@
 
         <select class="form-select" value="@unidadFiltro" @onchange="OnUnidadFiltroChanged" title="Filtrar por unidad">
             <option value="">Todas las unidades</option>
-            <optgroup label="Peso">
-                <option value="mg">mg</option>
-                <option value="g">g</option>
-                <option value="gr">gr</option>
-                <option value="kg">kg</option>
-            </optgroup>
-            <optgroup label="Volumen">
-                <option value="ml">ml</option>
-                <option value="l">l</option>
-                <option value="lt">lt</option>
-                <option value="oz">oz</option>
-            </optgroup>
-            <optgroup label="Otros">
-                <option value="lb">lb</option>
-                <option value="u">u</option>
-                <option value="und">und</option>
-                <option value="unidad">unidad</option>
-                <option value="unidades">unidades</option>
-                <option value="taza">taza</option>
-                <option value="tazas">tazas</option>
-                <option value="cda">cda</option>
-                <option value="cdta">cdta</option>
-                <option value="pza">pza</option>
-                <option value="pieza">pieza</option>
-                <option value="piezas">piezas</option>
-                <option value="paquete">paquete</option>
-                <option value="caja">caja</option>
-                <option value="lata">lata</option>
-                <option value="botella">botella</option>
-                <option value="bolsa">bolsa</option>
-                <option value="docena">docena</option>
-                <option value="atado">atado</option>
-            </optgroup>
+            <option value="g">g</option>
+            <option value="kg">kg</option>
+            <option value="l">l</option>
+            <option value="ml">ml</option>
+            <option value="oz">oz</option>
+            <option value="lb">lb</option>
+            <option value="unidad">unidad</option>
+            <option value="taza">taza</option>
         </select>
+
+        <input class="form-control insumos-categoria"
+               placeholder="Filtrar por categoría..."
+               value="@categoriaFiltro"
+               @onchange="OnCategoriaFiltroChanged"
+               maxlength="20"
+               title="Valores: materia_prima, empaque, otro" />
 
         <select class="form-select" value="@ordenarPor" @onchange="OnOrdenChanged" title="Ordenar por">
             <option value="nombre">Nombre</option>
             <option value="costo">Costo</option>
             <option value="merma">% Merma</option>
-            <option value="fecha">Fecha</option>
         </select>
 
         <select class="form-select" value="@direccion" @onchange="OnDireccionChanged" title="Dirección">
@@ -119,6 +104,7 @@
                     <tr>
                         <th>Nombre</th>
                         <th>Unidad</th>
+                        <th>Categoría</th>
                         <th>Costo</th>
                         <th>% Merma</th>
                         <th>Proveedor</th>
@@ -135,6 +121,7 @@
                             title="Clic para editar">
                             <td><strong>@insumo.Nombre</strong></td>
                             <td>@insumo.UnidadMedida</td>
+                            <td>@(string.IsNullOrWhiteSpace(insumo.Categoria) ? "—" : insumo.Categoria)</td>
                             <td>$@insumo.CostoUnitario.ToString("N2")</td>
                             <td>@insumo.PorcentajeMerma.ToString("N2")%</td>
                             <td>@(string.IsNullOrWhiteSpace(insumo.Proveedor) ? "—" : insumo.Proveedor)</td>
@@ -146,6 +133,7 @@
                             <td>@(insumo.NumeroRecetas > 0 ? insumo.NumeroRecetas.ToString() : "—")</td>
                             <td class="insumos-acciones" @onclick:stopPropagation="true">
                                 <button type="button" class="btn-mini-editar" @onclick="() => AbrirModalEditar(insumo)">Editar</button>
+                                <button type="button" class="btn-mini-historial" @onclick='() => Navigation.NavigateTo($"insumos/{insumo.Id}/historial")' title="Ver historial de precios">Historial</button>
                                 <button type="button" class="btn-mini-eliminar" @onclick="() => PedirEliminar(insumo)" aria-label="Eliminar @insumo.Nombre">🗑</button>
                             </td>
                         </tr>
@@ -183,39 +171,14 @@
                         <label class="auth-label">Unidad de medida *</label>
                         <InputSelect @bind-Value="form.UnidadMedida" class="form-select">
                             <option value="">Selecciona...</option>
-                            <optgroup label="Peso">
-                                <option value="mg">mg</option>
-                                <option value="g">g</option>
-                                <option value="gr">gr</option>
-                                <option value="kg">kg</option>
-                            </optgroup>
-                            <optgroup label="Volumen">
-                                <option value="ml">ml</option>
-                                <option value="l">l</option>
-                                <option value="lt">lt</option>
-                                <option value="oz">oz</option>
-                            </optgroup>
-                            <optgroup label="Otros">
-                                <option value="lb">lb</option>
-                                <option value="u">u</option>
-                                <option value="und">und</option>
-                                <option value="unidad">unidad</option>
-                                <option value="unidades">unidades</option>
-                                <option value="taza">taza</option>
-                                <option value="tazas">tazas</option>
-                                <option value="cda">cda</option>
-                                <option value="cdta">cdta</option>
-                                <option value="pza">pza</option>
-                                <option value="pieza">pieza</option>
-                                <option value="piezas">piezas</option>
-                                <option value="paquete">paquete</option>
-                                <option value="caja">caja</option>
-                                <option value="lata">lata</option>
-                                <option value="botella">botella</option>
-                                <option value="bolsa">bolsa</option>
-                                <option value="docena">docena</option>
-                                <option value="atado">atado</option>
-                            </optgroup>
+                            <option value="g">g</option>
+                            <option value="kg">kg</option>
+                            <option value="l">l</option>
+                            <option value="ml">ml</option>
+                            <option value="oz">oz</option>
+                            <option value="lb">lb</option>
+                            <option value="unidad">unidad</option>
+                            <option value="taza">taza</option>
                         </InputSelect>
                         @if (errores.TryGetValue(nameof(form.UnidadMedida), out var errUnidad))
                         {
@@ -224,7 +187,7 @@
                     </div>
 
                     <div class="form-group-sm">
-                        <label class="auth-label">% Merma (0-100) *</label>
+                        <label class="auth-label">% Merma (0-100, vacío = 0)</label>
                         <InputNumber @bind-Value="form.PorcentajeMerma" class="form-control" min="0" max="100" step="any" placeholder="Ej.: 0" />
                         @if (errores.TryGetValue(nameof(form.PorcentajeMerma), out var errMerma))
                         {
@@ -235,8 +198,8 @@
 
                 <div class="onb-grid">
                     <div class="form-group-sm">
-                        <label class="auth-label">Costo unitario *</label>
-                        <InputNumber @bind-Value="form.CostoUnitario" class="form-control" min="0" step="any" placeholder="Ej.: 2500" />
+                        <label class="auth-label">Costo unitario (mayor a 0) *</label>
+                        <InputNumber @bind-Value="form.CostoUnitario" class="form-control" min="0.01" step="any" placeholder="Ej.: 2500" />
                         @if (errores.TryGetValue(nameof(form.CostoUnitario), out var errCosto))
                         {
                             <span class="text-danger msg-error">@errCosto</span>
@@ -253,13 +216,23 @@
                     </div>
                 </div>
 
-                @if (esEdicion)
-                {
-                    <label class="insumos-check insumos-check-modal">
-                        <InputCheckbox @bind-Value="form.Activo" />
-                        Insumo activo
-                    </label>
-                }
+                <div class="form-group-sm">
+                    <label class="auth-label">Categoría</label>
+                    <InputSelect @bind-Value="form.Categoria" class="form-select">
+                        <option value="otro">otro</option>
+                        <option value="materia_prima">materia_prima</option>
+                        <option value="empaque">empaque</option>
+                    </InputSelect>
+                    @if (errores.TryGetValue(nameof(form.Categoria), out var errCategoria))
+                    {
+                        <span class="text-danger msg-error">@errCategoria</span>
+                    }
+                </div>
+
+                <label class="insumos-check insumos-check-modal">
+                    <InputCheckbox @bind-Value="form.Activo" />
+                    Insumo activo
+                </label>
 
                 @if (!string.IsNullOrWhiteSpace(errorGeneralModal))
                 {
@@ -279,7 +252,7 @@
 
 <ConfirmDialog Visible="@mostrarConfirmEliminar"
                Mensaje="@($"¿Eliminar el insumo «{insumoAEliminar?.Nombre}»? Esta acción no se puede deshacer.")"
-               OnConfirmar="ConfirmarEliminar"
+               OnConfirmar="ConfirmarEliminarInsumo"
                OnCancelar="() => mostrarConfirmEliminar = false" />
 
 @code {
@@ -291,6 +264,7 @@
 
     private string textoBusqueda = string.Empty;
     private string unidadFiltro = string.Empty;
+    private string categoriaFiltro = string.Empty;
     private string ordenarPor = "nombre";
     private string direccion = "asc";
     private bool incluirInactivos = true;
@@ -328,7 +302,7 @@
         try
         {
             var resultado = await InsumoService.ListarAsync(
-                textoBusqueda, ordenarPor, direccion, unidadFiltro, incluirInactivos, pagina, TamanoPagina);
+                textoBusqueda, ordenarPor, direccion, unidadFiltro, categoriaFiltro, incluirInactivos, pagina, TamanoPagina);
 
             if (resultado.Success && resultado.Data is not null)
             {
@@ -381,6 +355,13 @@
         await CargarAsync();
     }
 
+    private async Task OnCategoriaFiltroChanged(ChangeEventArgs e)
+    {
+        categoriaFiltro = e.Value?.ToString() ?? string.Empty;
+        pagina = 1;
+        await CargarAsync();
+    }
+
     private async Task OnOrdenChanged(ChangeEventArgs e)
     {
         ordenarPor = e.Value?.ToString() ?? "nombre";
@@ -425,7 +406,7 @@
     {
         esEdicion = false;
         insumoEditando = null;
-        form = new InsumoFormModel { Activo = true };
+        form = new InsumoFormModel { Activo = true, Categoria = "otro" };
         errores.Clear();
         errorGeneralModal = null;
         mostrarModal = true;
@@ -439,6 +420,7 @@
         {
             Nombre = insumo.Nombre,
             UnidadMedida = insumo.UnidadMedida,
+            Categoria = insumo.Categoria ?? "otro",
             CostoUnitario = insumo.CostoUnitario,
             PorcentajeMerma = insumo.PorcentajeMerma,
             Proveedor = insumo.Proveedor ?? string.Empty,
@@ -454,6 +436,11 @@
         mostrarModal = false;
         insumoEditando = null;
     }
+
+    private static readonly HashSet<string> CategoriasValidas = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "materia_prima", "empaque", "otro"
+    };
 
     private bool ValidarFormulario()
     {
@@ -473,18 +460,25 @@
             errores[nameof(form.UnidadMedida)] = "Selecciona una unidad de medida.";
         }
 
+        if (string.IsNullOrWhiteSpace(form.Categoria) ||
+            !CategoriasValidas.Contains(form.Categoria.Trim()))
+        {
+            errores[nameof(form.Categoria)] = "Selecciona una categoría válida.";
+        }
+
         if (form.CostoUnitario is null)
         {
-            errores[nameof(form.CostoUnitario)] = "El costo unitario es obligatorio (usa 0 si no aplica).";
+            errores[nameof(form.CostoUnitario)] = "El costo unitario es obligatorio y debe ser mayor a 0.";
         }
-        else if (form.CostoUnitario.Value < 0)
+        else if (form.CostoUnitario.Value <= 0)
         {
-            errores[nameof(form.CostoUnitario)] = "El costo no puede ser negativo.";
+            errores[nameof(form.CostoUnitario)] = "El costo debe ser mayor a 0.";
         }
 
         if (form.PorcentajeMerma is null)
         {
-            errores[nameof(form.PorcentajeMerma)] = "El % de merma es obligatorio (puede ser 0).";
+            // Campo vacío => se asume 0 automáticamente.
+            form.PorcentajeMerma = 0;
         }
         else if (form.PorcentajeMerma.Value < 0 || form.PorcentajeMerma.Value > 100)
         {
@@ -545,9 +539,11 @@
         {
             Nombre = form.Nombre.Trim(),
             UnidadMedida = form.UnidadMedida.Trim().ToLowerInvariant(),
+            Categoria = form.Categoria.Trim().ToLowerInvariant(),
             CostoUnitario = form.CostoUnitario!.Value,
             PorcentajeMerma = form.PorcentajeMerma!.Value,
-            Proveedor = string.IsNullOrWhiteSpace(form.Proveedor) ? null : form.Proveedor.Trim()
+            Proveedor = string.IsNullOrWhiteSpace(form.Proveedor) ? null : form.Proveedor.Trim(),
+            Activo = form.Activo
         };
 
         var resultado = await InsumoService.CrearAsync(request);
@@ -587,6 +583,13 @@
         {
             request.UnidadMedida = form.UnidadMedida.Trim().ToLowerInvariant();
         }
+
+        var categoriaForm = form.Categoria.Trim().ToLowerInvariant();
+        var categoriaOriginal = string.IsNullOrWhiteSpace(original.Categoria) ? "otro" : original.Categoria.Trim().ToLowerInvariant();
+        if (!string.Equals(categoriaForm, categoriaOriginal, StringComparison.Ordinal))
+        {
+            request.Categoria = categoriaForm;
+        }
         if (form.CostoUnitario!.Value != original.CostoUnitario)
         {
             request.CostoUnitario = form.CostoUnitario.Value;
@@ -605,8 +608,9 @@
             request.Activo = form.Activo;
         }
 
-        if (request.Nombre is null && request.UnidadMedida is null && request.CostoUnitario is null &&
-            request.PorcentajeMerma is null && request.Proveedor is null && request.Activo is null)
+        if (request.Nombre is null && request.UnidadMedida is null && request.Categoria is null &&
+            request.CostoUnitario is null && request.PorcentajeMerma is null &&
+            request.Proveedor is null && request.Activo is null)
         {
             CerrarModal();
             mensajeExito = "No había cambios para guardar.";
@@ -650,7 +654,7 @@
         mostrarConfirmEliminar = true;
     }
 
-    private async Task ConfirmarEliminar()
+    private async Task ConfirmarEliminarInsumo()
     {
         mostrarConfirmEliminar = false;
         if (insumoAEliminar is null)
@@ -762,6 +766,12 @@
             return false;
         }
 
+        if (!string.IsNullOrWhiteSpace(categoriaFiltro) &&
+            !string.Equals(insumo.Categoria ?? "otro", categoriaFiltro.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
         if (!incluirInactivos && !insumo.Activo)
         {
             return false;
@@ -786,7 +796,6 @@
         {
             "costo" => (a, b) => a.CostoUnitario.CompareTo(b.CostoUnitario),
             "merma" => (a, b) => a.PorcentajeMerma.CompareTo(b.PorcentajeMerma),
-            "fecha" => (a, b) => a.FechaActualizacion.CompareTo(b.FechaActualizacion),
             _ => (a, b) => string.Compare(a.Nombre, b.Nombre, StringComparison.OrdinalIgnoreCase)
         };
 
@@ -816,6 +825,7 @@
     {
         public string Nombre { get; set; } = string.Empty;
         public string UnidadMedida { get; set; } = string.Empty;
+        public string Categoria { get; set; } = "otro";
         public decimal? CostoUnitario { get; set; }
         public decimal? PorcentajeMerma { get; set; }
         public string Proveedor { get; set; } = string.Empty;

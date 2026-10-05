@@ -65,6 +65,19 @@ public sealed class PerfilService
         return await CrearResultadoAsync<List<RolDto>>(response);
     }
 
+    // Marca como usados los permisos pendientes (al salir del formulario o cerrar sesión).
+    // Nunca lanza: es una limpieza best-effort que no debe bloquear la navegación.
+    public async Task RevocarPermisoAsync()
+    {
+        try
+        {
+            using var response = await _httpClient.PostAsync("api/perfil/revocar-permiso", null);
+        }
+        catch (HttpRequestException)
+        {
+        }
+    }
+
     private static HttpRequestMessage CrearRequest(
         HttpMethod method,
         string url,
@@ -105,6 +118,14 @@ public sealed class PerfilService
             return null;
         }
 
+        // Si no es JSON (ej. página HTML de error del servidor), no se muestra
+        // el cuerpo crudo en la interfaz: se usa el mensaje por defecto.
+        var recortado = body.TrimStart();
+        if (!recortado.StartsWith("{") && !recortado.StartsWith("["))
+        {
+            return null;
+        }
+
         try
         {
             using var document = JsonDocument.Parse(body);
@@ -120,7 +141,7 @@ public sealed class PerfilService
         }
         catch (JsonException)
         {
-            return body;
+            return null;
         }
 
         return null;

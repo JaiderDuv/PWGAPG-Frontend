@@ -9,6 +9,8 @@
 
 <PageTitle>Editar perfil | Chef Metrics</PageTitle>
 
+<NavigationLock OnBeforeInternalNavigation="(context => OnAntesDeNavegar(context))" />
+
 <div class="perfil-edicion-shell">
     <div class="perfil-edicion-heading">
         <div>
@@ -131,6 +133,11 @@
                         <label class="auth-label" for="correo-contacto">Correo electrónico de contacto</label>
                         <InputText id="correo-contacto" @bind-Value="perfil.CorreoContacto" type="email" class="form-control" />
                         <ValidationMessage For="@(() => perfil.CorreoContacto)" class="text-danger msg-error" />
+                    </div>
+                    <div class="form-group">
+                        <label class="auth-label" for="telefono-contacto">Teléfono de contacto</label>
+                        <InputText id="telefono-contacto" @bind-Value="perfil.TelefonoContacto" type="tel" class="form-control" />
+                        <ValidationMessage For="@(() => perfil.TelefonoContacto)" class="text-danger msg-error" />
                     </div>
                 </div>
             </section>
@@ -332,6 +339,7 @@
     {
         procesando = true;
         mensajeError = null;
+        StateHasChanged();
 
         try
         {
@@ -344,6 +352,8 @@
 
             editToken = resultado.Data.EditToken;
             fase = FaseEdicion.Cargando;
+            StateHasChanged();
+
             var perfilResultado = await PerfilService.ObtenerPerfilAsync(editToken);
             if (!perfilResultado.Success || perfilResultado.Data is null)
             {
@@ -363,6 +373,7 @@
         finally
         {
             procesando = false;
+            StateHasChanged();
         }
     }
 
@@ -398,6 +409,12 @@
         if (perfil.TieneSitioFisico && string.IsNullOrWhiteSpace(perfil.Direccion))
         {
             mensajeError = "La dirección es obligatoria si el negocio tiene sitio físico.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(perfil.TelefonoContacto) || perfil.TelefonoContacto.Trim().Length < 7)
+        {
+            mensajeError = "El teléfono de contacto debe tener al menos 7 dígitos.";
             return;
         }
 
@@ -570,5 +587,16 @@
     private void VolverAlDashboard()
     {
         Navigation.NavigateTo("dashboard-empresa");
+    }
+
+    // Al salir del formulario hacia otra función, el token de edición se marca
+    // como usado automáticamente (no se bloquea la navegación).
+    private async Task OnAntesDeNavegar(LocationChangingContext context)
+    {
+        if (!string.IsNullOrWhiteSpace(editToken))
+        {
+            editToken = null;
+            await PerfilService.RevocarPermisoAsync();
+        }
     }
 }
