@@ -3,6 +3,7 @@
 @using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Pages.OnboardingTabs
 @inject NavigationManager Navigation
+@inject PWGAPG_Frontend.Services.AuthService AuthService
 
 <div class="onboarding-container">
     <h2 class="auth-titulo">Configura tu negocio</h2>
@@ -22,26 +23,23 @@
     </div>
 
     <div class="onboarding-contenido">
-        @switch (PestanaActiva)
-        {
-            case 0:
-                <InformacionPersonalTab OnGuardado="AvanzarPestana" />
-                break;
-            case 1:
-                <InformacionNegocioTab OnGuardado="AvanzarPestana" />
-                break;
-            case 2:
-                <EmpleadosTab OnGuardado="AvanzarPestana" />
-                break;
-            case 3:
-                <ProductosTab OnGuardado="AvanzarPestana"
-                              OnProductosActualizados="@((List<ProductoDTO> p) => productosGuardados = p)" />
-                break;
-            case 4:
-                <InsumosTab OnGuardado="FinalizarOnboarding"
-                            IngredientesSugeridos="@productosGuardados.SelectMany(p => p.Ingredientes).Distinct().ToList()" />
-                break;
-        }
+        <div style="display: @(PestanaActiva == 0 ? "block" : "none")">
+            <InformacionPersonalTab OnGuardado="AvanzarPestana" />
+        </div>
+        <div style="display: @(PestanaActiva == 1 ? "block" : "none")">
+            <InformacionNegocioTab OnGuardado="AvanzarPestana" />
+        </div>
+        <div style="display: @(PestanaActiva == 2 ? "block" : "none")">
+            <EmpleadosTab OnGuardado="AvanzarPestana" />
+        </div>
+        <div style="display: @(PestanaActiva == 3 ? "block" : "none")">
+            <ProductosTab OnGuardado="AvanzarPestana"
+                          OnProductosActualizados="@((List<ProductoDTO> p) => productosGuardados = p)" />
+        </div>
+        <div style="display: @(PestanaActiva == 4 ? "block" : "none")">
+            <InsumosTab OnGuardado="FinalizarOnboarding"
+                        IngredientesSugeridos="@productosGuardados.SelectMany(p => p.Ingredientes).Distinct().ToList()" />
+        </div>
     </div>
 </div>
 
@@ -71,9 +69,13 @@
             PestanaActiva++;
         }
     }
-    private void FinalizarOnboarding()
+    private async Task FinalizarOnboarding()
     {
-        // Cuando el backend confirme OnboardingCompletado = true, redirige al Dashboard:
-        // Navigation.NavigateTo("dashboard-empresa", replace: true);
+        // El backend confirma OnboardingCompletado = true y se redirige al Dashboard:
+        var ok = await AuthService.CompletarOnboardingAsync();
+        if (ok)
+        {
+            Navigation.NavigateTo("dashboard-empresa", replace: true);
+        }
     }
 }

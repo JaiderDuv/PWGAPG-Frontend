@@ -12,8 +12,7 @@ namespace PWGAPG_Frontend.Models
         public string? Nit { get; set; }
         public string? RazonSocial { get; set; }
 
-        [Required(ErrorMessage = "El campo RUES es obligatorio.")]
-        public string Rues { get; set; } = string.Empty;
+        public string? Rues { get; set; }
 
         [Required(ErrorMessage = "El correo de la empresa es obligatorio.")]
         [EmailAddress(ErrorMessage = "Ingrese un correo válido.")]
@@ -23,7 +22,9 @@ namespace PWGAPG_Frontend.Models
         [Phone(ErrorMessage = "Ingrese un número válido.")]
         public string TelefonoEmpresa { get; set; } = string.Empty;
 
-        public bool TieneSitioFisico { get; set; } = false;
+        public bool Formalizado { get; set; }
+
+    public bool TieneSitioFisico { get; set; } = false;
 
         public string? Direccion { get; set; }
     }

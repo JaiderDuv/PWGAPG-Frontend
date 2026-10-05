@@ -2,6 +2,7 @@
 @using PWGAPG_Frontend.Components
 @using System.Net.Http.Json
 @inject HttpClient Http
+@inject PWGAPG_Frontend.Services.AuthService AuthService
 
 <EditForm Model="@duenio" OnValidSubmit="@GuardarTodo">
     <DataAnnotationsValidator />
@@ -67,36 +68,6 @@
         </div>
     </div>
 
-    <hr class="onb-divider" />
-
-    <div class="socios-header">
-        <h3 class="onboarding-subtitulo">Socios del negocio (opcional)</h3>
-        <button type="button" class="btn-outline" @onclick="AbrirFormularioNuevoSocio">+ Añadir socio</button>
-    </div>
-
-    @if (socios.Any())
-    {
-        <div class="socios-lista">
-            @foreach (var socio in socios)
-            {
-                <div class="socio-item">
-                    <div class="socio-info">
-                        <strong>@socio.Nombres @socio.Apellidos</strong>
-                        <span>@socio.TipoDocumento @socio.NumeroDocumento · @socio.CorreoElectronico</span>
-                    </div>
-                    <div class="socio-acciones">
-                        <button type="button" class="btn-mini-editar" @onclick="() => EditarSocio(socio)">Editar</button>
-                        <button type="button" class="btn-mini-eliminar" @onclick="() => PedirEliminarSocio(socio)">Eliminar</button>
-                    </div>
-                </div>
-            }
-        </div>
-    }
-    else
-    {
-        <p class="text-muted">Aún no has añadido socios.</p>
-    }
-
     @if (mensajeErrorGeneral != null)
     {
         <div class="text-danger msg-error">@mensajeErrorGeneral</div>
@@ -107,159 +78,37 @@
     </div>
 </EditForm>
 
-@if (mostrarFormularioSocio)
-{
-    <div class="confirm-overlay">
-        <div class="socio-modal">
-            <h3 class="onboarding-subtitulo">@(socioEditando != null ? "Editar socio" : "Nuevo socio")</h3>
-
-            <EditForm Model="@socioTemporal" OnValidSubmit="@GuardarSocio">
-                <DataAnnotationsValidator />
-
-                <div class="foto-perfil-container">
-                    <label class="foto-perfil-label" for="fotoSocio">
-                        @if (!string.IsNullOrEmpty(socioTemporal.FotoPerfilBase64))
-                        {
-                            <img src="@socioTemporal.FotoPerfilBase64" class="foto-perfil-preview" />
-                        }
-                        else
-                        {
-                            <div class="foto-perfil-placeholder">+</div>
-                        }
-                    </label>
-                    <InputFile id="fotoSocio" OnChange="@(e => CargarFoto(e, socioTemporal))" class="foto-perfil-input" accept="image/*" />
-                </div>
-
-                <div class="onb-grid">
-                    <div class="form-group-sm">
-                        <label class="auth-label">Nombres *</label>
-                        <InputText @bind-Value="socioTemporal.Nombres" class="form-control" />
-                        <ValidationMessage For="@(() => socioTemporal.Nombres)" class="text-danger msg-error" />
-                    </div>
-                    <div class="form-group-sm">
-                        <label class="auth-label">Apellidos *</label>
-                        <InputText @bind-Value="socioTemporal.Apellidos" class="form-control" />
-                        <ValidationMessage For="@(() => socioTemporal.Apellidos)" class="text-danger msg-error" />
-                    </div>
-                    <div class="form-group-sm">
-                        <label class="auth-label">Tipo de Documento *</label>
-                        <InputSelect @bind-Value="socioTemporal.TipoDocumento" class="form-select">
-                            <option value="">-- Seleccione --</option>
-                            <option value="CC">Cédula de Ciudadanía</option>
-                            <option value="CE">Cédula de Extranjería</option>
-                            <option value="PP">Pasaporte</option>
-                            <option value="PEP">Permiso Especial de Permanencia</option>
-                        </InputSelect>
-                        <ValidationMessage For="@(() => socioTemporal.TipoDocumento)" class="text-danger msg-error" />
-                    </div>
-                    <div class="form-group-sm">
-                        <label class="auth-label">Número de Documento *</label>
-                        <InputText @bind-Value="socioTemporal.NumeroDocumento" class="form-control" />
-                        <ValidationMessage For="@(() => socioTemporal.NumeroDocumento)" class="text-danger msg-error" />
-                    </div>
-                    <div class="form-group-sm">
-                        <label class="auth-label">Teléfono *</label>
-                        <InputText @bind-Value="socioTemporal.Telefono" class="form-control" />
-                        <ValidationMessage For="@(() => socioTemporal.Telefono)" class="text-danger msg-error" />
-                    </div>
-                    <div class="form-group-sm">
-                        <label class="auth-label">Correo Electrónico *</label>
-                        <InputText @bind-Value="socioTemporal.CorreoElectronico" class="form-control" type="email" />
-                        <ValidationMessage For="@(() => socioTemporal.CorreoElectronico)" class="text-danger msg-error" />
-                    </div>
-                </div>
-
-                <div class="confirm-acciones" style="margin-top: 16px;">
-                    <button type="button" class="btn-outline" @onclick="CerrarFormularioSocio">Cancelar</button>
-                    <button type="submit" class="btn-solid">Guardar socio</button>
-                </div>
-            </EditForm>
-        </div>
-    </div>
-}
-
-<ConfirmDialog Visible="@mostrarConfirmEliminar"
-               Mensaje="¿Estás seguro de eliminar a este socio?"
-               OnConfirmar="ConfirmarEliminarSocio"
-               OnCancelar="() => mostrarConfirmEliminar = false" />
-
 @code {
     [Parameter] public EventCallback OnGuardado { get; set; }
 
-    private SocioDTO duenio = new();
-    private List<SocioDTO> socios = new();
-
-    private bool mostrarFormularioSocio = false;
-    private SocioDTO socioTemporal = new();
-    private SocioDTO? socioEditando = null;
-
-    private bool mostrarConfirmEliminar = false;
-    private SocioDTO? socioAEliminar = null;
+    private DuenioDTO duenio = new();
 
     private string? mensajeErrorGeneral;
 
-    private void AbrirFormularioNuevoSocio()
+    protected override async Task OnInitializedAsync()
     {
-        socioEditando = null;
-        socioTemporal = new SocioDTO();
-        mostrarFormularioSocio = true;
-    }
-
-    private void EditarSocio(SocioDTO socio)
-    {
-        socioEditando = socio;
-        socioTemporal = new SocioDTO
+        // Autocompleta la pestaña de información personal con lo guardado en BD.
+        try
         {
-            Id = socio.Id,
-            FotoPerfilBase64 = socio.FotoPerfilBase64,
-            Nombres = socio.Nombres,
-            Apellidos = socio.Apellidos,
-            TipoDocumento = socio.TipoDocumento,
-            NumeroDocumento = socio.NumeroDocumento,
-            Telefono = socio.Telefono,
-            CorreoElectronico = socio.CorreoElectronico
-        };
-        mostrarFormularioSocio = true;
-    }
-
-    private void GuardarSocio()
-    {
-        if (socioEditando != null)
-        {
-            var index = socios.FindIndex(s => s.Id == socioEditando.Id);
-            if (index >= 0) socios[index] = socioTemporal;
+            var datos = await Http.GetFromJsonAsync<OnboardingPersonalDto>("api/onboarding/datos-personales");
+            if (datos is not null)
+            {
+                duenio.Nombres = datos.Nombres ?? string.Empty;
+                duenio.Apellidos = datos.Apellidos ?? string.Empty;
+                duenio.TipoDocumento = datos.TipoDocumento ?? string.Empty;
+                duenio.NumeroDocumento = datos.NumeroDocumento ?? string.Empty;
+                duenio.CorreoElectronico = datos.CorreoElectronico ?? string.Empty;
+                duenio.Telefono = datos.TelefonoContacto ?? string.Empty;
+                duenio.FotoPerfilBase64 = datos.FotoPerfilUrl;
+            }
         }
-        else
+        catch
         {
-            socios.Add(socioTemporal);
+            // Si falla la red, se deja el formulario vacío.
         }
-
-        CerrarFormularioSocio();
     }
 
-    private void CerrarFormularioSocio()
-    {
-        mostrarFormularioSocio = false;
-        socioEditando = null;
-    }
-
-    private void PedirEliminarSocio(SocioDTO socio)
-    {
-        socioAEliminar = socio;
-        mostrarConfirmEliminar = true;
-    }
-
-    private void ConfirmarEliminarSocio()
-    {
-        if (socioAEliminar != null)
-        {
-            socios.Remove(socioAEliminar);
-        }
-        mostrarConfirmEliminar = false;
-        socioAEliminar = null;
-    }
-
-    private async Task CargarFoto(InputFileChangeEventArgs e, SocioDTO destino)
+    private async Task CargarFoto(InputFileChangeEventArgs e, DuenioDTO destino)
     {
         var archivo = e.File;
         if (archivo == null) return;
@@ -269,6 +118,16 @@
         await stream.CopyToAsync(ms);
         var base64 = Convert.ToBase64String(ms.ToArray());
         destino.FotoPerfilBase64 = $"data:{archivo.ContentType};base64,{base64}";
+
+        try
+        {
+            await Http.PostAsJsonAsync("api/onboarding/foto-perfil", new { FotoPerfilUrl = destino.FotoPerfilBase64 });
+            AuthService.ActualizarFotoPerfil(destino.FotoPerfilBase64);
+        }
+        catch
+        {
+            // Si falla la red/persistencia, la vista previa local se mantiene.
+        }
     }
 
     private async Task GuardarTodo()
@@ -277,8 +136,7 @@
 
         var payload = new
         {
-            Duenio = duenio,
-            Socios = socios
+            Duenio = duenio
         };
 
         // Cuando el backend tenga el endpoint listo, descomenta esto:

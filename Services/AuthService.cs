@@ -86,7 +86,111 @@ namespace PWGAPG_Frontend.Services
                 var onboardingGuardado = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "onboardingCompletado");
                 OnboardingCompletado = onboardingGuardado == "True";
 
+                // Refresca el flag real desde BD (sobrescribe el de localStorage).
+                var tokenLocal = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+                if (!string.IsNullOrWhiteSpace(tokenLocal))
+                {
+                    try
+                    {
+                        using var request = new HttpRequestMessage(HttpMethod.Get, "api/user");
+                        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenLocal);
+                        var resp = await _httpClient.SendAsync(request);
+                        if (resp.IsSuccessStatusCode)
+                        {
+                            using var doc = await System.Text.Json.JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync());
+                            if (doc.RootElement.TryGetProperty("onboardingCompletado", out var prop) && prop.ValueKind == System.Text.Json.JsonValueKind.True)
+                            {
+                                OnboardingCompletado = true;
+                            }
+                            else
+                            {
+                                OnboardingCompletado = false;
+                            }
+                            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "onboardingCompletado", OnboardingCompletado.ToString());
+                        }
+
+                        // Refresca la foto de perfil desde BD.
+                        using var requestFoto = new HttpRequestMessage(HttpMethod.Get, "api/onboarding/datos-personales");
+                        requestFoto.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenLocal);
+                        var respFoto = await _httpClient.SendAsync(requestFoto);
+                        if (respFoto.IsSuccessStatusCode)
+                        {
+                            using var docFoto = await System.Text.Json.JsonDocument.ParseAsync(await respFoto.Content.ReadAsStreamAsync());
+                            if (docFoto.RootElement.TryGetProperty("fotoPerfilUrl", out var fotoProp) && fotoProp.ValueKind == System.Text.Json.JsonValueKind.String && !string.IsNullOrWhiteSpace(fotoProp.GetString()))
+                            {
+                                UrlFotoPerfil = fotoProp.GetString()!;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Si falla la red, se queda con el valor por defecto.
+                    }
+                }
+
                 NotifyStateChanged();
+            }
+        }
+
+        public void ActualizarFotoPerfil(string? url)
+        {
+            UrlFotoPerfil = string.IsNullOrWhiteSpace(url) ? "images/default-avatar.png" : url;
+            NotifyStateChanged();
+        }
+
+        public async Task<(bool exito, string mensaje)> ReenviarVerificacionAsync(string correo)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(correo))
+                    return (false, "Ingresa tu correo electrónico primero.");
+
+                var resp = await _httpClient.PostAsJsonAsync(
+                    "api/usuarios/reenviar-verificacion",
+                    new { Correo = correo.Trim() });
+
+                var cuerpo = await resp.Content.ReadAsStringAsync();
+                string mensaje = "Si el correo está registrado y pendiente de verificación, recibirás un nuevo enlace en breve.";
+
+                if (!string.IsNullOrWhiteSpace(cuerpo))
+                {
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(cuerpo);
+                        if (doc.RootElement.TryGetProperty("mensaje", out var m) && m.ValueKind == JsonValueKind.String)
+                            mensaje = m.GetString() ?? mensaje;
+                        else if (doc.RootElement.TryGetProperty("Mensaje", out var m2) && m2.ValueKind == JsonValueKind.String)
+                            mensaje = m2.GetString() ?? mensaje;
+                    }
+                    catch { /* si no es JSON, usar mensaje por defecto */ }
+                }
+
+                return (resp.IsSuccessStatusCode, mensaje);
+            }
+            catch (HttpRequestException)
+            {
+                return (false, "No se pudo conectar con el servidor. Intenta de nuevo más tarde.");
+            }
+        }
+
+        public async Task<bool> CompletarOnboardingAsync()
+        {
+            try
+            {
+                var tokenLocal = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
+                using var request = new HttpRequestMessage(HttpMethod.Post, "api/onboarding/completar");
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenLocal);
+                var resp = await _httpClient.SendAsync(request);
+                if (!resp.IsSuccessStatusCode) return false;
+
+                OnboardingCompletado = true;
+                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "onboardingCompletado", "True");
+                NotifyStateChanged();
+                return true;
+            }
+            catch (HttpRequestException)
+            {
+                return false;
             }
         }
 
