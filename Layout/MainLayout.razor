@@ -14,35 +14,33 @@
 
     <nav class="nav-links">
         <NavLink class="nav-link" href="" Match="NavLinkMatch.All">Inicio</NavLink>
-        <NavLink class="nav-link" href="emprendimientos">Emprendimientos</NavLink>
 
         @if (AuthService.IsAuthenticated)
         {
             <NavLink class="nav-link" href="insumos">Insumos</NavLink>
+
+            <!-- Contenedor relativo del perfil -->
             <div class="user-profile-menu">
-                <button type="button" class="avatar-btn">
+                <button type="button" class="avatar-btn" @onclick="ToggleMenu" aria-label="Menú de usuario">
                     @if (!string.IsNullOrEmpty(AuthService.UrlFotoPerfil) && AuthService.UrlFotoPerfil != "images/default-avatar.png")
                     {
                         <img src="@AuthService.UrlFotoPerfil" alt="Foto perfil" class="avatar-img" />
                     }
                     else
                     {
-                        <span>@(string.IsNullOrWhiteSpace(AuthService.NombreEmpresa) ? "E" : AuthService.NombreEmpresa.Substring(0, 1).ToUpper())</span>
+                        <span class="avatar-initial">@(string.IsNullOrWhiteSpace(AuthService.NombreEmpresa) ? "E" : AuthService.NombreEmpresa.Substring(0, 1).ToUpper())</span>
                     }
-                </button>
-                <button type="button" class="hamburger-btn" @onclick="ToggleMenu" aria-label="Abrir menú de usuario">
-                    <span class="hamburger-bar"></span>
-                    <span class="hamburger-bar"></span>
-                    <span class="hamburger-bar"></span>
                 </button>
 
                 @if (mostrarMenu)
                 {
-                    <div class="dropdown-menu-custom">
+                    <div class="dropdown-menu-custom shadow-lg">
                         <div class="dropdown-header-custom">
                             <p class="dropdown-user-name">@(string.IsNullOrWhiteSpace(AuthService.NombreEmpresa) ? "Usuario" : AuthService.NombreEmpresa)</p>
-                            <span class="dropdown-user-role">Emprendedor</span>
+                            <span class="dropdown-user-role">EMPRENDEDOR</span>
                         </div>
+
+                        <div class="dropdown-divider"></div>
 
                         <NavLink class="dropdown-item-custom" href="editar-perfil-usuario" @onclick="() => mostrarMenu = false">
                             Mi Perfil
@@ -51,6 +49,8 @@
                         <NavLink class="dropdown-item-custom" href="editar-perfil" @onclick="() => mostrarMenu = false">
                             Mi Emprendimiento
                         </NavLink>
+
+                        <div class="dropdown-divider"></div>
 
                         <button type="button" class="dropdown-item-custom cerrar-sesion" @onclick="CerrarSesion">
                             Cerrar Sesión
@@ -106,7 +106,6 @@
     private async Task CerrarSesion()
     {
         mostrarMenu = false;
-        // Si había un permiso de edición de perfil activo, se revoca primero.
         await PerfilService.RevocarPermisoAsync();
         await AuthService.CerrarSesionAsync();
         Navigation.NavigateTo("/", replace: true);
