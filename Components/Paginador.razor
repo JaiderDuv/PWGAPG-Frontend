@@ -1,0 +1,23 @@
+﻿@if (TotalPaginas > 1 || Total > 0)
+{
+    <div class="insumos-paginacion">
+        <button type="button" class="btn-outline" disabled="@(Pagina <= 1)" @onclick="() => CambiarPagina(Pagina - 1)">← Anterior</button>
+        <span>Página @Pagina de @TotalPaginas · @Total registro(s)</span>
+        <button type="button" class="btn-outline" disabled="@(Pagina >= TotalPaginas)" @onclick="() => CambiarPagina(Pagina + 1)">Siguiente →</button>
+    </div>
+}
+
+@code {
+    [Parameter] public int Pagina { get; set; } = 1;
+    [Parameter] public int Total { get; set; }
+    [Parameter] public int TamanoPagina { get; set; } = 50;
+    [Parameter] public EventCallback<int> PaginaChanged { get; set; }
+
+    private int TotalPaginas => Math.Max(1, (int)Math.Ceiling(Total / (double)TamanoPagina));
+
+    private async Task CambiarPagina(int nuevaPagina)
+    {
+        if (nuevaPagina < 1 || nuevaPagina > TotalPaginas) return;
+        await PaginaChanged.InvokeAsync(nuevaPagina);
+    }
+}

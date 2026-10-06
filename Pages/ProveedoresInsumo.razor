@@ -1,0 +1,427 @@
+﻿@page "/insumos/{InsumoId:int}/proveedores"
+@attribute [Authorize]
+@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Components
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<div class="onboarding-container">
+    <button type="button" class="btn-outline" @onclick='() => Navigation.NavigateTo("insumos-proveedores")'>
+        ← Volver
+    </button>
+
+    <h2 class="auth-titulo" style="margin-top: 16px;">
+        Proveedores de @(string.IsNullOrWhiteSpace(nombreInsumo) ? "este insumo" : $"«{nombreInsumo}»")
+    </h2>
+    <p class="auth-subtitulo">Compara precios y gestiona los proveedores asociados a este insumo.</p>
+
+    <div class="onboarding-contenido">
+        @if (cargando)
+        {
+            <p class="text-muted">Cargando...</p>
+        }
+        else
+        {
+            <div class="socios-header">
+                <span></span>
+                <button type="button" class="btn-outline" @onclick="AbrirModalAgregar">+ Agregar Proveedor</button>
+            </div>
+
+            @if (mensajeError != null)
+            {
+                <div class="text-danger msg-error">@mensajeError</div>
+            }
+
+            @if (proveedoresAsociados.Any())
+            {
+                <div class="tabla-proveedores-wrap">
+                    <table class="tabla-proveedores">
+                        <thead>
+                            <tr>
+                                <th>Proveedor</th>
+                                <th>Contacto</th>
+                                <th>Precio</th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in proveedoresAsociados)
+                            {
+                                <tr class="@(p.EsMasBarato ? "fila-mas-barata" : "")">
+                                    <td>
+                                        <div class="proveedor-nombre-badges">
+                                            <strong>@p.Nombre</strong>
+                                            @if (p.EsPrincipal)
+                                            {
+                                                <span class="badge-principal">Principal</span>
+                                            }
+                                            @if (p.EsMasBarato)
+                                            {
+                                                <span class="badge-barato">Más barato</span>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td class="text-muted" style="font-size:0.85rem;">
+                                        @(p.Telefono ?? "Sin teléfono")<br />@(p.Correo ?? "Sin correo")
+                                    </td>
+                                    <td>
+                                        <input type="number" step="0.01" class="form-control costo-input"
+                                               @bind="costosEditados[p.ProveedorId]" />
+                                    </td>
+                                    <td>
+                                        @if (costosEditados.TryGetValue(p.ProveedorId, out var editado) && editado != p.Costo)
+                                        {
+                                            <button type="button" class="btn-mini-editar" @onclick="() => GuardarCosto(p.ProveedorId)">Guardar</button>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="proveedor-acciones">
+                                            @if (!p.EsPrincipal)
+                                            {
+                                                <button type="button" class="btn-mini-principal" @onclick="() => MarcarPrincipal(p.ProveedorId)">Marcar Principal</button>
+                                            }
+                                            <button type="button" class="btn-mini-eliminar" @onclick="() => PedirDesasociar(p)">Eliminar</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted">Aún no hay proveedores asociados a este insumo.</p>
+            }
+        }
+    </div>
+</div>
+
+@if (mostrarModalAgregar)
+{
+    <div class="confirm-overlay">
+        <div class="socio-modal">
+            <h3 class="onboarding-subtitulo">Agregar proveedor</h3>
+            <p class="text-muted" style="font-size:0.8rem; margin-top:-8px; margin-bottom:14px;">
+                Los campos marcados con * son obligatorios.
+            </p>
+
+            <div class="modo-toggle">
+                <button type="button" class="@(modoProveedor == "existente" ? "modo-btn activo" : "modo-btn")"
+                        @onclick='() => CambiarModo("existente")' disabled="@(!disponibles.Any())">
+                    Elegir existente
+                </button>
+                <button type="button" class="@(modoProveedor == "nuevo" ? "modo-btn activo" : "modo-btn")"
+                        @onclick='() => CambiarModo("nuevo")'>
+                    Crear nuevo
+                </button>
+            </div>
+
+            <EditForm Model="@formularioAgregar" OnValidSubmit="@AgregarProveedor">
+                <DataAnnotationsValidator />
+
+                @if (modoProveedor == "existente")
+                {
+                    <div class="form-group-sm">
+                        <label class="auth-label">Proveedor *</label>
+                        <select class="form-select" @bind="proveedorExistenteId">
+                            <option value="">-- Seleccione --</option>
+                            @foreach (var d in disponibles)
+                            {
+                                <option value="@d.Id">@d.Nombre</option>
+                            }
+                        </select>
+                        @if (mostrarErrorSeleccion)
+                        {
+                            <span class="text-danger msg-error">Seleccione un proveedor.</span>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="form-group-sm">
+                        <label class="auth-label">Nombre *</label>
+                        <InputText @bind-Value="formularioAgregar.Nombre" class="form-control" />
+                        <ValidationMessage For="@(() => formularioAgregar.Nombre)" class="text-danger msg-error" />
+                    </div>
+                    <div class="form-group-sm">
+                        <label class="auth-label">Teléfono</label>
+                        <InputText @bind-Value="formularioAgregar.Telefono" class="form-control" placeholder="Opcional" />
+                        <ValidationMessage For="@(() => formularioAgregar.Telefono)" class="text-danger msg-error" />
+                    </div>
+                    <div class="form-group-sm">
+                        <label class="auth-label">Correo</label>
+                        <InputText @bind-Value="formularioAgregar.Correo" class="form-control" placeholder="Opcional" />
+                        <ValidationMessage For="@(() => formularioAgregar.Correo)" class="text-danger msg-error" />
+                    </div>
+                }
+
+                <div class="form-group-sm">
+                    <label class="auth-label">Precio *</label>
+                    <InputNumber @bind-Value="formularioAgregar.Costo" class="form-control" />
+                    <ValidationMessage For="@(() => formularioAgregar.Costo)" class="text-danger msg-error" />
+                </div>
+
+                @if (mensajeErrorModal != null)
+                {
+                    <div class="text-danger msg-error">@mensajeErrorModal</div>
+                }
+
+                <div class="confirm-acciones" style="margin-top:16px;">
+                    <button type="button" class="btn-outline" @onclick="() => mostrarModalAgregar = false">Cancelar</button>
+                    <button type="submit" class="btn-solid">Guardar</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<ConfirmDialog Visible="@mostrarConfirmEliminar"
+               Mensaje="¿Estás seguro de quitar este proveedor del insumo?"
+               OnConfirmar="ConfirmarDesasociar"
+               OnCancelar="() => mostrarConfirmEliminar = false" />
+
+@code {
+    [Parameter] public int InsumoId { get; set; }
+
+    private bool cargando = true;
+    private string? mensajeError;
+    private string? mensajeErrorModal;
+
+    private List<InsumoProveedorDTO> proveedoresAsociados = new();
+    private List<ProveedorDTO> disponibles = new();
+    private Dictionary<int, decimal> costosEditados = new();
+
+    private bool mostrarModalAgregar = false;
+    private string modoProveedor = "nuevo";
+    private int? proveedorExistenteId;
+    private ProveedorNuevoDTO formularioAgregar = new();
+    private bool mostrarErrorSeleccion;
+    private string nombreInsumo = string.Empty;
+
+    private bool mostrarConfirmEliminar = false;
+    private InsumoProveedorDTO? proveedorAEliminar;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        mensajeError = null;
+
+        try
+        {
+            var respInsumo = await Http.GetAsync($"api/insumos/{InsumoId}");
+            if (respInsumo.IsSuccessStatusCode)
+            {
+                var cuerpo = await respInsumo.Content.ReadAsStringAsync();
+                using var doc = System.Text.Json.JsonDocument.Parse(cuerpo);
+                if (doc.RootElement.TryGetProperty("nombre", out var nombreProp))
+                {
+                    nombreInsumo = nombreProp.GetString() ?? string.Empty;
+                }
+            }
+
+            var respAsociados = await Http.GetAsync($"api/insumos/{InsumoId}/proveedores");
+            if (respAsociados.IsSuccessStatusCode)
+            {
+                proveedoresAsociados = await respAsociados.Content.ReadFromJsonAsync<List<InsumoProveedorDTO>>() ?? new();
+                costosEditados = proveedoresAsociados.ToDictionary(p => p.ProveedorId, p => p.Costo);
+            }
+            else
+            {
+                mensajeError = "No se pudo cargar la información de proveedores.";
+            }
+
+            var respDisponibles = await Http.GetAsync($"api/insumos/{InsumoId}/proveedores-disponibles");
+            if (respDisponibles.IsSuccessStatusCode)
+            {
+                disponibles = await respDisponibles.Content.ReadFromJsonAsync<List<ProveedorDTO>>() ?? new();
+            }
+        }
+        catch
+        {
+            mensajeError = "No se pudo conectar con el servidor.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private void AbrirModalAgregar()
+    {
+        formularioAgregar = new ProveedorNuevoDTO();
+        proveedorExistenteId = null;
+        mostrarErrorSeleccion = false;
+        mensajeErrorModal = null;
+        mensajeError = null;
+        mostrarModalAgregar = true;
+        CambiarModo(disponibles.Any() ? "existente" : "nuevo");
+    }
+
+    private void CambiarModo(string modo)
+    {
+        modoProveedor = modo;
+        mostrarErrorSeleccion = false;
+        mensajeErrorModal = null;
+
+        // En modo "existente" el Nombre no se usa, pero el DTO lo exige: se rellena para que el formulario valide.
+        formularioAgregar.Nombre = modo == "existente" ? "placeholder" : string.Empty;
+        formularioAgregar.Telefono = null;
+        formularioAgregar.Correo = null;
+    }
+
+    private async Task AgregarProveedor()
+    {
+        mensajeErrorModal = null;
+        mostrarErrorSeleccion = false;
+
+        formularioAgregar.Telefono = string.IsNullOrWhiteSpace(formularioAgregar.Telefono) ? null : formularioAgregar.Telefono.Trim();
+        formularioAgregar.Correo = string.IsNullOrWhiteSpace(formularioAgregar.Correo) ? null : formularioAgregar.Correo.Trim();
+
+        try
+        {
+            HttpResponseMessage resp;
+
+            if (modoProveedor == "existente")
+            {
+                if (!proveedorExistenteId.HasValue)
+                {
+                    mostrarErrorSeleccion = true;
+                    return;
+                }
+
+                resp = await Http.PostAsJsonAsync($"api/insumos/{InsumoId}/proveedores",
+                    new { ProveedorId = proveedorExistenteId.Value, Costo = formularioAgregar.Costo });
+            }
+            else
+            {
+                resp = await Http.PostAsJsonAsync($"api/insumos/{InsumoId}/proveedores/nuevo", formularioAgregar);
+            }
+
+            if (resp.IsSuccessStatusCode)
+            {
+                mostrarModalAgregar = false;
+                await CargarDatos();
+            }
+            else
+            {
+                mensajeErrorModal = await ExtraerMensajeError(resp);
+            }
+        }
+        catch
+        {
+            mensajeErrorModal = "No se pudo conectar con el servidor.";
+        }
+    }
+
+    private async Task<string> ExtraerMensajeError(HttpResponseMessage resp)
+    {
+        try
+        {
+            var cuerpo = await resp.Content.ReadAsStringAsync();
+            using var doc = System.Text.Json.JsonDocument.Parse(cuerpo);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("mensaje", out var mensaje))
+            {
+                return mensaje.GetString() ?? "No se pudo completar la acción.";
+            }
+
+            if (root.TryGetProperty("errors", out var errores) && errores.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                foreach (var campo in errores.EnumerateObject())
+                {
+                    foreach (var texto in campo.Value.EnumerateArray())
+                    {
+                        var valor = texto.GetString();
+                        if (!string.IsNullOrWhiteSpace(valor)) return valor;
+                    }
+                }
+            }
+        }
+        catch { }
+
+        return "No se pudo completar la acción. Verifica los datos e intenta de nuevo.";
+    }
+
+    private async Task MarcarPrincipal(int proveedorId)
+    {
+        mensajeError = null;
+        try
+        {
+            var resp = await Http.PatchAsync($"api/insumos/{InsumoId}/proveedores/{proveedorId}/principal", null);
+            if (resp.IsSuccessStatusCode)
+            {
+                await CargarDatos();
+            }
+            else
+            {
+                mensajeError = "No se pudo marcar como principal.";
+            }
+        }
+        catch
+        {
+            mensajeError = "No se pudo conectar con el servidor.";
+        }
+    }
+
+    private async Task GuardarCosto(int proveedorId)
+    {
+        mensajeError = null;
+        try
+        {
+            var nuevoCosto = costosEditados[proveedorId];
+            var resp = await Http.PatchAsJsonAsync($"api/insumos/{InsumoId}/proveedores/{proveedorId}/costo", new { Costo = nuevoCosto });
+            if (resp.IsSuccessStatusCode)
+            {
+                await CargarDatos();
+            }
+            else
+            {
+                mensajeError = "No se pudo actualizar el precio.";
+            }
+        }
+        catch
+        {
+            mensajeError = "No se pudo conectar con el servidor.";
+        }
+    }
+
+    private void PedirDesasociar(InsumoProveedorDTO proveedor)
+    {
+        proveedorAEliminar = proveedor;
+        mostrarConfirmEliminar = true;
+    }
+
+    private async Task ConfirmarDesasociar()
+    {
+        mostrarConfirmEliminar = false;
+        if (proveedorAEliminar == null) return;
+
+        try
+        {
+            var resp = await Http.DeleteAsync($"api/insumos/{InsumoId}/proveedores/{proveedorAEliminar.ProveedorId}");
+            if (resp.IsSuccessStatusCode)
+            {
+                await CargarDatos();
+            }
+            else
+            {
+                mensajeError = "No se pudo quitar el proveedor.";
+            }
+        }
+        catch
+        {
+            mensajeError = "No se pudo conectar con el servidor.";
+        }
+
+        proveedorAEliminar = null;
+    }
+}
