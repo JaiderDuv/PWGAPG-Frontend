@@ -1,0 +1,121 @@
+﻿@page "/recetas"
+@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Services
+@using PWGAPG_Frontend.Components
+@inject RecetaApiService Api
+
+<h3>Mis recetas</h3>
+
+@if (mensajeOk is not null) { <div class="alert alert-success">@mensajeOk</div> }
+@if (error is not null) { <div class="alert alert-danger">@error</div> }
+
+@if (mostrarForm)
+{
+    <RecetaForm @key="formKey" Editando="editando" Insumos="insumos"
+                OnGuardado="AlGuardar" OnCancelar="CerrarForm" />
+}
+else
+{
+    <div class="d-flex gap-2 mb-3">
+        <input class="form-control" style="max-width:300px" placeholder="Buscar receta..."
+               @bind="busqueda" @bind:event="oninput" @onkeyup="BuscarConEnter" />
+        <button class="btn btn-outline-secondary" @onclick="Cargar">Buscar</button>
+        <button class="btn btn-primary ms-auto" @onclick="Nueva">+ Nueva receta</button>
+    </div>
+}
+
+@if (recetas is null)
+{
+    <p>Cargando...</p>
+}
+else if (recetas.Count == 0)
+{
+    <p class="text-muted">Aún no tienes recetas. Crea la primera.</p>
+}
+else
+{
+    <table class="table table-hover">
+        <thead>
+            <tr><th>ID</th><th>Nombre</th><th>Porciones</th><th>Ingredientes</th><th></th></tr>
+        </thead>
+        <tbody>
+        @foreach (var r in recetas)
+        {
+            <tr>
+                <td>@r.Id</td>
+                <td>@r.Nombre</td>
+                <td>@r.PorcionesBase</td>
+                <td>@string.Join(", ", r.Insumos.Select(i => $"{i.InsumoNombre} ({i.Cantidad:0.###} {i.UnidadMedida})"))</td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-warning" @onclick="() => Editar(r)">Editar</button>
+                    <button class="btn btn-sm btn-danger" @onclick="() => PedirEliminar(r)">Eliminar</button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+<ConfirmDialog Visible="mostrarConfirm"
+               Mensaje="@($"¿Eliminar la receta '{aEliminar?.Nombre}' para siempre? Esta acción no se puede deshacer.")"
+               OnConfirmar="ConfirmarEliminar"
+               OnCancelar="CancelarEliminar" />
+
+@code {
+    private List<RecetaDto>? recetas;
+    private List<InsumoOpcionDto> insumos = new();
+    private RecetaDto? editando, aEliminar;
+    private bool mostrarForm, mostrarConfirm;
+    private string? busqueda, error, mensajeOk;
+    private Guid formKey = Guid.NewGuid();
+
+    protected override async Task OnInitializedAsync()
+    {
+        insumos = await Api.ListarInsumosAsync();
+        await Cargar();
+    }
+
+    private async Task Cargar()
+    {
+        var res = await Api.ListarAsync(busqueda);
+        if (res.Exito) { recetas = res.Datos; error = null; }
+        else { recetas = new(); error = res.Mensaje; }
+    }
+
+    private async Task BuscarConEnter(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await Cargar();
+    }
+
+    private void Nueva() { editando = null; AbrirForm(); }
+    private void Editar(RecetaDto r) { editando = r; AbrirForm(); }
+
+    private void AbrirForm()
+    {
+        mensajeOk = error = null;
+        formKey = Guid.NewGuid();   // fuerza a reconstruir el formulario
+        mostrarForm = true;
+    }
+
+    private void CerrarForm() => mostrarForm = false;
+
+    private async Task AlGuardar()
+    {
+        mostrarForm = false;
+        mensajeOk = editando is null ? "Receta creada correctamente." : "Receta actualizada correctamente.";
+        await Cargar();
+    }
+
+    private void PedirEliminar(RecetaDto r) { aEliminar = r; mostrarConfirm = true; }
+    private void CancelarEliminar() { mostrarConfirm = false; aEliminar = null; }
+
+    private async Task ConfirmarEliminar()
+    {
+        mostrarConfirm = false;
+        var res = await Api.EliminarAsync(aEliminar!.Id);
+        if (res.Exito) { mensajeOk = "Receta eliminada correctamente."; error = null; }
+        else { error = res.Mensaje; mensajeOk = null; }
+        aEliminar = null;
+        await Cargar();
+    }
+}

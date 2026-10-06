@@ -1,0 +1,171 @@
+﻿
+@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Services
+@inject RecetaApiService Api
+
+<div class="card mb-4">
+    <div class="card-header">
+        <strong>@(Editando is null ? "Nueva receta" : $"Editar receta #{Editando.Id}")</strong>
+    </div>
+    <div class="card-body">
+        <EditForm Model="modelo" OnValidSubmit="Guardar">
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label class="form-label">Nombre</label>
+                    <InputText class="form-control" @bind-Value="modelo.Nombre" maxlength="150" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Porciones base</label>
+                    <InputNumber class="form-control" @bind-Value="modelo.PorcionesBase" min="1" />
+                </div>
+            </div>
+
+            <h6>Ingredientes</h6>
+            <table class="table table-sm align-middle">
+                <thead><tr><th>Insumo</th><th style="width:150px">Cantidad</th><th style="width:130px">Unidad</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var fila in modelo.Filas)
+                    {
+                        <tr>
+                            <td>
+                                <select class="form-select" value="@fila.InsumoId"
+                                        @onchange="e => AlSeleccionarInsumo(fila, e.Value?.ToString())">
+                                    <option value="0">-- Selecciona --</option>
+                                    @foreach (var i in Insumos)
+                                    {
+                                        <option value="@i.Id">@i.Nombre (@i.UnidadMedida)</option>
+                                    }
+                                </select>
+                            </td>
+                            <td><InputNumber class="form-control" @bind-Value="fila.Cantidad" step="0.001" /></td>
+                            <td>
+                                <select class="form-select" @bind="fila.UnidadMedida">
+                                    @foreach (var u in UnidadesCompatibles(fila))
+                                    {
+                                        <option value="@u">@u</option>
+                                    }
+                                </select>
+                            </td>
+                            <td><button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => modelo.Filas.Remove(fila)">✕</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <button type="button" class="btn btn-sm btn-outline-secondary mb-3" @onclick="AgregarFila">+ Agregar ingrediente</button>
+
+            <div class="mb-3">
+                <label class="form-label">Instrucciones</label>
+                <InputTextArea class="form-control" rows="4" @bind-Value="modelo.Instrucciones" />
+            </div>
+
+            @if (error is not null)
+            {
+                <div class="alert alert-danger">@error</div>
+            }
+
+            <button type="submit" class="btn btn-primary" disabled="@guardando">
+                @(guardando ? "Guardando..." : "Guardar")
+            </button>
+            <button type="button" class="btn btn-secondary" @onclick="OnCancelar">Cancelar</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter] public RecetaDto? Editando { get; set; }
+    [Parameter] public RecetaDto? Precarga { get; set; }   // la usaremos con la IA
+    [Parameter] public List<InsumoOpcionDto> Insumos { get; set; } = new();
+    [Parameter] public EventCallback OnGuardado { get; set; }
+    [Parameter] public EventCallback OnCancelar { get; set; }
+
+    private static readonly Dictionary<string, string[]> Familias = new()
+    {
+        ["masa"] = new[] { "g", "kg", "oz", "lb" },
+        ["volumen"] = new[] { "ml", "l", "taza" },
+        ["conteo"] = new[] { "unidad" }
+    };
+
+    private FormModelo modelo = new();
+    private string? error;
+    private bool guardando;
+
+    protected override void OnInitialized()
+    {
+        var origen = Editando ?? Precarga;
+        if (origen is null) { modelo.Filas.Add(new Fila()); return; }
+
+        modelo.Nombre = origen.Nombre;
+        modelo.PorcionesBase = origen.PorcionesBase;
+        modelo.Instrucciones = origen.Instrucciones;
+        modelo.Filas = origen.Insumos.Select(i => new Fila
+        {
+            InsumoId = i.InsumoId,
+            Cantidad = i.Cantidad,
+            UnidadMedida = i.UnidadMedida
+        }).ToList();
+        if (modelo.Filas.Count == 0) modelo.Filas.Add(new Fila());
+    }
+
+    private void AgregarFila() => modelo.Filas.Add(new Fila());
+
+    private void AlSeleccionarInsumo(Fila fila, string? valor)
+    {
+        fila.InsumoId = int.TryParse(valor, out var id) ? id : 0;
+        var insumo = Insumos.FirstOrDefault(i => i.Id == fila.InsumoId);
+        if (insumo is not null) fila.UnidadMedida = insumo.UnidadMedida;
+    }
+
+    private IEnumerable<string> UnidadesCompatibles(Fila fila)
+    {
+        var insumo = Insumos.FirstOrDefault(i => i.Id == fila.InsumoId);
+        if (insumo is null) return Familias.Values.SelectMany(x => x);
+        return Familias.Values.First(f => f.Contains(insumo.UnidadMedida.ToLower()));
+    }
+
+    private async Task Guardar()
+    {
+        error = null;
+        if (modelo.Filas.Any(f => f.InsumoId == 0 || f.Cantidad <= 0))
+        {
+            error = "Cada ingrediente necesita un insumo y una cantidad mayor a 0.";
+            return;
+        }
+
+        var dto = new GuardarRecetaDto
+        {
+            Nombre = modelo.Nombre,
+            PorcionesBase = modelo.PorcionesBase,
+            Instrucciones = modelo.Instrucciones,
+            Insumos = modelo.Filas.Select(f => new RecetaInsumoDto
+            {
+                InsumoId = f.InsumoId,
+                Cantidad = f.Cantidad,
+                UnidadMedida = f.UnidadMedida
+            }).ToList()
+        };
+
+        guardando = true;
+        var res = Editando is null
+            ? await Api.CrearAsync(dto)
+            : await Api.ActualizarAsync(Editando.Id, dto);
+        guardando = false;
+
+        if (!res.Exito) { error = res.Mensaje; return; }
+        await OnGuardado.InvokeAsync();
+    }
+
+    private class FormModelo
+    {
+        public string Nombre { get; set; } = "";
+        public int PorcionesBase { get; set; } = 1;
+        public string? Instrucciones { get; set; }
+        public List<Fila> Filas { get; set; } = new();
+    }
+
+    private class Fila
+    {
+        public int InsumoId { get; set; }
+        public decimal Cantidad { get; set; }
+        public string UnidadMedida { get; set; } = "g";
+    }
+}
