@@ -1,0 +1,186 @@
+﻿@page "/insumos-proveedores"
+@attribute [Authorize]
+@using PWGAPG_Frontend.Models
+@using System.Net.Http.Json
+@implements IDisposable
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@using PWGAPG_Frontend.Components
+
+<div class="inventario-container">
+    <button type="button" class="btn-outline" @onclick='() => Navigation.NavigateTo("proveedores")'>
+        ← Volver a proveedores
+    </button>
+
+    <div class="inventario-header" style="margin-top: 16px;">
+        <div>
+            <span class="inventario-eyebrow">PROVEEDORES</span>
+            <h1 class="inventario-titulo">Asignar proveedor a un insumo</h1>
+            <p class="inventario-subtitulo">Busca el insumo y entra a gestionar sus proveedores y precios.</p>
+        </div>
+    </div>
+
+    <section class="insumos-toolbar">
+        <input class="form-control insumos-buscador"
+               placeholder="Buscar por nombre o proveedor..."
+               value="@textoBusqueda"
+               @oninput="e => textoBusqueda = e.Value?.ToString() ?? string.Empty" />
+    </section>
+
+    @if (mensajeError != null)
+    {
+        <div class="text-danger msg-error">@mensajeError</div>
+    }
+
+    @if (cargando && !insumos.Any())
+    {
+        <p class="text-muted">Cargando...</p>
+    }
+    else
+    {
+        <div class="inventario-tabla-wrap">
+            <table class="inventario-tabla">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Unidad</th>
+                        <th>Proveedor actual</th>
+                        <th>Costo</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (insumos.Any())
+                    {
+                        @foreach (var i in insumos)
+                        {
+                            <tr>
+                                <td><strong>@i.Nombre</strong></td>
+                                <td class="text-muted">@i.UnidadMedida</td>
+                                <td class="text-muted">@(i.Proveedor ?? "—")</td>
+                                <td class="text-muted">$@i.CostoUnitario.ToString("N0")</td>
+                                <td>
+                                    <button type="button" class="btn-mini-editar" @onclick="() => IrAProveedores(i.Id)">
+                                        Gestionar proveedores
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="text-muted" style="text-align:center; padding:24px;">
+                                @(string.IsNullOrWhiteSpace(textoBusqueda) ? "Aún no tienes insumos registrados." : "No hay insumos que coincidan con la búsqueda.")
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            
+        </div>
+        <Paginador Pagina="pagina" Total="total" TamanoPagina="TamanoPagina" PaginaChanged="CambiarPagina" />
+    }
+</div>
+
+@code {
+    private bool cargando = true;
+    private string? mensajeError;
+
+    private int pagina = 1;
+    private int total = 0;
+    private const int TamanoPagina = 50;
+
+    private string _textoBusqueda = string.Empty;
+    private string textoBusqueda
+    {
+        get => _textoBusqueda;
+        set
+        {
+            if (_textoBusqueda == value) return;
+            _textoBusqueda = value;
+            pagina = 1;
+            _ = ReiniciarDebounceAsync();
+        }
+    }
+
+    private List<InsumoApiDto> insumos = new();
+    private CancellationTokenSource? debounceCts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Buscar();
+    }
+
+    private async Task ReiniciarDebounceAsync()
+    {
+        debounceCts?.Cancel();
+        debounceCts?.Dispose();
+        debounceCts = new CancellationTokenSource();
+        var token = debounceCts.Token;
+
+        try
+        {
+            await Task.Delay(400, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        await Buscar();
+        StateHasChanged();
+    }
+
+    private async Task Buscar()
+    {
+        cargando = true;
+        mensajeError = null;
+
+        try
+        {
+            var url = $"api/insumos?pagina={pagina}&tamanoPagina={TamanoPagina}";
+            if (!string.IsNullOrWhiteSpace(textoBusqueda))
+            {
+                url += $"&busqueda={Uri.EscapeDataString(textoBusqueda)}";
+            }
+
+            var resp = await Http.GetAsync(url);
+            if (resp.IsSuccessStatusCode)
+            {
+                var resultado = await resp.Content.ReadFromJsonAsync<ListaPaginadaDto<InsumoApiDto>>();
+                insumos = resultado?.Datos ?? new();
+                total = resultado?.Total ?? 0;
+            }
+            else
+            {
+                mensajeError = $"No se pudo cargar la lista de insumos ({(int)resp.StatusCode}).";
+            }
+        }
+        catch
+        {
+            mensajeError = "No se pudo conectar con el servidor.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CambiarPagina(int nuevaPagina)
+    {
+        pagina = nuevaPagina;
+        await Buscar();
+    }
+
+    private void IrAProveedores(int insumoId)
+    {
+        Navigation.NavigateTo($"insumos/{insumoId}/proveedores");
+    }
+
+    public void Dispose()
+    {
+        debounceCts?.Cancel();
+        debounceCts?.Dispose();
+    }
+}

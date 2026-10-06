@@ -44,7 +44,7 @@ namespace PWGAPG_Frontend.Models
 
         [Required(ErrorMessage = "El teléfono de contacto es obligatorio.")]
         [StringLength(20)]
-        [RegularExpression(@"^\d{10}$", ErrorMessage = "El teléfono debe ser numérico y contener exactamente 10 dígitos.")]
+        [RegularExpression(@"^$|^3\d{9}$", ErrorMessage = "El teléfono debe tener 10 dígitos y empezar por 3.")]
         public string TelefonoContacto { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "El correo de contacto es obligatorio.")]
