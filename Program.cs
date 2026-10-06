@@ -14,6 +14,7 @@ builder.Services.AddHttpClient<IAuthService, AuthService>(c => c.BaseAddress = n
 builder.Services.AddScoped<AuthService>(sp => (AuthService)sp.GetRequiredService<IAuthService>());
 builder.Services.AddScoped<PerfilService>();
 builder.Services.AddScoped<InsumoService>();
+builder.Services.AddScoped<RecetaApiService>();   // <-- único cambio: recetas
 builder.Services.AddTransient<BearerAuthorizationHandler>();
 builder.Services.AddHttpClient("Api", c => c.BaseAddress = new Uri(apiUrl))
     .AddHttpMessageHandler<BearerAuthorizationHandler>();
