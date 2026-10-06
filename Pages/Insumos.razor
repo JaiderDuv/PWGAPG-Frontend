@@ -207,7 +207,7 @@
                     </div>
 
                     <div class="form-group-sm">
-                        <label class="auth-label">Proveedor @(esEdicion ? "(obligatorio si cambias el precio)" : "(opcional)")</label>
+                        <label class="auth-label">Proveedor @(esEdicion ? "*" : "(opcional)")</label>
                         <InputText @bind-Value="form.Proveedor" class="form-control" placeholder="Ej.: Distribuidora Andina" />
                         @if (errores.TryGetValue(nameof(form.Proveedor), out var errProv))
                         {
@@ -285,8 +285,6 @@
     private bool mostrarConfirmEliminar;
     private InsumoApiDto? insumoAEliminar;
 
-    // Debounce del buscador: espera a que el usuario deje de escribir
-    // antes de llamar al servidor (ver explicación al final del archivo).
     private CancellationTokenSource? debounceCts;
 
     protected override async Task OnInitializedAsync()
@@ -324,7 +322,6 @@
         }
     }
 
-    // --- Búsqueda con debounce (400 ms) ---
     private async Task OnBusquedaInput(ChangeEventArgs e)
     {
         textoBusqueda = e.Value?.ToString() ?? string.Empty;
@@ -340,7 +337,7 @@
         }
         catch (TaskCanceledException)
         {
-            return; // El usuario siguió escribiendo: se descarta esta búsqueda.
+            return;
         }
 
         pagina = 1;
@@ -401,7 +398,6 @@
         }
     }
 
-    // --- Modal nuevo/editar ---
     private void AbrirModalNuevo()
     {
         esEdicion = false;
@@ -477,7 +473,6 @@
 
         if (form.PorcentajeMerma is null)
         {
-            // Campo vacío => se asume 0 automáticamente.
             form.PorcentajeMerma = 0;
         }
         else if (form.PorcentajeMerma.Value < 0 || form.PorcentajeMerma.Value > 100)
@@ -490,7 +485,6 @@
             errores[nameof(form.Proveedor)] = "El proveedor no puede superar los 150 caracteres.";
         }
 
-        // Regla del BackEnd: cambiar el precio exige enviar el proveedor.
         if (esEdicion && insumoEditando is not null &&
             form.CostoUnitario.HasValue && form.CostoUnitario.Value != insumoEditando.CostoUnitario &&
             string.IsNullOrWhiteSpace(form.Proveedor))
@@ -553,7 +547,6 @@
             return;
         }
 
-        // Actualización local: se inserta sin recargar toda la lista.
         var creado = resultado.Data;
         total++;
         if (pagina == 1 && CoincideConFiltros(creado))
@@ -617,8 +610,6 @@
             return;
         }
 
-        // El proveedor se envía como null para limpiarlo solo si el usuario lo vació.
-        // Como el BackEnd exige proveedor al cambiar precio, ese caso ya va con valor.
         var resultado = await InsumoService.ActualizarParcialAsync(original.Id, request);
         if (!resultado.Success || resultado.Data is null)
         {
@@ -626,7 +617,6 @@
             return;
         }
 
-        // Actualización local: se reemplaza en su posición.
         var actualizado = resultado.Data;
         var index = insumos.FindIndex(i => i.Id == actualizado.Id);
         if (index >= 0)
@@ -646,7 +636,6 @@
         mensajeExito = $"El insumo «{actualizado.Nombre}» fue actualizado correctamente.";
     }
 
-    // --- Eliminar ---
     private void PedirEliminar(InsumoApiDto insumo)
     {
         LimpiarMensajes();
@@ -757,7 +746,6 @@
         }
     }
 
-    // --- Utilidades de actualización local ---
     private bool CoincideConFiltros(InsumoApiDto insumo)
     {
         if (!string.IsNullOrWhiteSpace(unidadFiltro) &&
@@ -832,12 +820,3 @@
         public bool Activo { get; set; } = true;
     }
 }
-
-@* NOTA — Qué es Debounce (explicación pedida):
-   El buscador filtra mientras escribes, pero NO llama al servidor en cada
-   tecla. Cada pulsación reinicia un temporizador de 400 ms
-   (CancellationTokenSource + Task.Delay en OnBusquedaInput); solo cuando el
-   usuario deja de escribir por 400 ms se hace UNA petición GET /api/insumos.
-   Así se evita saturar el BackEnd con peticiones intermedias inútiles
-   (p. ej. "h", "ha", "har", "hari", "harin", "harina" = 6 peticiones)
-   y la lista se sigue actualizando en tiempo real. *@

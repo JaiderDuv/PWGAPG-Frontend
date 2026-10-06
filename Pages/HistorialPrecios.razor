@@ -58,6 +58,7 @@
                             <tr>
                                 <th>Fecha</th>
                                 <th>Precio</th>
+                                <th>Diferencia</th>
                                 <th>Variación vs. anterior</th>
                             </tr>
                         </thead>
@@ -67,6 +68,7 @@
                                 <tr>
                                     <td>@entrada.Fecha.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
                                     <td><strong>$@entrada.Precio.ToString("N2")</strong></td>
+                                    <td>@TextoDiferencia(entrada)</td>
                                     <td>@BadgeVariacion(entrada)</td>
                                 </tr>
                             }
@@ -129,6 +131,17 @@
     private void OnFiltroProveedorInput(ChangeEventArgs e)
     {
         filtroProveedor = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private static string TextoDiferencia(HistorialPrecioDto entrada)
+    {
+        if (entrada.Diferencia is null)
+        {
+            return "—";
+        }
+
+        var signo = entrada.Diferencia.Value > 0 ? "+" : "";
+        return $"{signo}${entrada.Diferencia.Value:N2}";
     }
 
     private static RenderFragment BadgeVariacion(HistorialPrecioDto entrada) => builder =>
