@@ -93,6 +93,19 @@ public sealed class InsumoService
         return await CrearResultadoAsync<EliminarInsumoInfo>(response);
     }
 
+    public async Task<InsumoApiResult<List<ProveedorDTO>>> ListarProveedoresNegocioAsync()
+    {
+        using var response = await _httpClient.GetAsync("api/negocios/mio/proveedores");
+        return await CrearResultadoAsync<List<ProveedorDTO>>(response);
+    }
+
+    public async Task<InsumoApiResult<List<ProveedorDTO>>> BuscarProveedoresAsync(string termino, int limite = 8)
+    {
+        var url = $"api/negocios/mio/proveedores?busqueda={Uri.EscapeDataString(termino.Trim())}&limite={limite}";
+        using var response = await _httpClient.GetAsync(url);
+        return await CrearResultadoAsync<List<ProveedorDTO>>(response);
+    }
+
     public async Task<InsumoApiResult<HistorialPreciosDto>> ObtenerHistorialPreciosAsync(int id)
     {
         using var response = await _httpClient.GetAsync($"api/insumos/{id}/historial-precios");
@@ -162,6 +175,11 @@ public sealed class InsumoService
         try
         {
             using var document = JsonDocument.Parse(body);
+            // Las listas (ej. proveedores) son arrays top-level: no tienen "mensaje".
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
             if (document.RootElement.TryGetProperty("mensaje", out var mensaje))
             {
                 return mensaje.GetString();
@@ -173,6 +191,10 @@ public sealed class InsumoService
             }
         }
         catch (JsonException)
+        {
+            return null;
+        }
+        catch (InvalidOperationException)
         {
             return null;
         }
