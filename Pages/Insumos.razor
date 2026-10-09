@@ -13,7 +13,6 @@
         <div>
             <span class="perfil-kicker">INVENTARIO</span>
             <h1>Insumos</h1>
-            <p>Materia prima de tu negocio (leche, huevos, harina...). Los cambios se reflejan al instante.</p>
         </div>
         <div class="insumos-heading-acciones">
             <button type="button" class="btn-outline" @onclick='() => Navigation.NavigateTo("insumos/historial")'>Historial de precios</button>
@@ -60,12 +59,12 @@
             <option value="taza">taza</option>
         </select>
 
-        <input class="form-control insumos-categoria"
-               placeholder="Filtrar por categoría..."
-               value="@categoriaFiltro"
-               @onchange="OnCategoriaFiltroChanged"
-               maxlength="20"
-               title="Valores: materia_prima, empaque, otro" />
+        <select class="form-select" value="@categoriaFiltro" @onchange="OnCategoriaFiltroChanged" title="Filtrar por categoría">
+            <option value="">Todas las categorías</option>
+            <option value="materia_prima">materia_prima</option>
+            <option value="empaque">empaque</option>
+            <option value="otro">otro</option>
+        </select>
 
         <select class="form-select" value="@ordenarPor" @onchange="OnOrdenChanged" title="Ordenar por">
             <option value="nombre">Nombre</option>
@@ -208,7 +207,46 @@
 
                     <div class="form-group-sm">
                         <label class="auth-label">Proveedor @(esEdicion ? "*" : "(opcional)")</label>
-                        <InputText @bind-Value="form.Proveedor" class="form-control" placeholder="Ej.: Distribuidora Andina" />
+                        <div class="proveedor-drop-wrap">
+                            <input class="form-control" value="@form.Proveedor" @oninput="OnProveedorOnInput"
+                                   @onfocus="MostrarSugerenciasProveedor" @onblur="OcultarSugerenciasProveedor"
+                                   placeholder="Escribe para buscar o crear (vacío = ninguno)"
+                                   disabled="@cargandoProveedores" autocomplete="off" />
+                            @if (mostrarSugerenciasProveedor && sugerenciasActuales.Any())
+                            {
+                                <div class="proveedor-drop-lista">
+                                    @foreach (var sug in sugerenciasActuales)
+                                    {
+                                        <button type="button" class="proveedor-drop-item" @onmousedown="() => SeleccionarProveedor(sug.Nombre)">
+                                            @sug.Nombre
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                        @* Área de estado con altura fija: los mensajes no mueven el resto del formulario. *@
+                        <div style="min-height:20px;">
+                            @if (cargandoProveedores)
+                            {
+                                <span class="text-muted" style="font-size:0.8rem;">Cargando proveedores...</span>
+                            }
+                            else if (errorCargaProveedores)
+                            {
+                                <span class="text-danger msg-error" style="font-size:0.8rem;">No se pudieron cargar los proveedores. Verifica que el backend esté corriendo.</span>
+                            }
+                            else if (!listaProveedores.Any() && string.IsNullOrWhiteSpace(form.Proveedor))
+                            {
+                                <span class="text-muted" style="font-size:0.8rem;">Aún no hay proveedores registrados. Escribe un nombre para crear el primero.</span>
+                            }
+                            else if (buscandoProveedores)
+                            {
+                                <span class="text-muted" style="font-size:0.75rem;">Actualizando desde la base de datos...</span>
+                            }
+                            else if (MostrarAvisoSinCoincidencia)
+                            {
+                                <span class="text-muted" style="font-size:0.8rem;">Sin coincidencias para '@form.Proveedor.Trim()' — se creará como nuevo.</span>
+                            }
+                        </div>
                         @if (errores.TryGetValue(nameof(form.Proveedor), out var errProv))
                         {
                             <span class="text-danger msg-error">@errProv</span>
@@ -282,6 +320,11 @@
     private Dictionary<string, string> errores = new();
     private string? errorGeneralModal;
 
+    private List<ProveedorDTO> listaProveedores = new();
+    private bool cargandoProveedores;
+    private bool errorCargaProveedores;
+    private bool mostrarSugerenciasProveedor;
+
     private bool mostrarConfirmEliminar;
     private InsumoApiDto? insumoAEliminar;
 
@@ -290,6 +333,220 @@
     protected override async Task OnInitializedAsync()
     {
         await CargarAsync();
+        try
+        {
+            await CargarProveedoresAsync();
+        }
+        catch (Exception)
+        {
+            cargandoProveedores = false;
+        }
+    }
+
+    private async Task CargarProveedoresAsync()
+    {
+        cargandoProveedores = true;
+        errorCargaProveedores = false;
+        try
+        {
+            var resultado = await InsumoService.ListarProveedoresNegocioAsync();
+            if (resultado.Success && resultado.Data is not null)
+            {
+                listaProveedores = resultado.Data
+                    .OrderBy(p => p.Nombre, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+            else
+            {
+                errorCargaProveedores = true;
+            }
+        }
+        catch (HttpRequestException)
+        {
+            errorCargaProveedores = true;
+        }
+        catch (Exception)
+        {
+            errorCargaProveedores = true;
+        }
+        finally
+        {
+            cargandoProveedores = false;
+        }
+    }
+    
+    private List<ProveedorDTO> sugerenciasActuales = new();
+    private bool buscandoProveedores;
+    private CancellationTokenSource? proveedorBusquedaCts;
+
+    // Aviso "sin coincidencias": persiste 5s tras salir del campo (punto 3).
+    private bool avisoProveedorVisible;
+    private CancellationTokenSource? avisoProveedorCts;
+
+    // Último término con coincidencia EXACTA devuelta por la BD (punto 2).
+    private string? terminoExactoDb;
+
+    // Hay coincidencia si la lista muestra algo o el texto iguala a un
+    // proveedor registrado (local o confirmado por la BD). Solo sin esto
+    // se avisa que se creará como nuevo.
+    private bool HayCoincidenciaProveedor()
+    {
+        if (sugerenciasActuales.Any()) return true;
+        var texto = form.Proveedor?.Trim() ?? string.Empty;
+        if (texto.Length == 0) return true;
+        if (listaProveedores.Any(p => string.Equals(p.Nombre.Trim(), texto, StringComparison.OrdinalIgnoreCase))) return true;
+        return terminoExactoDb is not null
+            && string.Equals(terminoExactoDb, texto, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool MostrarAvisoSinCoincidencia =>
+        !string.IsNullOrWhiteSpace(form.Proveedor)
+        && !buscandoProveedores
+        && !HayCoincidenciaProveedor()
+        && (mostrarSugerenciasProveedor || avisoProveedorVisible);
+
+    private static List<ProveedorDTO> FiltrarProveedores(IEnumerable<ProveedorDTO> fuente, string termino, int tope = 6)
+    {
+        if (string.IsNullOrWhiteSpace(termino))
+        {
+            return new List<ProveedorDTO>();
+        }
+        var t = termino.Trim();
+        var prefijos = fuente
+            .Where(p => p.Nombre.StartsWith(t, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(p.Nombre, t, StringComparison.OrdinalIgnoreCase))
+            .Take(tope)
+            .ToList();
+        if (prefijos.Count < tope)
+        {
+            prefijos.AddRange(fuente
+                .Where(p => !p.Nombre.StartsWith(t, StringComparison.OrdinalIgnoreCase)
+                    && p.Nombre.Contains(t, StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(p.Nombre, t, StringComparison.OrdinalIgnoreCase)
+                    && !prefijos.Any(x => x.Id == p.Id))
+                .Take(tope - prefijos.Count));
+        }
+        return prefijos;
+    }
+
+    private void MostrarSugerenciasProveedor()
+    {
+        avisoProveedorCts?.Cancel();
+        avisoProveedorVisible = false;
+        mostrarSugerenciasProveedor = true;
+        sugerenciasActuales = FiltrarProveedores(listaProveedores, form.Proveedor);
+        _ = BuscarSugerenciasEnBdAsync(form.Proveedor);
+    }
+
+    private async Task OcultarSugerenciasProveedor()
+    {
+        // Retardo para que el clic en la sugerencia se procese antes del blur.
+        await Task.Delay(150);
+        mostrarSugerenciasProveedor = false;
+        // El aviso no desaparece al saltar de campo: queda 5s visible.
+        if (!string.IsNullOrWhiteSpace(form.Proveedor) && !HayCoincidenciaProveedor())
+        {
+            avisoProveedorVisible = true;
+            StateHasChanged();
+            await ProgramarOcultadoAvisoAsync();
+        }
+    }
+
+    private async Task ProgramarOcultadoAvisoAsync()
+    {
+        avisoProveedorCts?.Cancel();
+        avisoProveedorCts?.Dispose();
+        avisoProveedorCts = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(5000, avisoProveedorCts.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+        avisoProveedorVisible = false;
+        StateHasChanged();
+    }
+
+    private void OnProveedorOnInput(ChangeEventArgs e)
+    {
+        form.Proveedor = e.Value?.ToString() ?? string.Empty;
+        errores.Remove(nameof(form.Proveedor));
+        avisoProveedorCts?.Cancel();
+        avisoProveedorVisible = false;
+        mostrarSugerenciasProveedor = true;
+        sugerenciasActuales = FiltrarProveedores(listaProveedores, form.Proveedor);
+        _ = BuscarSugerenciasEnBdAsync(form.Proveedor);
+    }
+
+    private async Task BuscarSugerenciasEnBdAsync(string? texto)
+    {
+        proveedorBusquedaCts?.Cancel();
+        proveedorBusquedaCts?.Dispose();
+        proveedorBusquedaCts = new CancellationTokenSource();
+        var token = proveedorBusquedaCts.Token;
+
+        var termino = texto?.Trim() ?? string.Empty;
+        if (termino.Length == 0)
+        {
+            buscandoProveedores = false;
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            await Task.Delay(150, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        buscandoProveedores = true;
+        StateHasChanged();
+        try
+        {
+            var resultado = await InsumoService.BuscarProveedoresAsync(termino, 8);
+            if (token.IsCancellationRequested) return;
+            if (!string.Equals(form.Proveedor?.Trim(), termino, StringComparison.OrdinalIgnoreCase)) return;
+            if (resultado.Success && resultado.Data is not null)
+            {
+                // Registra si la BD trae el nombre exacto (aunque se excluya
+                // de la lista visible) para no avisar en vano.
+                terminoExactoDb = resultado.Data.Any(p => string.Equals(p.Nombre.Trim(), termino, StringComparison.OrdinalIgnoreCase))
+                    ? termino
+                    : null;
+                sugerenciasActuales = FiltrarProveedores(resultado.Data, termino, 8);
+                // Si llegaron coincidencias, un aviso previo queda sin efecto.
+                if (HayCoincidenciaProveedor())
+                {
+                    avisoProveedorCts?.Cancel();
+                    avisoProveedorVisible = false;
+                }
+            }
+        }
+        catch (Exception)
+        {
+        }
+        finally
+        {
+            buscandoProveedores = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SeleccionarProveedor(string nombre)
+    {
+        proveedorBusquedaCts?.Cancel();
+        buscandoProveedores = false;
+        avisoProveedorCts?.Cancel();
+        avisoProveedorVisible = false;
+        form.Proveedor = nombre;
+        sugerenciasActuales.Clear();
+        mostrarSugerenciasProveedor = false;
+        errores.Remove(nameof(form.Proveedor));
     }
 
     private async Task CargarAsync()
@@ -315,6 +572,10 @@
         catch (HttpRequestException)
         {
             mensajeError = "No fue posible conectar con el servidor.";
+        }
+        catch (Exception)
+        {
+            mensajeError = "Ocurrió un error al cargar los insumos.";
         }
         finally
         {
@@ -398,17 +659,28 @@
         }
     }
 
-    private void AbrirModalNuevo()
+    private async Task AbrirModalNuevo()
     {
         esEdicion = false;
         insumoEditando = null;
         form = new InsumoFormModel { Activo = true, Categoria = "otro" };
         errores.Clear();
         errorGeneralModal = null;
+        mostrarSugerenciasProveedor = false;
+        sugerenciasActuales.Clear();
+        buscandoProveedores = false;
+        avisoProveedorCts?.Cancel();
+        avisoProveedorVisible = false;
+        terminoExactoDb = null;
+        if (!listaProveedores.Any() && !cargandoProveedores)
+        {
+            await CargarProveedoresAsync();
+        }
+        form.Proveedor = string.Empty;
         mostrarModal = true;
     }
 
-    private void AbrirModalEditar(InsumoApiDto insumo)
+    private async Task AbrirModalEditar(InsumoApiDto insumo)
     {
         esEdicion = true;
         insumoEditando = insumo;
@@ -424,6 +696,16 @@
         };
         errores.Clear();
         errorGeneralModal = null;
+        mostrarSugerenciasProveedor = false;
+        sugerenciasActuales.Clear();
+        buscandoProveedores = false;
+        avisoProveedorCts?.Cancel();
+        avisoProveedorVisible = false;
+        terminoExactoDb = null;
+        if (!listaProveedores.Any() && !cargandoProveedores)
+        {
+            await CargarProveedoresAsync();
+        }
         mostrarModal = true;
     }
 
@@ -431,6 +713,12 @@
     {
         mostrarModal = false;
         insumoEditando = null;
+        mostrarSugerenciasProveedor = false;
+        sugerenciasActuales.Clear();
+        buscandoProveedores = false;
+        avisoProveedorCts?.Cancel();
+        avisoProveedorVisible = false;
+        terminoExactoDb = null;
     }
 
     private static readonly HashSet<string> CategoriasValidas = new(StringComparer.OrdinalIgnoreCase)
@@ -440,6 +728,7 @@
 
     private bool ValidarFormulario()
     {
+        form.Proveedor = form.Proveedor?.Trim() ?? string.Empty;
         errores.Clear();
 
         if (string.IsNullOrWhiteSpace(form.Nombre))
@@ -590,7 +879,7 @@
         }
         else if ((form.Proveedor ?? string.Empty).Trim() != (original.Proveedor ?? string.Empty))
         {
-            request.Proveedor = string.IsNullOrWhiteSpace(form.Proveedor) ? null : form.Proveedor.Trim();
+            request.Proveedor = string.IsNullOrWhiteSpace(form.Proveedor) ? string.Empty : form.Proveedor.Trim();
         }
         if (form.PorcentajeMerma!.Value != original.PorcentajeMerma)
         {
@@ -665,7 +954,6 @@
             }
             else if (resultado.StatusCode == System.Net.HttpStatusCode.Conflict)
             {
-                // En uso: no se elimina; se explica y se ofrece desactivar.
                 bloqueoEliminar = new BloqueoEliminar(
                     insumoAEliminar,
                     resultado.Message ?? "El insumo está en uso y no se puede eliminar.",
@@ -805,6 +1093,10 @@
     {
         debounceCts?.Cancel();
         debounceCts?.Dispose();
+        proveedorBusquedaCts?.Cancel();
+        proveedorBusquedaCts?.Dispose();
+        avisoProveedorCts?.Cancel();
+        avisoProveedorCts?.Dispose();
     }
 
     private sealed record BloqueoEliminar(InsumoApiDto Insumo, string Mensaje, int NumeroRecetas);

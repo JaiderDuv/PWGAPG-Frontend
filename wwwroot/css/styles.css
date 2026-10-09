@@ -795,3 +795,40 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
     display: flex;
     gap: 8px;
 }
+
+.proveedor-drop-wrap {
+    position: relative;
+}
+
+.proveedor-drop-lista {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1500;
+    margin-top: 4px;
+    padding: 4px;
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.proveedor-drop-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: var(--text-main);
+}
+
+    .proveedor-drop-item:hover {
+        background-color: #FEF3C7;
+    }
