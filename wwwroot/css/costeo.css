@@ -1,0 +1,123 @@
+﻿.rc-recipe-wide {
+    grid-column: 1 / -1;
+}
+
+.cs-panel {
+    margin-top: .75rem;
+}
+
+.cs-aviso {
+    display: flex;
+    gap: .6rem;
+    padding: .65rem .85rem;
+    border-radius: 10px;
+    margin-bottom: .6rem;
+    font-size: .88rem;
+    align-items: flex-start;
+}
+
+.cs-aviso-warn {
+    background: #FFF7E6;
+    border: 1px solid #F5D08A;
+    color: #7A4B00;
+}
+
+.cs-aviso-info {
+    background: #EEF4FF;
+    border: 1px solid #C7D7F5;
+    color: #1E3A6B;
+}
+
+.cs-aviso a {
+    color: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+.cs-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: .6rem;
+    margin: .75rem 0;
+}
+
+.cs-kpi {
+    background: var(--cm-soft);
+    border-radius: 10px;
+    padding: .6rem .8rem;
+}
+
+    .cs-kpi small {
+        display: block;
+        color: var(--cm-muted);
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+    }
+
+    .cs-kpi strong {
+        display: block;
+        font-size: 1.15rem;
+        color: var(--cm-primary-dark);
+    }
+
+    .cs-kpi em {
+        font-size: .75rem;
+        color: var(--cm-muted);
+        font-style: normal;
+    }
+
+.cs-kpi-main {
+    background: #111;
+}
+
+    .cs-kpi-main small, .cs-kpi-main em {
+        color: #d4d4d4;
+    }
+
+    .cs-kpi-main strong {
+        color: #fff;
+        font-size: 1.35rem;
+    }
+
+.cs-detalle summary {
+    cursor: pointer;
+    color: var(--cm-brand);
+    font-weight: 600;
+    font-size: .9rem;
+}
+
+.cs-table thead th {
+    font-size: .75rem;
+    text-transform: uppercase;
+    color: var(--cm-muted);
+    letter-spacing: .03em;
+    border-bottom: 2px solid var(--cm-border);
+    white-space: nowrap;
+}
+
+.cs-table tfoot td {
+    border-top: 2px solid var(--cm-border);
+    background: var(--cm-soft);
+}
+
+.cs-badge {
+    font-size: .7rem;
+    background: #FFF7E6;
+    color: #7A4B00;
+    border-radius: 999px;
+    padding: .05rem .45rem;
+    margin-left: .35rem;
+}
+
+.cs-inactivo {
+    opacity: .55;
+}
+
+.cs-preview {
+    margin-top: .75rem;
+    background: var(--cm-soft);
+    border-radius: 10px;
+    padding: .5rem .85rem;
+    display: inline-block;
+}

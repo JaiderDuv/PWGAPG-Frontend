@@ -1,11 +1,29 @@
 ﻿using PWGAPG_Frontend.Models;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Net.Http.Headers;
 
 namespace PWGAPG_Frontend.Services;
 
 public class RecetaApiService
 {
+    // Convierte "/uploads/recetas/x.jpg" en la URL absoluta del backend.
+    public string? UrlImagen(string? ruta) =>
+        string.IsNullOrWhiteSpace(ruta) || _http.BaseAddress is null
+            ? null
+            : new Uri(_http.BaseAddress, ruta).ToString();
+
+    public async Task<ApiResultado<RecetaDto>> SubirImagenAsync(int id, byte[] bytes, string nombre, string contentType)
+    {
+        using var contenido = new MultipartFormDataContent();
+        var archivo = new ByteArrayContent(bytes);
+        archivo.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+        contenido.Add(archivo, "archivo", nombre);   // "archivo" = nombre del parámetro del controller
+        return await Enviar(() => _http.PostAsync($"api/recetas/{id}/imagen", contenido));
+    }
+
+    public async Task<ApiResultado<RecetaDto>> EliminarImagenAsync(int id) =>
+        await Enviar(() => _http.DeleteAsync($"api/recetas/{id}/imagen"));
     private readonly HttpClient _http;
     public RecetaApiService(HttpClient http) => _http = http;
 

@@ -1,97 +1,174 @@
-﻿
+﻿@using System.ComponentModel.DataAnnotations
 @using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Services
 @inject RecetaApiService Api
 
-<div class="card mb-4">
-    <div class="card-header">
-        <strong>@(Editando is null ? "Nueva receta" : $"Editar receta #{Editando.Id}")</strong>
+<div class="rc-card rc-form">
+    <div class="rc-card-header">
+        <h5 class="mb-0">@(Editando is null ? "Nueva receta" : $"Editar receta #{Editando.Id}")</h5>
     </div>
-    <div class="card-body">
-        <EditForm Model="modelo" OnValidSubmit="Guardar">
-            <div class="row">
-                <div class="col-md-8 mb-3">
-                    <label class="form-label">Nombre</label>
-                    <InputText class="form-control" @bind-Value="modelo.Nombre" maxlength="150" />
+
+    <EditForm Model="modelo" OnValidSubmit="Guardar" OnInvalidSubmit="AlInvalido" class="rc-card-body" novalidate>
+        <DataAnnotationsValidator />
+
+        <div class="row g-4">
+            <!-- Imagen -->
+            <div class="col-lg-4">
+                <label class="rc-label">Imagen de la receta</label>
+                <div class="rc-image-box">
+                    @if (ImagenMostrada is not null)
+                    {
+                        <img src="@ImagenMostrada" alt="Vista previa" />
+                    }
+                    else
+                    {
+                        <div class="rc-image-placeholder"><span>🍽️</span><small>Sin imagen</small></div>
+                    }
                 </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Porciones base</label>
-                    <InputNumber class="form-control" @bind-Value="modelo.PorcionesBase" min="1" />
+                <div class="d-flex gap-2 mt-2">
+                    <label class="btn btn-sm btn-outline-secondary mb-0">
+                        Elegir imagen
+                        <InputFile class="d-none" OnChange="AlElegirImagen"
+                                   accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" />
+                    </label>
+                    @if (ImagenMostrada is not null)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="QuitarImagen">Quitar</button>
+                    }
                 </div>
+                <small class="text-muted d-block mt-1">JPG, PNG o WEBP. Máximo 2 MB.</small>
+                @if (errorImagen is not null) { <div class="rc-error">@errorImagen</div> }
             </div>
 
-            <h6>Ingredientes</h6>
-            <table class="table table-sm align-middle">
-                <thead><tr><th>Insumo</th><th style="width:150px">Cantidad</th><th style="width:130px">Unidad</th><th></th></tr></thead>
+            <!-- Datos básicos -->
+              
+            <div class="col-lg-8">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="rc-label">Nombre *</label>
+                        <InputText class="form-control" @bind-Value="modelo.Nombre"
+                                   maxlength="100" placeholder="Ej: Salsa de tomate casera" />
+                        <ValidationMessage For="() => modelo.Nombre" class="rc-error" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="rc-label">Porciones base *</label>
+                        <InputNumber class="form-control" @bind-Value="modelo.PorcionesBase" min="1" max="1000" step="1" />
+                        <ValidationMessage For="() => modelo.PorcionesBase" class="rc-error" />
+                    </div>
+                    <div class="col-12">
+                        <label class="rc-label">Instrucciones <small class="text-muted">(@(modelo.Instrucciones?.Length ?? 0)/2000)</small></label>
+                        <textarea class="form-control" rows="5" maxlength="2000"
+                                  value="@modelo.Instrucciones"
+                                  @oninput="e => modelo.Instrucciones = e.Value?.ToString()"
+                                  placeholder="Paso a paso de la preparación..."></textarea>
+                        <ValidationMessage For="() => modelo.Instrucciones" class="rc-error" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ingredientes -->
+        <h6 class="rc-section-title">Ingredientes</h6>
+        <div class="table-responsive">
+            <table class="table rc-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Insumo</th>
+                        <th style="width:150px">Cantidad</th>
+                        <th style="width:120px">Unidad</th>
+                        <th style="width:130px" class="text-end">Costo</th>
+                        <th style="width:50px"></th>
+                    </tr>
+                </thead>
                 <tbody>
-                    @foreach (var fila in modelo.Filas)
+                @foreach (var fila in modelo.Filas)
+                {
+                    var tieneError = erroresFila.ContainsKey(fila);
+                    <tr>
+                        <td>
+                            <select class="form-select @(tieneError ? "is-invalid" : "")" value="@fila.InsumoId"
+                                    @onchange="e => AlSeleccionarInsumo(fila, e.Value?.ToString())">
+                                <option value="0">-- Selecciona --</option>
+                                @foreach (var i in Insumos)
+                                {
+                                    <option value="@i.Id" disabled="@YaElegido(i.Id, fila)">@i.Nombre (@i.UnidadMedida)</option>
+                                }
+                            </select>
+                        </td>
+                       <td>
+                         <InputNumber class="@ClaseInput(tieneError)" @bind-Value="fila.Cantidad"
+                         min="0.001" max="100000" step="0.001" />
+                       </td>
+                        <td>
+                            <select class="form-select" @bind="fila.UnidadMedida">
+                                @foreach (var u in UnidadesCompatibles(fila)) { <option value="@u">@u</option> }
+                            </select>
+                        </td>
+                        <td class="text-end">@Formato.Moneda(CostoDeFila(fila))</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    title="Quitar ingrediente" @onclick="() => QuitarFila(fila)">✕</button>
+                        </td>
+                    </tr>
+                    @if (tieneError)
                     {
-                        <tr>
-                            <td>
-                                <select class="form-select" value="@fila.InsumoId"
-                                        @onchange="e => AlSeleccionarInsumo(fila, e.Value?.ToString())">
-                                    <option value="0">-- Selecciona --</option>
-                                    @foreach (var i in Insumos)
-                                    {
-                                        <option value="@i.Id">@i.Nombre (@i.UnidadMedida)</option>
-                                    }
-                                </select>
-                            </td>
-                            <td><InputNumber class="form-control" @bind-Value="fila.Cantidad" step="0.001" /></td>
-                            <td>
-                                <select class="form-select" @bind="fila.UnidadMedida">
-                                    @foreach (var u in UnidadesCompatibles(fila))
-                                    {
-                                        <option value="@u">@u</option>
-                                    }
-                                </select>
-                            </td>
-                            <td><button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => modelo.Filas.Remove(fila)">✕</button></td>
-                        </tr>
+                        <tr class="rc-row-error"><td colspan="5"><div class="rc-error">@erroresFila[fila]</div></td></tr>
                     }
+                }
                 </tbody>
             </table>
-            <button type="button" class="btn btn-sm btn-outline-secondary mb-3" @onclick="AgregarFila">+ Agregar ingrediente</button>
-
-            <div class="mb-3">
-                <label class="form-label">Instrucciones</label>
-                <InputTextArea class="form-control" rows="4" @bind-Value="modelo.Instrucciones" />
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AgregarFila"
+                    disabled="@(modelo.Filas.Count >= 50)">+ Agregar ingrediente</button>
+            <div class="rc-costos">
+                <span>Costo total: <strong>@Formato.Moneda(CostoTotal)</strong></span>
+                <span>Por porción: <strong>@Formato.Moneda(CostoPorcion)</strong></span>
             </div>
+        </div>
+        @if (errorGeneral is not null) { <div class="rc-error mb-2">@errorGeneral</div> }
 
-            @if (error is not null)
-            {
-                <div class="alert alert-danger">@error</div>
-            }
+        @if (errorApi is not null) { <div class="alert alert-danger">@errorApi</div> }
 
+        <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-outline-secondary" @onclick="OnCancelar" disabled="@guardando">Cancelar</button>
             <button type="submit" class="btn btn-primary" disabled="@guardando">
-                @(guardando ? "Guardando..." : "Guardar")
+                @(guardando ? "Guardando..." : "Guardar receta")
             </button>
-            <button type="button" class="btn btn-secondary" @onclick="OnCancelar">Cancelar</button>
-        </EditForm>
-    </div>
+        </div>
+    </EditForm>
 </div>
 
 @code {
     [Parameter] public RecetaDto? Editando { get; set; }
-    [Parameter] public RecetaDto? Precarga { get; set; }   // la usaremos con la IA
+    [Parameter] public RecetaDto? Precarga { get; set; }   // para la IA más adelante
     [Parameter] public List<InsumoOpcionDto> Insumos { get; set; } = new();
-    [Parameter] public EventCallback OnGuardado { get; set; }
+    [Parameter] public EventCallback<string?> OnGuardado { get; set; }
     [Parameter] public EventCallback OnCancelar { get; set; }
 
-    private static readonly Dictionary<string, string[]> Familias = new()
-    {
-        ["masa"] = new[] { "g", "kg", "oz", "lb" },
-        ["volumen"] = new[] { "ml", "l", "taza" },
-        ["conteo"] = new[] { "unidad" }
-    };
+    private const long MaxImagenBytes = 2 * 1024 * 1024;
+    private static readonly string[] ExtPermitidas = { ".jpg", ".jpeg", ".png", ".webp" };
+    private static readonly string[] TiposPermitidos = { "image/jpeg", "image/png", "image/webp" };
+    private static string ClaseInput(bool conError) =>
+    conError ? "form-control is-invalid" : "form-control";
 
     private FormModelo modelo = new();
-    private string? error;
+    private readonly Dictionary<Fila, string> erroresFila = new();
+    private string? errorGeneral, errorApi, errorImagen;
     private bool guardando;
+
+    // Imagen
+    private byte[]? imagenBytes;
+    private string? imagenNombre, imagenTipo, previewSrc, imagenActual;
+    private bool quitarImagen;
+
+    private string? ImagenMostrada =>
+        previewSrc ?? (quitarImagen ? null : Api.UrlImagen(imagenActual));
 
     protected override void OnInitialized()
     {
         var origen = Editando ?? Precarga;
+        imagenActual = Editando?.ImagenUrl;
         if (origen is null) { modelo.Filas.Add(new Fila()); return; }
 
         modelo.Nombre = origen.Nombre;
@@ -99,66 +176,144 @@
         modelo.Instrucciones = origen.Instrucciones;
         modelo.Filas = origen.Insumos.Select(i => new Fila
         {
-            InsumoId = i.InsumoId,
-            Cantidad = i.Cantidad,
-            UnidadMedida = i.UnidadMedida
+            InsumoId = i.InsumoId, Cantidad = i.Cantidad, UnidadMedida = i.UnidadMedida
         }).ToList();
         if (modelo.Filas.Count == 0) modelo.Filas.Add(new Fila());
     }
 
+    // ---------- Imagen ----------
+    private async Task AlElegirImagen(InputFileChangeEventArgs e)
+    {
+        errorImagen = null;
+        var f = e.File;
+        var ext = Path.GetExtension(f.Name).ToLowerInvariant();
+
+        if (!ExtPermitidas.Contains(ext) || !TiposPermitidos.Contains(f.ContentType))
+        { errorImagen = "Solo se permiten imágenes JPG, PNG o WEBP."; return; }
+        if (f.Size > MaxImagenBytes)
+        { errorImagen = "La imagen no puede superar los 2 MB."; return; }
+
+        using var ms = new MemoryStream();
+        await f.OpenReadStream(MaxImagenBytes).CopyToAsync(ms);
+        imagenBytes = ms.ToArray();
+        imagenNombre = f.Name;
+        imagenTipo = f.ContentType;
+        previewSrc = $"data:{f.ContentType};base64,{Convert.ToBase64String(imagenBytes)}";
+        quitarImagen = false;
+    }
+
+    private void QuitarImagen()
+    {
+        imagenBytes = null; previewSrc = null; errorImagen = null;
+        quitarImagen = true;
+    }
+
+    // ---------- Ingredientes ----------
     private void AgregarFila() => modelo.Filas.Add(new Fila());
+    private void QuitarFila(Fila f) { modelo.Filas.Remove(f); erroresFila.Remove(f); }
+
+    private bool YaElegido(int insumoId, Fila actual) =>
+        modelo.Filas.Any(f => f != actual && f.InsumoId == insumoId);
 
     private void AlSeleccionarInsumo(Fila fila, string? valor)
     {
         fila.InsumoId = int.TryParse(valor, out var id) ? id : 0;
         var insumo = Insumos.FirstOrDefault(i => i.Id == fila.InsumoId);
         if (insumo is not null) fila.UnidadMedida = insumo.UnidadMedida;
+        erroresFila.Remove(fila);
     }
 
     private IEnumerable<string> UnidadesCompatibles(Fila fila)
     {
         var insumo = Insumos.FirstOrDefault(i => i.Id == fila.InsumoId);
-        if (insumo is null) return Familias.Values.SelectMany(x => x);
-        return Familias.Values.First(f => f.Contains(insumo.UnidadMedida.ToLower()));
+        return insumo is null ? ConversorUnidades.UnidadesDeLaMismaFamilia("g")
+                              : ConversorUnidades.UnidadesDeLaMismaFamilia(insumo.UnidadMedida);
     }
+
+    private decimal CostoDeFila(Fila f)
+    {
+        var i = Insumos.FirstOrDefault(x => x.Id == f.InsumoId);
+        return i is null || f.Cantidad <= 0 ? 0 :
+            ConversorUnidades.CostoLinea(f.Cantidad, f.UnidadMedida, i.UnidadMedida, i.CostoUnitario, i.PorcentajeMerma);
+    }
+
+    private decimal CostoTotal => modelo.Filas.Sum(CostoDeFila);
+    private decimal CostoPorcion => modelo.PorcionesBase > 0 ? CostoTotal / modelo.PorcionesBase : 0;
+
+    // ---------- Validación y guardado ----------
+    private bool ValidarFilas()
+    {
+        erroresFila.Clear();
+        errorGeneral = null;
+
+        if (modelo.Filas.Count == 0) { errorGeneral = "Agrega al menos un ingrediente."; return false; }
+
+        foreach (var f in modelo.Filas)
+        {
+            if (f.InsumoId == 0) erroresFila[f] = "Selecciona un insumo.";
+            else if (modelo.Filas.Count(x => x.InsumoId == f.InsumoId) > 1) erroresFila[f] = "Este insumo está repetido.";
+            else if (f.Cantidad <= 0) erroresFila[f] = "La cantidad debe ser mayor a 0.";
+            else if (f.Cantidad > 100000) erroresFila[f] = "La cantidad no puede superar 100.000.";
+            else if (decimal.Round(f.Cantidad, 3) != f.Cantidad) erroresFila[f] = "La cantidad admite máximo 3 decimales.";
+        }
+        if (erroresFila.Count > 0) errorGeneral = "Revisa los ingredientes marcados en rojo.";
+        return erroresFila.Count == 0;
+    }
+
+    private void AlInvalido() => ValidarFilas();   // muestra también los errores de ingredientes
 
     private async Task Guardar()
     {
-        error = null;
-        if (modelo.Filas.Any(f => f.InsumoId == 0 || f.Cantidad <= 0))
-        {
-            error = "Cada ingrediente necesita un insumo y una cantidad mayor a 0.";
-            return;
-        }
+        errorApi = null;
+        if (!ValidarFilas()) return;
 
         var dto = new GuardarRecetaDto
         {
-            Nombre = modelo.Nombre,
+            Nombre = modelo.Nombre.Trim(),
             PorcionesBase = modelo.PorcionesBase,
             Instrucciones = modelo.Instrucciones,
             Insumos = modelo.Filas.Select(f => new RecetaInsumoDto
             {
-                InsumoId = f.InsumoId,
-                Cantidad = f.Cantidad,
-                UnidadMedida = f.UnidadMedida
+                InsumoId = f.InsumoId, Cantidad = f.Cantidad, UnidadMedida = f.UnidadMedida
             }).ToList()
         };
 
         guardando = true;
-        var res = Editando is null
-            ? await Api.CrearAsync(dto)
-            : await Api.ActualizarAsync(Editando.Id, dto);
-        guardando = false;
+        var res = Editando is null ? await Api.CrearAsync(dto) : await Api.ActualizarAsync(Editando.Id, dto);
+        if (!res.Exito) { errorApi = res.Mensaje; guardando = false; return; }
 
-        if (!res.Exito) { error = res.Mensaje; return; }
-        await OnGuardado.InvokeAsync();
+        var id = res.Datos!.Id;
+        string? aviso = null;
+
+        if (imagenBytes is not null)
+        {
+            var img = await Api.SubirImagenAsync(id, imagenBytes, imagenNombre!, imagenTipo!);
+            if (!img.Exito) aviso = $"La receta se guardó, pero la imagen no se pudo subir: {img.Mensaje}";
+        }
+        else if (quitarImagen && Editando?.ImagenUrl is not null)
+        {
+            await Api.EliminarImagenAsync(id);
+        }
+
+        guardando = false;
+        await OnGuardado.InvokeAsync(aviso);
     }
 
+    // ---------- Modelos del formulario ----------
     private class FormModelo
     {
+        [Required(ErrorMessage = "El nombre es obligatorio.")]
+        [StringLength(100, MinimumLength = 3, ErrorMessage = "El nombre debe tener entre 3 y 100 caracteres.")]
+        [RegularExpression(@"^(?=.*\p{L})[\p{L}\p{N} .,'\-()&]+$",
+            ErrorMessage = "Solo letras, números, espacios y . , ' - ( ) & (debe incluir letras).")]
         public string Nombre { get; set; } = "";
+
+        [Range(1, 1000, ErrorMessage = "Las porciones deben estar entre 1 y 1000.")]
         public int PorcionesBase { get; set; } = 1;
+
+        [StringLength(2000, ErrorMessage = "Máximo 2000 caracteres.")]
         public string? Instrucciones { get; set; }
+
         public List<Fila> Filas { get; set; } = new();
     }
 

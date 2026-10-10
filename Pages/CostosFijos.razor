@@ -1,0 +1,266 @@
+﻿@page "/costos-fijos"
+@using System.ComponentModel.DataAnnotations
+@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Services
+@using PWGAPG_Frontend.Components
+@inject CosteoApiService Api
+
+<div class="rc-page container py-4">
+    <div class="rc-header">
+        <div>
+            <h2 class="rc-title">Costos fijos del negocio</h2>
+            <p class="rc-subtitle">Arriendo, servicios, nómina... Cada monto mensual se divide entre su valor divisor para repartirlo en el costo real de cada receta.</p>
+        </div>
+        @if (!mostrarForm)
+        {
+            <button class="btn btn-primary" @onclick="Nuevo">+ Nuevo costo fijo</button>
+        }
+    </div>
+
+    @if (mensajeOk is not null) { <div class="alert alert-success">@mensajeOk</div> }
+    @if (error is not null) { <div class="alert alert-danger">@error</div> }
+
+    @if (mostrarForm)
+    {
+        <div class="rc-card">
+            <div class="rc-card-header">
+                <h5 class="mb-0">@(editando is null ? "Nuevo costo fijo" : $"Editar costo fijo #{editando.Id}")</h5>
+            </div>
+            <EditForm Model="modelo" OnValidSubmit="Guardar" class="rc-card-body" novalidate>
+                <DataAnnotationsValidator />
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="rc-label">Nombre *</label>
+                        <InputText class="form-control" @bind-Value="modelo.Nombre" maxlength="150"
+                                   placeholder="Ej: Arriendo del local" />
+                        <ValidationMessage For="() => modelo.Nombre" class="rc-error" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="rc-label">Monto mensual *</label>
+                        <InputNumber class="form-control" @bind-Value="modelo.MontoMensual" min="0.01" step="0.01" />
+                        <ValidationMessage For="() => modelo.MontoMensual" class="rc-error" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="rc-label">Se reparte por *</label>
+                        <InputSelect class="form-select" @bind-Value="modelo.UnidadProrrateo">
+                            @foreach (var u in Unidades) { <option value="@u.Key">@u.Value</option> }
+                        </InputSelect>
+                        <ValidationMessage For="() => modelo.UnidadProrrateo" class="rc-error" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="rc-label">Valor divisor *</label>
+                        <InputNumber class="form-control" @bind-Value="modelo.ValorDivisor" min="0.01" step="0.01" />
+                        <ValidationMessage For="() => modelo.ValorDivisor" class="rc-error" />
+                        <small class="text-muted">Total de "@Etiqueta(modelo.UnidadProrrateo)" al mes (ej. 500).</small>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" id="cf-activo" @bind-Value="modelo.Activo" />
+                            <label class="form-check-label" for="cf-activo">Activo (se incluye en el costo real)</label>
+                        </div>
+                    </div>
+                </div>
+
+                @if (modelo.MontoMensual > 0 && modelo.ValorDivisor > 0)
+                {
+                    <div class="cs-preview">
+                        Aporte por unidad de prorrateo: <strong>@Formato.Moneda(modelo.MontoMensual / modelo.ValorDivisor)</strong>
+                    </div>
+                }
+
+                @if (errorForm is not null) { <div class="alert alert-danger mt-3">@errorForm</div> }
+
+                <div class="d-flex gap-2 justify-content-end mt-3">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CerrarForm" disabled="@guardando">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" disabled="@guardando">
+                        @(guardando ? "Guardando..." : "Guardar")
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    }
+
+    @if (costos is null)
+    {
+        <p class="text-muted">Cargando...</p>
+    }
+    else if (costos.Count == 0)
+    {
+        <div class="rc-empty">
+            <span>🏢</span>
+            <p>Aún no tienes costos fijos. Agrega el primero para obtener un costo real más preciso.</p>
+        </div>
+    }
+    else
+    {
+        <div class="rc-card">
+            <div class="table-responsive">
+                <table class="table cs-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th class="text-end">Monto mensual</th>
+                            <th>Se reparte por</th>
+                            <th class="text-end">Valor divisor</th>
+                            <th class="text-end">Aporte</th>
+                            <th>Estado</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var c in costos)
+                    {
+                        <tr class="@(c.Activo ? "" : "cs-inactivo")">
+                            <td>@c.Nombre</td>
+                            <td class="text-end">@Formato.Moneda(c.MontoMensual)</td>
+                            <td>@Etiqueta(c.UnidadProrrateo)</td>
+                            <td class="text-end">@c.ValorDivisor.ToString("0.##")</td>
+                            <td class="text-end">@Formato.Moneda(Aporte(c))</td>
+                            <td>
+                                <button class="btn btn-sm @(c.Activo ? "btn-outline-success" : "btn-outline-secondary")"
+                                        @onclick="() => CambiarEstado(c)">
+                                    @(c.Activo ? "Activo" : "Inactivo")
+                                </button>
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => Editar(c)">Editar</button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => PedirEliminar(c)">Eliminar</button>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td><strong>Total activos</strong></td>
+                            <td class="text-end"><strong>@Formato.Moneda(TotalMensual)</strong></td>
+                            <td></td>
+                            <td></td>
+                            <td class="text-end"><strong>@Formato.Moneda(TotalAporte)</strong></td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+<ConfirmDialog Visible="mostrarConfirm"
+               Mensaje="@($"¿Eliminar el costo fijo '{aEliminar?.Nombre}' para siempre? Cambiará el costo real de tus recetas.")"
+               OnConfirmar="ConfirmarEliminar"
+               OnCancelar="CancelarEliminar" />
+
+@code {
+    // Valores permitidos por CK_CostoFijo_UnidadProrrateo en la BD.
+    private static readonly Dictionary<string, string> Unidades = new()
+    {
+        ["recetas_activas"] = "Recetas activas",
+        ["horas_produccion"] = "Horas de producción",
+        ["unidades_producidas"] = "Unidades producidas"
+    };
+
+    private static string Etiqueta(string valor) =>
+        Unidades.TryGetValue(valor, out var e) ? e : valor;
+
+    private List<CostoFijoDto>? costos;
+    private CostoFijoDto? editando, aEliminar;
+    private FormModelo modelo = new();
+    private bool mostrarForm, mostrarConfirm, guardando;
+    private string? error, errorForm, mensajeOk;
+
+    private static decimal Aporte(CostoFijoDto c) => c.ValorDivisor > 0 ? c.MontoMensual / c.ValorDivisor : 0;
+    private decimal TotalMensual => costos?.Where(c => c.Activo).Sum(c => c.MontoMensual) ?? 0;
+    private decimal TotalAporte => costos?.Where(c => c.Activo).Sum(Aporte) ?? 0;
+
+    protected override async Task OnInitializedAsync() => await Cargar();
+
+    private async Task Cargar()
+    {
+        var res = await Api.ListarCostosFijosAsync();
+        if (res.Exito) { costos = res.Datos; error = null; }
+        else { costos = new(); error = res.Mensaje; }
+    }
+
+    private void Nuevo() { editando = null; modelo = new(); AbrirForm(); }
+
+    private void Editar(CostoFijoDto c)
+    {
+        editando = c;
+        modelo = new FormModelo
+        {
+            Nombre = c.Nombre, MontoMensual = c.MontoMensual,
+            UnidadProrrateo = c.UnidadProrrateo, ValorDivisor = c.ValorDivisor, Activo = c.Activo
+        };
+        AbrirForm();
+    }
+
+    private void AbrirForm() { mensajeOk = error = errorForm = null; mostrarForm = true; }
+    private void CerrarForm() => mostrarForm = false;
+
+    private async Task Guardar()
+    {
+        errorForm = null; guardando = true;
+        var nombre = modelo.Nombre.Trim();
+
+        var res = editando is null
+            ? await Api.CrearCostoFijoAsync(new CrearCostoFijoDto
+              {
+                  Nombre = nombre, MontoMensual = modelo.MontoMensual,
+                  UnidadProrrateo = modelo.UnidadProrrateo, ValorDivisor = modelo.ValorDivisor,
+                  Activo = modelo.Activo
+              })
+            : await Api.ActualizarCostoFijoAsync(editando.Id, new ActualizarCostoFijoDto
+              {
+                  Nombre = nombre, MontoMensual = modelo.MontoMensual,
+                  UnidadProrrateo = modelo.UnidadProrrateo, ValorDivisor = modelo.ValorDivisor,
+                  Activo = modelo.Activo
+              });
+        guardando = false;
+
+        if (!res.Exito) { errorForm = res.Mensaje; return; }
+        mensajeOk = editando is null ? "Costo fijo creado correctamente." : "Costo fijo actualizado correctamente.";
+        mostrarForm = false;
+        await Cargar();
+    }
+
+    private async Task CambiarEstado(CostoFijoDto c)
+    {
+        var res = await Api.ActualizarCostoFijoAsync(c.Id, new ActualizarCostoFijoDto { Activo = !c.Activo });
+        if (res.Exito) { mensajeOk = null; error = null; }
+        else { error = res.Mensaje; }
+        await Cargar();
+    }
+
+    private void PedirEliminar(CostoFijoDto c) { aEliminar = c; mostrarConfirm = true; }
+    private void CancelarEliminar() { mostrarConfirm = false; aEliminar = null; }
+
+    private async Task ConfirmarEliminar()
+    {
+        mostrarConfirm = false;
+        var res = await Api.EliminarCostoFijoAsync(aEliminar!.Id);
+        if (res.Exito) { mensajeOk = "Costo fijo eliminado correctamente."; error = null; }
+        else { error = res.Mensaje; mensajeOk = null; }
+        aEliminar = null;
+        await Cargar();
+    }
+
+    private class FormModelo
+    {
+        [Required(ErrorMessage = "El nombre es obligatorio.")]
+        [StringLength(150, MinimumLength = 3, ErrorMessage = "El nombre debe tener entre 3 y 150 caracteres.")]
+        [RegularExpression(@"^(?=.*\p{L})[\p{L}\p{N} .,'\-()&]+$",
+            ErrorMessage = "Solo letras, números, espacios y . , ' - ( ) & (debe incluir letras).")]
+        public string Nombre { get; set; } = "";
+
+        [Range(0.01, 9999999999, ErrorMessage = "El monto debe ser mayor a 0.")]
+        public decimal MontoMensual { get; set; }
+
+        [Required(ErrorMessage = "Selecciona la unidad de prorrateo.")]
+        public string UnidadProrrateo { get; set; } = "unidades_producidas";
+
+        [Range(0.01, 1000000, ErrorMessage = "El valor divisor debe estar entre 0,01 y 1.000.000.")]
+        public decimal ValorDivisor { get; set; } = 1;
+
+        public bool Activo { get; set; } = true;
+    }
+}

@@ -1,0 +1,142 @@
+﻿@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Services
+@inject CosteoApiService Api
+
+<div class="cs-panel">
+@if (cargando)
+{
+    <p class="text-muted mb-0">Calculando costo real...</p>
+}
+else if (error is not null)
+{
+    <div class="alert alert-danger mb-0">@error</div>
+}
+else if (costo is not null)
+{
+    @* Aviso: sin costos fijos configurados *@
+    @if (costo.SinCostosFijos)
+    {
+        <div class="cs-aviso cs-aviso-warn">
+            <span>⚠️</span>
+            <div>
+                <strong>No hay costos fijos configurados.</strong>
+                El costo fijo prorrateado es $ 0, por lo que el costo real puede estar subestimado.
+                <a href="costos-fijos">Configurar costos fijos</a>
+            </div>
+        </div>
+    }
+
+    @* Aviso: insumos sin proveedor principal *@
+    @if (SinProveedor.Count > 0)
+    {
+        <div class="cs-aviso cs-aviso-warn">
+            <span>⚠️</span>
+            <div>
+                <strong>Insumos sin proveedor principal:</strong> @string.Join(", ", SinProveedor.Select(l => l.Insumo)).
+                Se usó su costo unitario como respaldo. Asigna un proveedor principal en
+                <a href="insumos">Insumos</a>.
+            </div>
+        </div>
+    }
+
+    @* Otras advertencias del backend (unidades incompatibles, costo 0, etc.) *@
+    @foreach (var a in OtrasAdvertencias)
+    {
+        <div class="cs-aviso cs-aviso-info"><span>ℹ️</span><div>@a</div></div>
+    }
+
+    <div class="cs-kpis">
+        <div class="cs-kpi">
+            <small>Costo de insumos</small>
+            <strong>@Formato.Moneda(costo.CostoInsumos)</strong>
+            <em>incluye @Formato.Moneda(costo.CostoMermaAplicada) de merma</em>
+        </div>
+        <div class="cs-kpi">
+            <small>Costo fijo prorrateado</small>
+            <strong>@Formato.Moneda(costo.CostoFijoProrrateado)</strong>
+        </div>
+        <div class="cs-kpi">
+            <small>Costo total</small>
+            <strong>@Formato.Moneda(costo.CostoTotal)</strong>
+        </div>
+        <div class="cs-kpi cs-kpi-main">
+            <small>Costo por porción</small>
+            <strong>@Formato.Moneda(costo.CostoPorPorcion)</strong>
+            <em>@costo.PorcionesBase porción(es) base</em>
+        </div>
+    </div>
+
+    <details class="cs-detalle">
+        <summary>Ver desglose por insumo</summary>
+        <div class="table-responsive">
+            <table class="table table-sm cs-table">
+                <thead>
+                    <tr>
+                        <th>Insumo</th>
+                        <th class="text-end">En receta</th>
+                        <th class="text-end">A comprar (con merma)</th>
+                        <th class="text-end">Costo proveedor</th>
+                        <th class="text-end">Costo</th>
+                        <th class="text-end">Merma extra</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var l in costo.Lineas)
+                {
+                    <tr>
+                        <td>
+                            @l.Insumo
+                            @if (l.FuenteCosto == "costo_unitario_respaldo")
+                            {
+                                <span class="cs-badge" title="Sin proveedor principal: se usó el costo unitario">⚠️ respaldo</span>
+                            }
+                        </td>
+                        <td class="text-end">@l.Cantidad.ToString("0.####") @l.UnidadReceta</td>
+                        <td class="text-end">@l.CantidadParaComprar.ToString("0.####") @l.UnidadInsumo</td>
+                        <td class="text-end">@Formato.Moneda(l.CostoProveedor) / @l.UnidadInsumo</td>
+                        <td class="text-end">@Formato.Moneda(l.CostoInsumo)</td>
+                        <td class="text-end">@Formato.Moneda(l.MermaExtra)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </details>
+}
+</div>
+
+@code {
+    [Parameter] public int RecetaId { get; set; }
+    // Para que otros componentes (p. ej. margen de HU8.2) reciban el costo calculado.
+    [Parameter] public EventCallback<CostoRecetaDto> OnCostoCargado { get; set; }
+
+    private CostoRecetaDto? costo;
+    private string? error;
+    private bool cargando;
+    private int idCargado;
+
+    private List<LineaCostoDto> SinProveedor =>
+        costo?.Lineas.Where(l => l.FuenteCosto == "costo_unitario_respaldo").ToList() ?? new();
+
+    // Las dos primeras ya tienen su propio aviso; se omiten para no duplicar.
+    private IEnumerable<string> OtrasAdvertencias =>
+        costo?.Advertencias.Where(a => !a.StartsWith("No hay costos fijos")
+                                    && !a.Contains("no tiene proveedor principal")) ?? Enumerable.Empty<string>();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (RecetaId == idCargado) return;
+        idCargado = RecetaId;
+        await Cargar();
+    }
+
+    public async Task Cargar()
+    {
+        cargando = true; error = null;
+        var res = await Api.ObtenerCostoAsync(RecetaId);
+        cargando = false;
+        if (!res.Exito) { error = res.Mensaje; costo = null; return; }
+        costo = res.Datos;
+        await OnCostoCargado.InvokeAsync(costo!);
+    }
+}

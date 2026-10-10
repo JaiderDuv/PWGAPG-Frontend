@@ -1,0 +1,58 @@
+﻿using System.Net.Http.Json;
+using System.Text.Json;
+using PWGAPG_Frontend.Models;
+
+namespace PWGAPG_Frontend.Services;
+
+public class CosteoApiService
+{
+    private readonly HttpClient _http;
+    public CosteoApiService(HttpClient http) => _http = http;
+
+    // ---------- Costo de receta ----------
+    public async Task<ApiResultado<CostoRecetaDto>> ObtenerCostoAsync(int recetaId) =>
+        await Leer<CostoRecetaDto>(await _http.GetAsync($"api/recetas/{recetaId}/costo"));
+
+    // ---------- Costos fijos ----------
+    public async Task<ApiResultado<List<CostoFijoDto>>> ListarCostosFijosAsync() =>
+        await Leer<List<CostoFijoDto>>(await _http.GetAsync("api/costos-fijos?incluirInactivos=true"));
+
+    public async Task<ApiResultado<CostoFijoDto>> CrearCostoFijoAsync(CrearCostoFijoDto dto) =>
+        await Leer<CostoFijoDto>(await _http.PostAsJsonAsync("api/costos-fijos", dto));
+
+    public async Task<ApiResultado<CostoFijoDto>> ActualizarCostoFijoAsync(int id, ActualizarCostoFijoDto dto) =>
+        await Leer<CostoFijoDto>(await _http.PatchAsJsonAsync($"api/costos-fijos/{id}", dto));
+
+    public async Task<ApiResultado<bool>> EliminarCostoFijoAsync(int id)
+    {
+        var res = await _http.DeleteAsync($"api/costos-fijos/{id}");
+        return res.IsSuccessStatusCode
+            ? new(true, true, null)
+            : new(false, false, await LeerError(res));
+    }
+
+    // ---------- Helpers ----------
+    private static async Task<ApiResultado<T>> Leer<T>(HttpResponseMessage res)
+    {
+        if (!res.IsSuccessStatusCode) return new(false, default, await LeerError(res));
+        return new(true, await res.Content.ReadFromJsonAsync<T>(), null);
+    }
+
+    private static async Task<string> LeerError(HttpResponseMessage res)
+    {
+        if (res.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            return "Tu sesión expiró. Inicia sesión de nuevo.";
+        try
+        {
+            using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+            var root = doc.RootElement;
+            if (root.TryGetProperty("mensaje", out var m)) return m.GetString() ?? "Error.";
+            if (root.TryGetProperty("errors", out var errs))
+                foreach (var campo in errs.EnumerateObject())
+                    foreach (var msg in campo.Value.EnumerateArray())
+                        return msg.GetString() ?? "Datos no válidos.";
+        }
+        catch { }
+        return "Ocurrió un error inesperado.";
+    }
+}
