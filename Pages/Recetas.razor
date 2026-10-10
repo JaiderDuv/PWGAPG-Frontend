@@ -4,57 +4,96 @@
 @using PWGAPG_Frontend.Components
 @inject RecetaApiService Api
 
-<h3>Mis recetas</h3>
-
-@if (mensajeOk is not null) { <div class="alert alert-success">@mensajeOk</div> }
-@if (error is not null) { <div class="alert alert-danger">@error</div> }
-
-@if (mostrarForm)
-{
-    <RecetaForm @key="formKey" Editando="editando" Insumos="insumos"
-                OnGuardado="AlGuardar" OnCancelar="CerrarForm" />
-}
-else
-{
-    <div class="d-flex gap-2 mb-3">
-        <input class="form-control" style="max-width:300px" placeholder="Buscar receta..."
-               @bind="busqueda" @bind:event="oninput" @onkeyup="BuscarConEnter" />
-        <button class="btn btn-outline-secondary" @onclick="Cargar">Buscar</button>
-        <button class="btn btn-primary ms-auto" @onclick="Nueva">+ Nueva receta</button>
-    </div>
-}
-
-@if (recetas is null)
-{
-    <p>Cargando...</p>
-}
-else if (recetas.Count == 0)
-{
-    <p class="text-muted">Aún no tienes recetas. Crea la primera.</p>
-}
-else
-{
-    <table class="table table-hover">
-        <thead>
-            <tr><th>ID</th><th>Nombre</th><th>Porciones</th><th>Ingredientes</th><th></th></tr>
-        </thead>
-        <tbody>
-        @foreach (var r in recetas)
+<div class="rc-page container py-4">
+    <div class="rc-header">
+        <div>
+            <h2 class="rc-title">Mis recetas</h2>
+            <p class="rc-subtitle">Estandariza tus recetas y conoce lo que cuesta cada porción.</p>
+        </div>
+        @if (!mostrarForm)
         {
-            <tr>
-                <td>@r.Id</td>
-                <td>@r.Nombre</td>
-                <td>@r.PorcionesBase</td>
-                <td>@string.Join(", ", r.Insumos.Select(i => $"{i.InsumoNombre} ({i.Cantidad:0.###} {i.UnidadMedida})"))</td>
-                <td class="text-end">
-                    <button class="btn btn-sm btn-warning" @onclick="() => Editar(r)">Editar</button>
-                    <button class="btn btn-sm btn-danger" @onclick="() => PedirEliminar(r)">Eliminar</button>
-                </td>
-            </tr>
+            <button class="btn btn-primary" @onclick="Nueva">+ Nueva receta</button>
         }
-        </tbody>
-    </table>
-}
+    </div>
+
+    @if (mensajeOk is not null) { <div class="alert alert-success">@mensajeOk</div> }
+    @if (error is not null) { <div class="alert alert-danger">@error</div> }
+
+    @if (mostrarForm)
+    {
+        <RecetaForm @key="formKey" Editando="editando" Insumos="insumos"
+                    OnGuardado="AlGuardar" OnCancelar="CerrarForm" />
+    }
+    else
+    {
+        <div class="rc-toolbar">
+            <input class="form-control" placeholder="Buscar receta por nombre..." maxlength="100"
+                   @bind="busqueda" @bind:event="oninput" @onkeyup="BuscarConEnter" />
+            <button class="btn btn-outline-secondary" @onclick="Cargar">Buscar</button>
+            @if (recetas is not null) { <span class="rc-count">@recetas.Count receta(s)</span> }
+        </div>
+
+        @if (recetas is null)
+        {
+            <p class="text-muted">Cargando...</p>
+        }
+        else if (recetas.Count == 0)
+        {
+            <div class="rc-empty">
+                <span>🍽️</span>
+                <p>Aún no tienes recetas. Crea la primera.</p>
+            </div>
+        }
+        else
+        {
+            <div class="rc-grid">
+            @foreach (var r in recetas)
+            {
+                <div class="rc-recipe @(costosAbiertos.Contains(r.Id) ? "rc-recipe-wide" : "")">
+                    <div class="rc-recipe-img">
+                        @if (Api.UrlImagen(r.ImagenUrl) is { } url) { <img src="@url" alt="@r.Nombre" loading="lazy" /> }
+                        else { <span>🍽️</span> }
+                        <small class="rc-id">#@r.Id</small>
+                    </div>
+                    <div class="rc-recipe-body">
+                        <h5>@r.Nombre</h5>
+                        <div class="rc-meta">
+                            <span>@r.PorcionesBase porción(es)</span>
+                            <span>@r.Insumos.Count ingrediente(s)</span>
+                        </div>
+                        <div class="rc-price">
+                            <div><small>Costo de insumos</small><strong>@Formato.Moneda(r.CostoTotal)</strong></div>
+                            <div><small>Por porción</small><strong>@Formato.Moneda(r.CostoPorPorcion)</strong></div>
+                        </div>
+                        <details>
+                            <summary>Ver ingredientes</summary>
+                            <ul class="rc-ingredients">
+                                @foreach (var i in r.Insumos)
+                                {
+                                    <li><span>@i.InsumoNombre</span><span>@i.Cantidad.ToString("0.###") @i.UnidadMedida</span></li>
+                                }
+                            </ul>
+                            @if (!string.IsNullOrWhiteSpace(r.Instrucciones)) { <p class="rc-instr">@r.Instrucciones</p> }
+                        </details>
+
+                        <button class="btn btn-sm btn-outline-secondary mt-2" @onclick="() => AlternarCosto(r.Id)">
+                            @(costosAbiertos.Contains(r.Id) ? "Ocultar costo real" : "Ver costo real")
+                        </button>
+                        @if (costosAbiertos.Contains(r.Id))
+                        {
+                            <CostoRecetaPanel RecetaId="r.Id" />
+                        }
+                    </div>
+                    <div class="rc-recipe-actions">
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => Editar(r)">Editar</button>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => PedirEliminar(r)">Eliminar</button>
+                    </div>
+                </div>
+            }
+            </div>
+        }
+    }
+</div>
 
 <ConfirmDialog Visible="mostrarConfirm"
                Mensaje="@($"¿Eliminar la receta '{aEliminar?.Nombre}' para siempre? Esta acción no se puede deshacer.")"
@@ -68,6 +107,7 @@ else
     private bool mostrarForm, mostrarConfirm;
     private string? busqueda, error, mensajeOk;
     private Guid formKey = Guid.NewGuid();
+    private readonly HashSet<int> costosAbiertos = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -82,9 +122,11 @@ else
         else { recetas = new(); error = res.Mensaje; }
     }
 
-    private async Task BuscarConEnter(KeyboardEventArgs e)
+    private async Task BuscarConEnter(KeyboardEventArgs e) { if (e.Key == "Enter") await Cargar(); }
+
+    private void AlternarCosto(int id)
     {
-        if (e.Key == "Enter") await Cargar();
+        if (!costosAbiertos.Remove(id)) costosAbiertos.Add(id);
     }
 
     private void Nueva() { editando = null; AbrirForm(); }
@@ -93,16 +135,16 @@ else
     private void AbrirForm()
     {
         mensajeOk = error = null;
-        formKey = Guid.NewGuid();   // fuerza a reconstruir el formulario
+        formKey = Guid.NewGuid();
         mostrarForm = true;
     }
 
     private void CerrarForm() => mostrarForm = false;
 
-    private async Task AlGuardar()
+    private async Task AlGuardar(string? aviso)
     {
         mostrarForm = false;
-        mensajeOk = editando is null ? "Receta creada correctamente." : "Receta actualizada correctamente.";
+        mensajeOk = aviso ?? (editando is null ? "Receta creada correctamente." : "Receta actualizada correctamente.");
         await Cargar();
     }
 
