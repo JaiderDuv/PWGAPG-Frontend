@@ -1,0 +1,141 @@
+@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Services
+@inject CosteoApiService Api
+@implements IDisposable
+
+<div class="cs-panel">
+    <div class="d-flex align-items-end gap-2 flex-wrap mb-2">
+        <div>
+            <label class="form-label mb-1" for="@($"porciones-{RecetaId}")">Porciones deseadas</label>
+            <input id="@($"porciones-{RecetaId}")" type="number" min="1" step="1"
+                   class="form-control" style="max-width: 160px;"
+                   value="@porcionesTexto" @oninput="OnPorcionesInput" />
+        </div>
+        <small class="text-muted">Base: @PorcionesBase porción(es) · Factor ×@((escalado?.FactorEscala ?? 1m).ToString("0.####"))</small>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(errorValidacion))
+    {
+        <div class="alert alert-danger mb-0">@errorValidacion</div>
+    }
+    else if (cargando)
+    {
+        <p class="text-muted mb-0">Calculando escalado...</p>
+    }
+    else if (error is not null)
+    {
+        <div class="alert alert-danger mb-0">@error</div>
+    }
+    else if (escalado is not null)
+    {
+        @foreach (var a in escalado.Advertencias)
+        {
+            <div class="cs-aviso cs-aviso-info"><span>ℹ️</span><div>@a</div></div>
+        }
+
+        <div class="cs-kpis">
+            <div class="cs-kpi">
+                <small>Costo de insumos</small>
+                <strong>@Formato.Moneda(escalado.CostoInsumos)</strong>
+                <em>incluye @Formato.Moneda(escalado.CostoMermaAplicada) de merma</em>
+            </div>
+            <div class="cs-kpi">
+                <small>Costo fijo prorrateado</small>
+                <strong>@Formato.Moneda(escalado.CostoFijoProrrateado)</strong>
+            </div>
+            <div class="cs-kpi">
+                <small>Costo total (@escalado.PorcionesDeseadas porciones)</small>
+                <strong>@Formato.Moneda(escalado.CostoTotal)</strong>
+            </div>
+            <div class="cs-kpi cs-kpi-main">
+                <small>Costo por porción</small>
+                <strong>@Formato.Moneda(escalado.CostoPorPorcion)</strong>
+            </div>
+        </div>
+
+        <details class="cs-detalle" open>
+            <summary>Ver insumos escalados</summary>
+            <div class="table-responsive">
+                <table class="table table-sm cs-table">
+                    <thead>
+                        <tr>
+                            <th>Insumo</th>
+                            <th class="text-end">Cantidad escalada</th>
+                            <th class="text-end">A comprar (con merma)</th>
+                            <th class="text-end">Costo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var l in escalado.Lineas)
+                    {
+                        <tr>
+                            <td>@l.Insumo</td>
+                            <td class="text-end">@l.Cantidad.ToString("0.####") @l.UnidadReceta</td>
+                            <td class="text-end">@l.CantidadParaComprar.ToString("0.####") @l.UnidadInsumo</td>
+                            <td class="text-end">@Formato.Moneda(l.CostoInsumo)</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </details>
+        <p class="text-muted mt-2 mb-0"><small>Simulación temporal: no modifica la receta base.</small></p>
+    }
+</div>
+
+@code {
+    [Parameter] public int RecetaId { get; set; }
+    [Parameter] public int PorcionesBase { get; set; }
+
+    private EscaladoRecetaDto? escalado;
+    private string? error, errorValidacion;
+    private bool cargando;
+    private string porcionesTexto = "";
+    private int idCargado;
+    private CancellationTokenSource? debounceCts;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (RecetaId == idCargado) return;
+        idCargado = RecetaId;
+        porcionesTexto = PorcionesBase.ToString();
+        await Cargar();
+    }
+
+    private async Task OnPorcionesInput(ChangeEventArgs e)
+    {
+        porcionesTexto = e.Value?.ToString() ?? "";
+        errorValidacion = null;
+        debounceCts?.Cancel();
+        debounceCts?.Dispose();
+        debounceCts = new CancellationTokenSource();
+        var token = debounceCts.Token;
+        try { await Task.Delay(300, token); }
+        catch (TaskCanceledException) { return; }
+        await Cargar();
+        StateHasChanged();
+    }
+
+    private async Task Cargar()
+    {
+        error = null;
+        if (!int.TryParse((porcionesTexto ?? "").Trim(), out var porciones) || porciones <= 0)
+        {
+            errorValidacion = "Ingresa un número de porciones mayor a 0.";
+            escalado = null;
+            return;
+        }
+        errorValidacion = null;
+        cargando = true;
+        var res = await Api.ObtenerEscaladoAsync(RecetaId, porciones);
+        cargando = false;
+        if (!res.Exito) { error = res.Mensaje; escalado = null; return; }
+        escalado = res.Datos;
+    }
+
+    public void Dispose()
+    {
+        debounceCts?.Cancel();
+        debounceCts?.Dispose();
+    }
+}

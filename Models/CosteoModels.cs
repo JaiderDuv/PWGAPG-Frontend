@@ -30,6 +30,23 @@ public class CostoRecetaDto
     public List<LineaCostoDto> Lineas { get; set; } = new();
 }
 
+public class EscaladoRecetaDto
+{
+    public int RecetaId { get; set; }
+    public string Receta { get; set; } = "";
+    public int PorcionesBase { get; set; }
+    public int PorcionesDeseadas { get; set; }
+    public decimal FactorEscala { get; set; }
+    public decimal CostoInsumos { get; set; }
+    public decimal CostoMermaAplicada { get; set; }
+    public decimal CostoFijoProrrateado { get; set; }
+    public decimal CostoTotal { get; set; }
+    public decimal CostoPorPorcion { get; set; }
+    public bool SinCostosFijos { get; set; }
+    public List<string> Advertencias { get; set; } = new();
+    public List<LineaCostoDto> Lineas { get; set; } = new();
+}
+
 public class CostoFijoDto
 {
     public int Id { get; set; }

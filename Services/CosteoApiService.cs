@@ -9,11 +9,12 @@ public class CosteoApiService
     private readonly HttpClient _http;
     public CosteoApiService(HttpClient http) => _http = http;
 
-    // ---------- Costo de receta ----------
     public async Task<ApiResultado<CostoRecetaDto>> ObtenerCostoAsync(int recetaId) =>
         await Leer<CostoRecetaDto>(await _http.GetAsync($"api/recetas/{recetaId}/costo"));
 
-    // ---------- Costos fijos ----------
+    public async Task<ApiResultado<EscaladoRecetaDto>> ObtenerEscaladoAsync(int recetaId, int porciones) =>
+        await Leer<EscaladoRecetaDto>(await _http.GetAsync($"api/recetas/{recetaId}/escalado?porciones={porciones}"));
+
     public async Task<ApiResultado<List<CostoFijoDto>>> ListarCostosFijosAsync() =>
         await Leer<List<CostoFijoDto>>(await _http.GetAsync("api/costos-fijos?incluirInactivos=true"));
 
@@ -31,7 +32,6 @@ public class CosteoApiService
             : new(false, false, await LeerError(res));
     }
 
-    // ---------- Helpers ----------
     private static async Task<ApiResultado<T>> Leer<T>(HttpResponseMessage res)
     {
         if (!res.IsSuccessStatusCode) return new(false, default, await LeerError(res));
