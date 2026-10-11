@@ -2,7 +2,8 @@
 @inject PWGAPG_Frontend.Services.AuthService AuthService
 @inject PWGAPG_Frontend.Services.PerfilService PerfilService
 @inject NavigationManager Navigation
-@implements IDisposable
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <header class="navbar">
     <div class="logo-container">
@@ -78,10 +79,12 @@
 
 @code {
     private bool mostrarMenu = false;
+    private bool vigilanciaIniciada = false;
+    private DotNetObjectReference<MainLayout>? dotNetRef;
 
     protected override void OnInitialized()
     {
-        AuthService.OnChange += StateHasChanged;
+        AuthService.OnChange += ManejarCambioAuth;
         Navigation.LocationChanged += OnLocationChanged;
         VerificarOnboardingPendiente();
     }
@@ -101,6 +104,40 @@
         }
     }
 
+    private async void ManejarCambioAuth()
+    {
+        StateHasChanged();
+        if (AuthService.IsAuthenticated)
+        {
+            await IniciarVigilanciaInactividad();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && AuthService.IsAuthenticated)
+        {
+            await IniciarVigilanciaInactividad();
+        }
+    }
+
+    private async Task IniciarVigilanciaInactividad()
+    {
+        if (vigilanciaIniciada) return;
+        vigilanciaIniciada = true;
+
+        dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("chefMetricsInactividad.iniciar", dotNetRef, 15);
+    }
+
+    [JSInvokable]
+    public async Task SesionExpiradaPorInactividad()
+    {
+        vigilanciaIniciada = false;
+        await AuthService.CerrarSesionAsync();
+        Navigation.NavigateTo("login", forceLoad: true);
+    }
+
     private void ToggleMenu()
     {
         mostrarMenu = !mostrarMenu;
@@ -111,12 +148,26 @@
         mostrarMenu = false;
         await PerfilService.RevocarPermisoAsync();
         await AuthService.CerrarSesionAsync();
+        vigilanciaIniciada = false;
         Navigation.NavigateTo("/", replace: true);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        AuthService.OnChange -= StateHasChanged;
+        AuthService.OnChange -= ManejarCambioAuth;
         Navigation.LocationChanged -= OnLocationChanged;
+
+        if (dotNetRef != null)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("chefMetricsInactividad.detener");
+            }
+            catch
+            {
+                // La página ya se está descargando; no pasa nada si esto falla.
+            }
+            dotNetRef.Dispose();
+        }
     }
 }

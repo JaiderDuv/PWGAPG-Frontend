@@ -1,4 +1,5 @@
 ﻿@page "/recetas"
+@attribute [Authorize]
 @using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Services
 @using PWGAPG_Frontend.Components
@@ -49,7 +50,7 @@
             <div class="rc-grid">
             @foreach (var r in recetas)
             {
-                <div class="rc-recipe @(costosAbiertos.Contains(r.Id) ? "rc-recipe-wide" : "")">
+                    <div class="rc-recipe @(costosAbiertos.Contains(r.Id) || preciosAbiertos.Contains(r.Id) ? "rc-recipe-wide" : "")">
                     <div class="rc-recipe-img">
                         @if (Api.UrlImagen(r.ImagenUrl) is { } url) { <img src="@url" alt="@r.Nombre" loading="lazy" /> }
                         else { <span>🍽️</span> }
@@ -76,13 +77,21 @@
                             @if (!string.IsNullOrWhiteSpace(r.Instrucciones)) { <p class="rc-instr">@r.Instrucciones</p> }
                         </details>
 
-                        <button class="btn btn-sm btn-outline-secondary mt-2" @onclick="() => AlternarCosto(r.Id)">
-                            @(costosAbiertos.Contains(r.Id) ? "Ocultar costo real" : "Ver costo real")
-                        </button>
-                        @if (costosAbiertos.Contains(r.Id))
-                        {
-                            <CostoRecetaPanel RecetaId="r.Id" />
-                        }
+                            <button class="btn btn-sm btn-outline-secondary mt-2" @onclick="() => AlternarCosto(r.Id)">
+                                @(costosAbiertos.Contains(r.Id) ? "Ocultar costo real" : "Ver costo real")
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary mt-2 ms-2" @onclick="() => AlternarPrecio(r.Id)">
+                                @(preciosAbiertos.Contains(r.Id) ? "Ocultar precio sugerido" : "Ver precio sugerido")
+                            </button>
+
+                            @if (costosAbiertos.Contains(r.Id))
+                            {
+                                <CostoRecetaPanel RecetaId="r.Id" />
+                            }
+                            @if (preciosAbiertos.Contains(r.Id))
+                            {
+                                <SugerenciaPrecioVenta RecetaId="r.Id" />
+                            }
                     </div>
                     <div class="rc-recipe-actions">
                         <button class="btn btn-sm btn-outline-secondary" @onclick="() => Editar(r)">Editar</button>
@@ -108,6 +117,7 @@
     private string? busqueda, error, mensajeOk;
     private Guid formKey = Guid.NewGuid();
     private readonly HashSet<int> costosAbiertos = new();
+    private readonly HashSet<int> preciosAbiertos = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -127,6 +137,10 @@
     private void AlternarCosto(int id)
     {
         if (!costosAbiertos.Remove(id)) costosAbiertos.Add(id);
+    }
+    private void AlternarPrecio(int id)
+    {
+        if (!preciosAbiertos.Remove(id)) preciosAbiertos.Add(id);
     }
 
     private void Nueva() { editando = null; AbrirForm(); }

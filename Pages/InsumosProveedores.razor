@@ -43,6 +43,7 @@
                 <thead>
                     <tr>
                         <th>Nombre</th>
+                        <th>Cantidad</th>
                         <th>Unidad</th>
                         <th>Proveedor actual</th>
                         <th>Costo</th>
@@ -56,11 +57,15 @@
                         {
                             <tr>
                                 <td><strong>@i.Nombre</strong></td>
+                                <td class="text-muted">
+                                    @(i.Cantidad.HasValue? i.Cantidad.Value.ToString("0.###") : "—")
+                                </td>
                                 <td class="text-muted">@i.UnidadMedida</td>
                                 <td class="text-muted">@(i.Proveedor ?? "—")</td>
                                 <td class="text-muted">$@i.CostoUnitario.ToString("N0")</td>
                                 <td>
-                                    <button type="button" class="btn-mini-editar" @onclick="() => IrAProveedores(i.Id)">
+                                    <button type="button" class="btn-mini-editar"
+                                            @onclick="() => IrAProveedores(i.Id)">
                                         Gestionar proveedores
                                     </button>
                                 </td>
@@ -70,14 +75,16 @@
                     else
                     {
                         <tr>
-                            <td colspan="5" class="text-muted" style="text-align:center; padding:24px;">
-                                @(string.IsNullOrWhiteSpace(textoBusqueda) ? "Aún no tienes insumos registrados." : "No hay insumos que coincidan con la búsqueda.")
-                            </td>
-                        </tr>
-                    }
+                            <td colspan="6" class="text-muted"
+                                style="text-align:center; padding:24px;">
+                                @(string.IsNullOrWhiteSpace(textoBusqueda)
+                                                        ? "Aún no tienes insumos registrados."
+                                                        : "No hay insumos que coincidan con la búsqueda.")
+                    </td>
+                </tr>
+                                }
                 </tbody>
             </table>
-            
         </div>
         <Paginador Pagina="pagina" Total="total" TamanoPagina="TamanoPagina" PaginaChanged="CambiarPagina" />
     }

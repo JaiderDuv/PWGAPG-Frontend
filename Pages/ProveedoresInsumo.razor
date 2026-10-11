@@ -3,18 +3,23 @@
 @using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Components
 @using System.Net.Http.Json
+@using System.ComponentModel.DataAnnotations
 @inject HttpClient Http
 @inject NavigationManager Navigation
 
 <div class="onboarding-container">
-    <button type="button" class="btn-outline" @onclick='() => Navigation.NavigateTo("insumos-proveedores")'>
+    <button type="button" class="btn-outline"
+            @onclick='() => Navigation.NavigateTo("insumos-proveedores")'>
         ← Volver
     </button>
 
     <h2 class="auth-titulo" style="margin-top: 16px;">
-        Proveedores de @(string.IsNullOrWhiteSpace(nombreInsumo) ? "este insumo" : $"«{nombreInsumo}»")
+        Proveedores de @(string.IsNullOrWhiteSpace(nombreInsumo)
+                ? "este insumo" : $"«{nombreInsumo}»")
     </h2>
-    <p class="auth-subtitulo">Compara precios y gestiona los proveedores asociados a este insumo.</p>
+    <p class="auth-subtitulo">
+        Compara precios y gestiona los proveedores asociados a este insumo.
+    </p>
 
     <div class="onboarding-contenido">
         @if (cargando)
@@ -25,12 +30,18 @@
         {
             <div class="socios-header">
                 <span></span>
-                <button type="button" class="btn-outline" @onclick="AbrirModalAgregar">+ Agregar Proveedor</button>
+                <button type="button" class="btn-outline" @onclick="AbrirModalAgregar">
+                    + Agregar Proveedor
+                </button>
             </div>
 
             @if (mensajeError != null)
             {
                 <div class="text-danger msg-error">@mensajeError</div>
+            }
+            @if (mensajeExito != null)
+            {
+                <div class="text-success msg-error">@mensajeExito</div>
             }
 
             @if (proveedoresAsociados.Any())
@@ -41,8 +52,9 @@
                             <tr>
                                 <th>Proveedor</th>
                                 <th>Contacto</th>
+                                <th>Cantidad</th>
+                                <th>Unidad</th>
                                 <th>Precio</th>
-                                <th></th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -61,28 +73,33 @@
                                             {
                                                 <span class="badge-barato">Más barato</span>
                                             }
-                                        </div>
-                                    </td>
-                                    <td class="text-muted" style="font-size:0.85rem;">
-                                        @(p.Telefono ?? "Sin teléfono")<br />@(p.Correo ?? "Sin correo")
-                                    </td>
-                                    <td>
-                                        <input type="number" step="0.01" class="form-control costo-input"
-                                               @bind="costosEditados[p.ProveedorId]" />
-                                    </td>
-                                    <td>
-                                        @if (costosEditados.TryGetValue(p.ProveedorId, out var editado) && editado != p.Costo)
-                                        {
-                                            <button type="button" class="btn-mini-editar" @onclick="() => GuardarCosto(p.ProveedorId)">Guardar</button>
-                                        }
-                                    </td>
-                                    <td>
-                                        <div class="proveedor-acciones">
-                                            @if (!p.EsPrincipal)
+                                    </div>
+                                </td>
+                                <td class="text-muted" style="font-size:0.85rem;">
+                                    @(string.IsNullOrWhiteSpace(p.Telefono) ? "Sin teléfono" : p.Telefono)<br />
+                                    @(string.IsNullOrWhiteSpace(p.Correo) ? "Sin correo" : p.Correo)
+                                </td>
+                                <td>@p.Cantidad.ToString("0.###")</td>
+                                <td>@p.UnidadMedida</td>
+                                <td>$@p.Costo.ToString("N2")</td>
+                                
+                        <td>
+                            <div class="proveedor-acciones">
+                                <button type="button" class="btn-mini-editar"
+                                        @onclick="() => AbrirModalEditar(p)">
+                                    Editar
+                                </button>
+                                @if (!p.EsPrincipal)
                                             {
-                                                <button type="button" class="btn-mini-principal" @onclick="() => MarcarPrincipal(p.ProveedorId)">Marcar Principal</button>
+                                                <button type="button" class="btn-mini-principal"
+                                                        @onclick="() => MarcarPrincipal(p.ProveedorId)">
+                                                    Marcar Principal
+                                                </button>
                                             }
-                                            <button type="button" class="btn-mini-eliminar" @onclick="() => PedirDesasociar(p)">Eliminar</button>
+                                            <button type="button" class="btn-mini-eliminar"
+                                                    @onclick="() => PedirDesasociar(p)">
+                                                Eliminar
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -93,27 +110,124 @@
             }
             else
             {
-                <p class="text-muted">Aún no hay proveedores asociados a este insumo.</p>
+                <p class="text-muted">
+                    Aún no hay proveedores asociados a este insumo.
+                </p>
             }
         }
     </div>
 </div>
 
+@* ===================== MODAL EDITAR ===================== *@
+@if (mostrarModalEditar && editando is not null)
+{
+    <div class="confirm-overlay">
+        <div class="socio-modal">
+            <h3 class="onboarding-subtitulo">Editar proveedor</h3>
+            <p class="text-muted"
+               style="font-size:0.8rem; margin-top:-8px; margin-bottom:14px;">
+                Los campos marcados con * son obligatorios.
+            </p>
+
+            <EditForm Model="@formularioEditar" OnValidSubmit="@GuardarEdicion">
+                <DataAnnotationsValidator />
+
+                <div class="form-group-sm">
+                    <label class="auth-label">Nombre *</label>
+                    <InputText @bind-Value="formularioEditar.Nombre" class="form-control" />
+                    <ValidationMessage For="@(() => formularioEditar.Nombre)"
+                                       class="text-danger msg-error" />
+                </div>
+                <div class="form-group-sm">
+                    <label class="auth-label">Teléfono</label>
+                    <InputText @bind-Value="formularioEditar.Telefono"
+                               class="form-control" placeholder="Opcional" />
+                    <ValidationMessage For="@(() => formularioEditar.Telefono)"
+                                       class="text-danger msg-error" />
+                </div>
+                <div class="form-group-sm">
+                    <label class="auth-label">Correo</label>
+                    <InputText @bind-Value="formularioEditar.Correo"
+                               class="form-control" placeholder="Opcional" />
+                    <ValidationMessage For="@(() => formularioEditar.Correo)"
+                                       class="text-danger msg-error" />
+                </div>
+                <p class="text-muted" style="font-size:0.75rem; margin-top:-4px;">
+                    Nombre, teléfono y correo son del proveedor: el cambio aplica a todos los insumos donde aparece.
+                </p>
+
+                <div class="onb-grid">
+                    <div class="form-group-sm">
+                        <label class="auth-label">Cantidad *</label>
+                        <InputNumber @bind-Value="formularioEditar.Cantidad"
+                                     class="form-control" min="0.001" step="any" />
+                        <ValidationMessage For="@(() => formularioEditar.Cantidad)"
+                                           class="text-danger msg-error" />
+                    </div>
+                    <div class="form-group-sm">
+                        <label class="auth-label">Unidad *</label>
+                        <InputSelect @bind-Value="formularioEditar.UnidadMedida" class="form-select">
+                            <option value="">Selecciona...</option>
+                            <option value="g">g</option>
+                            <option value="kg">kg</option>
+                            <option value="l">l</option>
+                            <option value="ml">ml</option>
+                            <option value="oz">oz</option>
+                            <option value="lb">lb</option>
+                            <option value="unidad">unidad</option>
+                            <option value="taza">taza</option>
+                        </InputSelect>
+                        <ValidationMessage For="@(() => formularioEditar.UnidadMedida)"
+                                           class="text-danger msg-error" />
+                    </div>
+                </div>
+
+                <div class="form-group-sm">
+                    <label class="auth-label">Precio *</label>
+                    <InputNumber @bind-Value="formularioEditar.Costo"
+                                 class="form-control" min="0.01" step="any" />
+                    <ValidationMessage For="@(() => formularioEditar.Costo)"
+                                       class="text-danger msg-error" />
+                </div>
+
+                @if (mensajeErrorModal != null)
+                {
+                    <div class="text-danger msg-error">@mensajeErrorModal</div>
+                }
+
+                <div class="confirm-acciones" style="margin-top:16px;">
+                    <button type="button" class="btn-outline" @onclick="CerrarModalEditar">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-solid" disabled="@guardando">
+                        @(guardando ? "Guardando..." : "Guardar")
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@* ===================== MODAL AGREGAR ===================== *@
 @if (mostrarModalAgregar)
 {
     <div class="confirm-overlay">
         <div class="socio-modal">
             <h3 class="onboarding-subtitulo">Agregar proveedor</h3>
-            <p class="text-muted" style="font-size:0.8rem; margin-top:-8px; margin-bottom:14px;">
+            <p class="text-muted"
+               style="font-size:0.8rem; margin-top:-8px; margin-bottom:14px;">
                 Los campos marcados con * son obligatorios.
             </p>
 
             <div class="modo-toggle">
-                <button type="button" class="@(modoProveedor == "existente" ? "modo-btn activo" : "modo-btn")"
-                        @onclick='() => CambiarModo("existente")' disabled="@(!disponibles.Any())">
+                <button type="button"
+                        class="@(modoProveedor == "existente" ? "modo-btn activo" : "modo-btn")"
+                        @onclick='() => CambiarModo("existente")'
+                        disabled="@(!disponibles.Any())">
                     Elegir existente
                 </button>
-                <button type="button" class="@(modoProveedor == "nuevo" ? "modo-btn activo" : "modo-btn")"
+                <button type="button"
+                        class="@(modoProveedor == "nuevo" ? "modo-btn activo" : "modo-btn")"
                         @onclick='() => CambiarModo("nuevo")'>
                     Crear nuevo
                 </button>
@@ -135,7 +249,9 @@
                         </select>
                         @if (mostrarErrorSeleccion)
                         {
-                            <span class="text-danger msg-error">Seleccione un proveedor.</span>
+                            <span class="text-danger msg-error">
+                                Seleccione un proveedor.
+                            </span>
                         }
                     </div>
                 }
@@ -143,25 +259,57 @@
                 {
                     <div class="form-group-sm">
                         <label class="auth-label">Nombre *</label>
-                        <InputText @bind-Value="formularioAgregar.Nombre" class="form-control" />
-                        <ValidationMessage For="@(() => formularioAgregar.Nombre)" class="text-danger msg-error" />
+                        <InputText @bind-Value="formularioAgregar.Nombre"
+                                   class="form-control" />
+                        <ValidationMessage For="@(() => formularioAgregar.Nombre)"
+                                           class="text-danger msg-error" />
                     </div>
                     <div class="form-group-sm">
                         <label class="auth-label">Teléfono</label>
-                        <InputText @bind-Value="formularioAgregar.Telefono" class="form-control" placeholder="Opcional" />
-                        <ValidationMessage For="@(() => formularioAgregar.Telefono)" class="text-danger msg-error" />
+                        <InputText @bind-Value="formularioAgregar.Telefono"
+                                   class="form-control" placeholder="Opcional" />
                     </div>
                     <div class="form-group-sm">
                         <label class="auth-label">Correo</label>
-                        <InputText @bind-Value="formularioAgregar.Correo" class="form-control" placeholder="Opcional" />
-                        <ValidationMessage For="@(() => formularioAgregar.Correo)" class="text-danger msg-error" />
+                        <InputText @bind-Value="formularioAgregar.Correo"
+                                   class="form-control" placeholder="Opcional" />
                     </div>
                 }
 
+                <div class="onb-grid">
+                    <div class="form-group-sm">
+                        <label class="auth-label">Cantidad *</label>
+                        <InputNumber @bind-Value="formularioAgregar.Cantidad"
+                                     class="form-control" min="0.001" step="any"
+                                     placeholder="Ej.: 500" />
+                        <ValidationMessage For="@(() => formularioAgregar.Cantidad)"
+                                           class="text-danger msg-error" />
+                    </div>
+                    <div class="form-group-sm">
+                        <label class="auth-label">Unidad *</label>
+                        <InputSelect @bind-Value="formularioAgregar.UnidadMedida"
+                                     class="form-select">
+                            <option value="">Selecciona...</option>
+                            <option value="g">g</option>
+                            <option value="kg">kg</option>
+                            <option value="l">l</option>
+                            <option value="ml">ml</option>
+                            <option value="oz">oz</option>
+                            <option value="lb">lb</option>
+                            <option value="unidad">unidad</option>
+                            <option value="taza">taza</option>
+                        </InputSelect>
+                        <ValidationMessage For="@(() => formularioAgregar.UnidadMedida)"
+                                           class="text-danger msg-error" />
+                    </div>
+                </div>
+
                 <div class="form-group-sm">
                     <label class="auth-label">Precio *</label>
-                    <InputNumber @bind-Value="formularioAgregar.Costo" class="form-control" />
-                    <ValidationMessage For="@(() => formularioAgregar.Costo)" class="text-danger msg-error" />
+                    <InputNumber @bind-Value="formularioAgregar.Costo"
+                                 class="form-control" />
+                    <ValidationMessage For="@(() => formularioAgregar.Costo)"
+                                       class="text-danger msg-error" />
                 </div>
 
                 @if (mensajeErrorModal != null)
@@ -170,7 +318,10 @@
                 }
 
                 <div class="confirm-acciones" style="margin-top:16px;">
-                    <button type="button" class="btn-outline" @onclick="() => mostrarModalAgregar = false">Cancelar</button>
+                    <button type="button" class="btn-outline"
+                            @onclick="() => mostrarModalAgregar = false">
+                        Cancelar
+                    </button>
                     <button type="submit" class="btn-solid">Guardar</button>
                 </div>
             </EditForm>
@@ -188,18 +339,27 @@
 
     private bool cargando = true;
     private string? mensajeError;
+    private string? mensajeExito;
     private string? mensajeErrorModal;
 
     private List<InsumoProveedorDTO> proveedoresAsociados = new();
     private List<ProveedorDTO> disponibles = new();
-    private Dictionary<int, decimal> costosEditados = new();
 
+    // Modal agregar
     private bool mostrarModalAgregar = false;
     private string modoProveedor = "nuevo";
     private int? proveedorExistenteId;
     private ProveedorNuevoDTO formularioAgregar = new();
     private bool mostrarErrorSeleccion;
     private string nombreInsumo = string.Empty;
+    private string unidadInsumo = string.Empty;
+
+    // Modal editar
+    private bool mostrarModalEditar = false;
+    private bool guardando = false;
+    private bool recargarAlCerrar = false;
+    private InsumoProveedorDTO? editando;
+    private EdicionProveedorModel formularioEditar = new();
 
     private bool mostrarConfirmEliminar = false;
     private InsumoProveedorDTO? proveedorAEliminar;
@@ -221,27 +381,29 @@
             {
                 var cuerpo = await respInsumo.Content.ReadAsStringAsync();
                 using var doc = System.Text.Json.JsonDocument.Parse(cuerpo);
-                if (doc.RootElement.TryGetProperty("nombre", out var nombreProp))
-                {
-                    nombreInsumo = nombreProp.GetString() ?? string.Empty;
-                }
+                if (doc.RootElement.TryGetProperty("nombre", out var n))
+                    nombreInsumo = n.GetString() ?? string.Empty;
+                if (doc.RootElement.TryGetProperty("unidadMedida", out var u))
+                    unidadInsumo = u.GetString() ?? "g";
             }
 
             var respAsociados = await Http.GetAsync($"api/insumos/{InsumoId}/proveedores");
             if (respAsociados.IsSuccessStatusCode)
             {
-                proveedoresAsociados = await respAsociados.Content.ReadFromJsonAsync<List<InsumoProveedorDTO>>() ?? new();
-                costosEditados = proveedoresAsociados.ToDictionary(p => p.ProveedorId, p => p.Costo);
+                proveedoresAsociados = await respAsociados.Content
+                    .ReadFromJsonAsync<List<InsumoProveedorDTO>>() ?? new();
             }
             else
             {
                 mensajeError = "No se pudo cargar la información de proveedores.";
             }
 
-            var respDisponibles = await Http.GetAsync($"api/insumos/{InsumoId}/proveedores-disponibles");
+            var respDisponibles = await Http.GetAsync(
+                $"api/insumos/{InsumoId}/proveedores-disponibles");
             if (respDisponibles.IsSuccessStatusCode)
             {
-                disponibles = await respDisponibles.Content.ReadFromJsonAsync<List<ProveedorDTO>>() ?? new();
+                disponibles = await respDisponibles.Content
+                    .ReadFromJsonAsync<List<ProveedorDTO>>() ?? new();
             }
         }
         catch
@@ -254,13 +416,133 @@
         }
     }
 
+    // ---------- Modal editar ----------
+
+    private void AbrirModalEditar(InsumoProveedorDTO p)
+    {
+        editando = p;
+        formularioEditar = new EdicionProveedorModel
+        {
+            Nombre = p.Nombre,
+            Telefono = p.Telefono,
+            Correo = p.Correo,
+            Cantidad = p.Cantidad,
+            UnidadMedida = p.UnidadMedida,
+            Costo = p.Costo
+        };
+        mensajeErrorModal = null;
+        mensajeError = null;
+        mensajeExito = null;
+        recargarAlCerrar = false;
+        mostrarModalEditar = true;
+    }
+
+    private async Task CerrarModalEditar()
+    {
+        mostrarModalEditar = false;
+        editando = null;
+        mensajeErrorModal = null;
+        if (recargarAlCerrar)
+        {
+            recargarAlCerrar = false;
+            await CargarDatos();
+        }
+    }
+
+    private async Task GuardarEdicion()
+    {
+        if (editando is null) return;
+
+        mensajeErrorModal = null;
+        guardando = true;
+
+        try
+        {
+            var f = formularioEditar;
+            var nombre = f.Nombre.Trim();
+            var telefono = string.IsNullOrWhiteSpace(f.Telefono) ? null : f.Telefono.Trim();
+            var correo = string.IsNullOrWhiteSpace(f.Correo) ? null : f.Correo.Trim();
+
+            var cambioContacto =
+                !string.Equals(nombre, editando.Nombre, StringComparison.Ordinal) ||
+                telefono != editando.Telefono ||
+                correo != editando.Correo;
+
+            var cambioPrecio =
+                f.Costo != editando.Costo ||
+                f.Cantidad != editando.Cantidad ||
+                !string.Equals(f.UnidadMedida, editando.UnidadMedida, StringComparison.Ordinal);
+
+            if (!cambioContacto && !cambioPrecio)
+            {
+                await CerrarModalEditar();
+                mensajeExito = "No había cambios para guardar.";
+                return;
+            }
+
+            if (cambioContacto)
+            {
+                var resp = await Http.PatchAsJsonAsync(
+                    $"api/proveedores/{editando.ProveedorId}",
+                    new { Nombre = nombre, Telefono = telefono, Correo = correo });
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    mensajeErrorModal = await ExtraerMensajeError(resp);
+                    return;
+                }
+
+                // Ya quedó guardado: si el precio falla, el reintento no lo vuelve a enviar.
+                editando.Nombre = nombre;
+                editando.Telefono = telefono;
+                editando.Correo = correo;
+                recargarAlCerrar = true;
+            }
+
+            if (cambioPrecio)
+            {
+                var resp = await Http.PatchAsJsonAsync(
+                    $"api/insumos/{InsumoId}/proveedores/{editando.ProveedorId}/costo",
+                    new
+                    {
+                        Costo = f.Costo,
+                        Cantidad = f.Cantidad,
+                        UnidadMedida = f.UnidadMedida
+                    });
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    mensajeErrorModal = await ExtraerMensajeError(resp);
+                    return;
+                }
+            }
+
+            recargarAlCerrar = false;
+            mostrarModalEditar = false;
+            editando = null;
+            mensajeExito = "Cambios guardados correctamente.";
+            await CargarDatos();
+        }
+        catch
+        {
+            mensajeErrorModal = "No se pudo conectar con el servidor.";
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    // ---------- Modal agregar ----------
+
     private void AbrirModalAgregar()
     {
-        formularioAgregar = new ProveedorNuevoDTO();
+        formularioAgregar = new ProveedorNuevoDTO { UnidadMedida = unidadInsumo };
         proveedorExistenteId = null;
         mostrarErrorSeleccion = false;
         mensajeErrorModal = null;
         mensajeError = null;
+        mensajeExito = null;
         mostrarModalAgregar = true;
         CambiarModo(disponibles.Any() ? "existente" : "nuevo");
     }
@@ -270,8 +552,6 @@
         modoProveedor = modo;
         mostrarErrorSeleccion = false;
         mensajeErrorModal = null;
-
-        // En modo "existente" el Nombre no se usa, pero el DTO lo exige: se rellena para que el formulario valide.
         formularioAgregar.Nombre = modo == "existente" ? "placeholder" : string.Empty;
         formularioAgregar.Telefono = null;
         formularioAgregar.Correo = null;
@@ -282,8 +562,10 @@
         mensajeErrorModal = null;
         mostrarErrorSeleccion = false;
 
-        formularioAgregar.Telefono = string.IsNullOrWhiteSpace(formularioAgregar.Telefono) ? null : formularioAgregar.Telefono.Trim();
-        formularioAgregar.Correo = string.IsNullOrWhiteSpace(formularioAgregar.Correo) ? null : formularioAgregar.Correo.Trim();
+        formularioAgregar.Telefono = string.IsNullOrWhiteSpace(formularioAgregar.Telefono)
+            ? null : formularioAgregar.Telefono.Trim();
+        formularioAgregar.Correo = string.IsNullOrWhiteSpace(formularioAgregar.Correo)
+            ? null : formularioAgregar.Correo.Trim();
 
         try
         {
@@ -297,12 +579,20 @@
                     return;
                 }
 
-                resp = await Http.PostAsJsonAsync($"api/insumos/{InsumoId}/proveedores",
-                    new { ProveedorId = proveedorExistenteId.Value, Costo = formularioAgregar.Costo });
+                resp = await Http.PostAsJsonAsync(
+                    $"api/insumos/{InsumoId}/proveedores",
+                    new
+                    {
+                        ProveedorId = proveedorExistenteId.Value,
+                        Costo = formularioAgregar.Costo,
+                        Cantidad = formularioAgregar.Cantidad,
+                        UnidadMedida = formularioAgregar.UnidadMedida
+                    });
             }
             else
             {
-                resp = await Http.PostAsJsonAsync($"api/insumos/{InsumoId}/proveedores/nuevo", formularioAgregar);
+                resp = await Http.PostAsJsonAsync(
+                    $"api/insumos/{InsumoId}/proveedores/nuevo", formularioAgregar);
             }
 
             if (resp.IsSuccessStatusCode)
@@ -321,44 +611,19 @@
         }
     }
 
-    private async Task<string> ExtraerMensajeError(HttpResponseMessage resp)
-    {
-        try
-        {
-            var cuerpo = await resp.Content.ReadAsStringAsync();
-            using var doc = System.Text.Json.JsonDocument.Parse(cuerpo);
-            var root = doc.RootElement;
-
-            if (root.TryGetProperty("mensaje", out var mensaje))
-            {
-                return mensaje.GetString() ?? "No se pudo completar la acción.";
-            }
-
-            if (root.TryGetProperty("errors", out var errores) && errores.ValueKind == System.Text.Json.JsonValueKind.Object)
-            {
-                foreach (var campo in errores.EnumerateObject())
-                {
-                    foreach (var texto in campo.Value.EnumerateArray())
-                    {
-                        var valor = texto.GetString();
-                        if (!string.IsNullOrWhiteSpace(valor)) return valor;
-                    }
-                }
-            }
-        }
-        catch { }
-
-        return "No se pudo completar la acción. Verifica los datos e intenta de nuevo.";
-    }
+    // ---------- Marcar principal ----------
 
     private async Task MarcarPrincipal(int proveedorId)
     {
         mensajeError = null;
+        mensajeExito = null;
         try
         {
-            var resp = await Http.PatchAsync($"api/insumos/{InsumoId}/proveedores/{proveedorId}/principal", null);
+            var resp = await Http.PatchAsync(
+                $"api/insumos/{InsumoId}/proveedores/{proveedorId}/principal", null);
             if (resp.IsSuccessStatusCode)
             {
+                mensajeExito = "Proveedor marcado como principal.";
                 await CargarDatos();
             }
             else
@@ -372,27 +637,7 @@
         }
     }
 
-    private async Task GuardarCosto(int proveedorId)
-    {
-        mensajeError = null;
-        try
-        {
-            var nuevoCosto = costosEditados[proveedorId];
-            var resp = await Http.PatchAsJsonAsync($"api/insumos/{InsumoId}/proveedores/{proveedorId}/costo", new { Costo = nuevoCosto });
-            if (resp.IsSuccessStatusCode)
-            {
-                await CargarDatos();
-            }
-            else
-            {
-                mensajeError = "No se pudo actualizar el precio.";
-            }
-        }
-        catch
-        {
-            mensajeError = "No se pudo conectar con el servidor.";
-        }
-    }
+    // ---------- Eliminar ----------
 
     private void PedirDesasociar(InsumoProveedorDTO proveedor)
     {
@@ -405,11 +650,16 @@
         mostrarConfirmEliminar = false;
         if (proveedorAEliminar == null) return;
 
+        mensajeError = null;
+        mensajeExito = null;
+
         try
         {
-            var resp = await Http.DeleteAsync($"api/insumos/{InsumoId}/proveedores/{proveedorAEliminar.ProveedorId}");
+            var resp = await Http.DeleteAsync(
+                $"api/insumos/{InsumoId}/proveedores/{proveedorAEliminar.ProveedorId}");
             if (resp.IsSuccessStatusCode)
             {
+                mensajeExito = "Proveedor eliminado correctamente.";
                 await CargarDatos();
             }
             else
@@ -423,5 +673,57 @@
         }
 
         proveedorAEliminar = null;
+    }
+
+    // ---------- Utilidades ----------
+
+    private async Task<string> ExtraerMensajeError(HttpResponseMessage resp)
+    {
+        try
+        {
+            var cuerpo = await resp.Content.ReadAsStringAsync();
+            using var doc = System.Text.Json.JsonDocument.Parse(cuerpo);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("mensaje", out var mensaje))
+                return mensaje.GetString() ?? "No se pudo completar la acción.";
+
+            if (root.TryGetProperty("errors", out var errores) &&
+                errores.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                foreach (var campo in errores.EnumerateObject())
+                    foreach (var texto in campo.Value.EnumerateArray())
+                    {
+                        var valor = texto.GetString();
+                        if (!string.IsNullOrWhiteSpace(valor)) return valor;
+                    }
+            }
+        }
+        catch { }
+
+        return "No se pudo completar la acción. Verifica los datos e intenta de nuevo.";
+    }
+
+    // ---------- Modelo del formulario de edición ----------
+    private class EdicionProveedorModel
+    {
+        [Required(ErrorMessage = "El nombre del proveedor es obligatorio.")]
+        [StringLength(150, ErrorMessage = "El nombre no puede superar los 150 caracteres.")]
+        public string Nombre { get; set; } = string.Empty;
+
+        [RegularExpression(@"^$|^3\d{9}$", ErrorMessage = "El teléfono debe tener 10 dígitos y empezar por 3.")]
+        public string? Telefono { get; set; }
+
+        [RegularExpression(@"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$", ErrorMessage = "Ingrese un correo electrónico válido.")]
+        public string? Correo { get; set; }
+
+        [Range(0.01, double.MaxValue, ErrorMessage = "La cantidad debe ser mayor a 0.")]
+        public decimal Cantidad { get; set; }
+
+        [Required(ErrorMessage = "La unidad es obligatoria.")]
+        public string UnidadMedida { get; set; } = string.Empty;
+
+        [Range(0.01, double.MaxValue, ErrorMessage = "El precio debe ser mayor a 0.")]
+        public decimal Costo { get; set; }
     }
 }
