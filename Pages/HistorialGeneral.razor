@@ -77,6 +77,8 @@
                                         <th>Fecha</th>
                                         <th>Proveedor</th>
                                         <th>Precio</th>
+                                        <th>Cantidad</th>
+                                        <th>P. unitario</th>
                                         <th>Diferencia</th>
                                         <th>Variación</th>
                                         <th></th>
@@ -89,6 +91,8 @@
                                             <td>@entrada.Fecha.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
                                             <td>@(string.IsNullOrWhiteSpace(entrada.Proveedor) ? "—" : entrada.Proveedor)</td>
                                             <td><strong>$@entrada.Precio.ToString("N2")</strong></td>
+                                            <td>@(entrada.Cantidad.HasValue ? entrada.Cantidad.Value.ToString("N3") : "—")</td>
+                                            <td>@(entrada.PrecioUnitario.HasValue ? $"${entrada.PrecioUnitario.Value:N2}" : "—")</td>
                                             <td>@TextoDiferencia(entrada)</td>
                                             <td>@BadgeVariacion(entrada)</td>
                                             <td>

@@ -34,6 +34,12 @@ public class PerfilEmprendedorDto
     [StringLength(50)]
     public string Rues { get; set; } = string.Empty;
 
+        [StringLength(5)]
+    public string TipoDocumento { get; set; } = string.Empty;
+
+    [StringLength(20)]
+    public string NumeroDocumento { get; set; } = string.Empty;
+
     [Required(ErrorMessage = "El correo de la empresa es obligatorio.")]
     [EmailAddress(ErrorMessage = "Ingresa un correo de empresa válido.")]
     [StringLength(255)]
@@ -49,18 +55,14 @@ public class PerfilEmprendedorDto
     public List<EmpleadoDto> Empleados { get; set; } = new();
 }
 
-// Sección 03 del formulario: empleados del negocio (tabla Empleado del BackEnd).
-// La tabla no tiene nombres/apellidos/teléfono: solo correo invitado + rol + estado.
 public class EmpleadoDto
 {
-    // Null => invitación nueva (el servidor la crea como "pendiente").
     public int? Id { get; set; }
 
     public string CorreoInvitado { get; set; } = string.Empty;
 
     public int RolId { get; set; }
 
-    // Solo lectura (lo devuelve el GET).
     public string? NombreRol { get; set; }
     public string? EstadoInvitacion { get; set; }
 }

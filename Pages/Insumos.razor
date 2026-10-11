@@ -70,6 +70,7 @@
             <option value="nombre">Nombre</option>
             <option value="costo">Costo</option>
             <option value="merma">% Merma</option>
+            <option value="cantidad">Cantidad</option>
         </select>
 
         <select class="form-select" value="@direccion" @onchange="OnDireccionChanged" title="Dirección">
@@ -106,6 +107,7 @@
                         <th>Categoría</th>
                         <th>Costo</th>
                         <th>% Merma</th>
+                        <th>Cantidad</th>
                         <th>Proveedor</th>
                         <th>Estado</th>
                         <th>Recetas</th>
@@ -123,6 +125,7 @@
                             <td>@(string.IsNullOrWhiteSpace(insumo.Categoria) ? "—" : insumo.Categoria)</td>
                             <td>$@insumo.CostoUnitario.ToString("N2")</td>
                             <td>@insumo.PorcentajeMerma.ToString("N2")%</td>
+                            <td>@(insumo.Cantidad.HasValue ? insumo.Cantidad.Value.ToString("0.##") : "—")</td>
                             <td>@(string.IsNullOrWhiteSpace(insumo.Proveedor) ? "—" : insumo.Proveedor)</td>
                             <td>
                                 <span class="insumos-badge @(insumo.Activo ? "insumos-badge-activo" : "insumos-badge-inactivo")">
@@ -193,6 +196,15 @@
                             <span class="text-danger msg-error">@errMerma</span>
                         }
                     </div>
+                </div>
+
+                <div class="form-group-sm">
+                    <label class="auth-label">Cantidad (opcional)</label>
+                        <InputNumber @bind-Value="form.Cantidad" class="form-control" min="0" step="any" placeholder="Ej.: 10" />
+                    @if (errores.TryGetValue(nameof(form.Cantidad), out var errCantidad))
+                    {
+                        <span class="text-danger msg-error">@errCantidad</span>
+                    }
                 </div>
 
                 <div class="onb-grid">
@@ -379,16 +391,11 @@
     private bool buscandoProveedores;
     private CancellationTokenSource? proveedorBusquedaCts;
 
-    // Aviso "sin coincidencias": persiste 5s tras salir del campo (punto 3).
     private bool avisoProveedorVisible;
     private CancellationTokenSource? avisoProveedorCts;
 
-    // Último término con coincidencia EXACTA devuelta por la BD (punto 2).
     private string? terminoExactoDb;
 
-    // Hay coincidencia si la lista muestra algo o el texto iguala a un
-    // proveedor registrado (local o confirmado por la BD). Solo sin esto
-    // se avisa que se creará como nuevo.
     private bool HayCoincidenciaProveedor()
     {
         if (sugerenciasActuales.Any()) return true;
@@ -440,10 +447,8 @@
 
     private async Task OcultarSugerenciasProveedor()
     {
-        // Retardo para que el clic en la sugerencia se procese antes del blur.
         await Task.Delay(150);
         mostrarSugerenciasProveedor = false;
-        // El aviso no desaparece al saltar de campo: queda 5s visible.
         if (!string.IsNullOrWhiteSpace(form.Proveedor) && !HayCoincidenciaProveedor())
         {
             avisoProveedorVisible = true;
@@ -513,13 +518,10 @@
             if (!string.Equals(form.Proveedor?.Trim(), termino, StringComparison.OrdinalIgnoreCase)) return;
             if (resultado.Success && resultado.Data is not null)
             {
-                // Registra si la BD trae el nombre exacto (aunque se excluya
-                // de la lista visible) para no avisar en vano.
                 terminoExactoDb = resultado.Data.Any(p => string.Equals(p.Nombre.Trim(), termino, StringComparison.OrdinalIgnoreCase))
                     ? termino
                     : null;
                 sugerenciasActuales = FiltrarProveedores(resultado.Data, termino, 8);
-                // Si llegaron coincidencias, un aviso previo queda sin efecto.
                 if (HayCoincidenciaProveedor())
                 {
                     avisoProveedorCts?.Cancel();
@@ -691,6 +693,7 @@
             Categoria = insumo.Categoria ?? "otro",
             CostoUnitario = insumo.CostoUnitario,
             PorcentajeMerma = insumo.PorcentajeMerma,
+            Cantidad = insumo.Cantidad,
             Proveedor = insumo.Proveedor ?? string.Empty,
             Activo = insumo.Activo
         };
@@ -774,6 +777,11 @@
             errores[nameof(form.Proveedor)] = "El proveedor no puede superar los 150 caracteres.";
         }
 
+        if (form.Cantidad.HasValue && form.Cantidad.Value < 0)
+        {
+            errores[nameof(form.Cantidad)] = "La cantidad no puede ser negativa.";
+        }
+
         if (esEdicion && insumoEditando is not null &&
             form.CostoUnitario.HasValue && form.CostoUnitario.Value != insumoEditando.CostoUnitario &&
             string.IsNullOrWhiteSpace(form.Proveedor))
@@ -825,6 +833,7 @@
             Categoria = form.Categoria.Trim().ToLowerInvariant(),
             CostoUnitario = form.CostoUnitario!.Value,
             PorcentajeMerma = form.PorcentajeMerma!.Value,
+            Cantidad = form.Cantidad,
             Proveedor = string.IsNullOrWhiteSpace(form.Proveedor) ? null : form.Proveedor.Trim(),
             Activo = form.Activo
         };
@@ -885,6 +894,10 @@
         {
             request.PorcentajeMerma = form.PorcentajeMerma.Value;
         }
+        if (form.Cantidad != original.Cantidad)
+        {
+            request.Cantidad = form.Cantidad;
+        }
         if (form.Activo != original.Activo)
         {
             request.Activo = form.Activo;
@@ -892,7 +905,7 @@
 
         if (request.Nombre is null && request.UnidadMedida is null && request.Categoria is null &&
             request.CostoUnitario is null && request.PorcentajeMerma is null &&
-            request.Proveedor is null && request.Activo is null)
+            request.Cantidad is null && request.Proveedor is null && request.Activo is null)
         {
             CerrarModal();
             mensajeExito = "No había cambios para guardar.";
@@ -1072,6 +1085,7 @@
         {
             "costo" => (a, b) => a.CostoUnitario.CompareTo(b.CostoUnitario),
             "merma" => (a, b) => a.PorcentajeMerma.CompareTo(b.PorcentajeMerma),
+            "cantidad" => (a, b) => Nullable.Compare(a.Cantidad, b.Cantidad),
             _ => (a, b) => string.Compare(a.Nombre, b.Nombre, StringComparison.OrdinalIgnoreCase)
         };
 
@@ -1108,6 +1122,7 @@
         public string Categoria { get; set; } = "otro";
         public decimal? CostoUnitario { get; set; }
         public decimal? PorcentajeMerma { get; set; }
+        public decimal? Cantidad { get; set; }
         public string Proveedor { get; set; } = string.Empty;
         public bool Activo { get; set; } = true;
     }

@@ -43,8 +43,6 @@ public sealed class PerfilService
         using var response = await _httpClient.SendAsync(request);
         return await CrearResultadoAsync<ActualizarPerfilResultadoDto>(response);
     }
-
-    // Perfil de usuario: libre, sin token de edición. Solo JWT (Bearer handler).
     public async Task<PerfilApiResult<PerfilUsuarioDto>> ObtenerPerfilUsuarioAsync()
     {
         using var response = await _httpClient.GetAsync("api/perfil/usuario");
@@ -58,15 +56,12 @@ public sealed class PerfilService
         return await CrearResultadoAsync<ActualizarPerfilResultadoDto>(response);
     }
 
-    // Catálogo de roles para el desplegable de empleados.
     public async Task<PerfilApiResult<List<RolDto>>> ObtenerRolesAsync()
     {
         using var response = await _httpClient.GetAsync("api/perfil/roles");
         return await CrearResultadoAsync<List<RolDto>>(response);
     }
 
-    // Marca como usados los permisos pendientes (al salir del formulario o cerrar sesión).
-    // Nunca lanza: es una limpieza best-effort que no debe bloquear la navegación.
     public async Task RevocarPermisoAsync()
     {
         try
@@ -118,8 +113,6 @@ public sealed class PerfilService
             return null;
         }
 
-        // Si no es JSON (ej. página HTML de error del servidor), no se muestra
-        // el cuerpo crudo en la interfaz: se usa el mensaje por defecto.
         var recortado = body.TrimStart();
         if (!recortado.StartsWith("{") && !recortado.StartsWith("["))
         {
@@ -129,6 +122,10 @@ public sealed class PerfilService
         try
         {
             using var document = JsonDocument.Parse(body);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
             if (document.RootElement.TryGetProperty("mensaje", out var mensaje))
             {
                 return mensaje.GetString();
@@ -140,6 +137,10 @@ public sealed class PerfilService
             }
         }
         catch (JsonException)
+        {
+            return null;
+        }
+        catch (InvalidOperationException)
         {
             return null;
         }
