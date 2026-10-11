@@ -4,6 +4,7 @@
 @using PWGAPG_Frontend.Components
 @inject PWGAPG_Frontend.Services.InsumoService InsumoService
 @inject NavigationManager Navigation
+@inject Microsoft.JSInterop.IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>Mis insumos | Chef Metrics</PageTitle>
@@ -189,7 +190,8 @@
                     </div>
 
                     <div class="form-group-sm">
-                        <label class="auth-label">% Merma (0-100, vacío = 0)</label>
+                        <label class="auth-label">% Merma <span class="campo-ayuda-wrap"><span id="ayuda-merma-ancla" class="campo-ayuda" @onclick="AlClicAyuda" @onmouseenter="AlEntrarAyuda" @onmouseleave="AlSalirAyuda">?</span></span></label>
+                        <span id="ayuda-merma-caja" class="campo-ayuda-caja" style="@estiloAyuda" @onmouseenter="AlEntrarAyuda" @onmouseleave="AlSalirAyuda">Porcentaje del insumo que se pierde al prepararlo (cáscaras, recortes, evaporación). Se usa para calcular cuánto debes comprar y su costo real.</span>
                         <InputNumber @bind-Value="form.PorcentajeMerma" class="form-control" min="0" max="100" step="any" placeholder="Ej.: 0" />
                         @if (errores.TryGetValue(nameof(form.PorcentajeMerma), out var errMerma))
                         {
@@ -199,7 +201,7 @@
                 </div>
 
                 <div class="form-group-sm">
-                    <label class="auth-label">Cantidad (opcional)</label>
+                    <label class="auth-label">Cantidad *</label>
                         <InputNumber @bind-Value="form.Cantidad" class="form-control" min="0" step="any" placeholder="Ej.: 10" />
                     @if (errores.TryGetValue(nameof(form.Cantidad), out var errCantidad))
                     {
@@ -209,7 +211,7 @@
 
                 <div class="onb-grid">
                     <div class="form-group-sm">
-                        <label class="auth-label">Costo unitario (mayor a 0) *</label>
+                        <label class="auth-label">Costo *</label>
                         <InputNumber @bind-Value="form.CostoUnitario" class="form-control" min="0.01" step="any" placeholder="Ej.: 2500" />
                         @if (errores.TryGetValue(nameof(form.CostoUnitario), out var errCosto))
                         {
@@ -256,7 +258,7 @@
                             }
                             else if (MostrarAvisoSinCoincidencia)
                             {
-                                <span class="text-muted" style="font-size:0.8rem;">Sin coincidencias para '@form.Proveedor.Trim()' — se creará como nuevo.</span>
+                                <span class="text-muted" style="font-size:0.8rem;">Sin coincidencias para '@form.Proveedor.Trim()' se creará como nuevo.</span>
                             }
                         </div>
                         @if (errores.TryGetValue(nameof(form.Proveedor), out var errProv))
@@ -269,9 +271,9 @@
                 <div class="form-group-sm">
                     <label class="auth-label">Categoría</label>
                     <InputSelect @bind-Value="form.Categoria" class="form-select">
-                        <option value="otro">otro</option>
-                        <option value="materia_prima">materia_prima</option>
-                        <option value="empaque">empaque</option>
+                        <option value="Otro">Otro</option>
+                        <option value="Materia prima">Materia prima</option>
+                        <option value="Empaque">Empaque</option>
                     </InputSelect>
                     @if (errores.TryGetValue(nameof(form.Categoria), out var errCategoria))
                     {
@@ -334,6 +336,11 @@
 
     private List<ProveedorDTO> listaProveedores = new();
     private bool cargandoProveedores;
+    private bool mostrarAyudaMerma;
+    private bool ayudaMermaFija;
+    private bool posicionarAyudaPendiente;
+    private string estiloAyuda = "display:none;";
+    private bool AyudaVisible => mostrarAyudaMerma || ayudaMermaFija;
     private bool errorCargaProveedores;
     private bool mostrarSugerenciasProveedor;
 
@@ -716,6 +723,9 @@
     {
         mostrarModal = false;
         insumoEditando = null;
+        mostrarAyudaMerma = false;
+        ayudaMermaFija = false;
+        estiloAyuda = "display:none;";
         mostrarSugerenciasProveedor = false;
         sugerenciasActuales.Clear();
         buscandoProveedores = false;
@@ -777,7 +787,11 @@
             errores[nameof(form.Proveedor)] = "El proveedor no puede superar los 150 caracteres.";
         }
 
-        if (form.Cantidad.HasValue && form.Cantidad.Value < 0)
+        if (form.Cantidad is null)
+        {
+            errores[nameof(form.Cantidad)] = "La cantidad es obligatoria.";
+        }
+        else if (form.Cantidad.Value < 0)
         {
             errores[nameof(form.Cantidad)] = "La cantidad no puede ser negativa.";
         }
@@ -1103,6 +1117,77 @@
         bloqueoEliminar = null;
     }
 
+    private CancellationTokenSource? ayudaOcultarCts;
+
+    private void AlEntrarAyuda()
+    {
+        ayudaOcultarCts?.Cancel();
+        mostrarAyudaMerma = true;
+        PedirPosicionAyuda();
+    }
+
+    private async Task AlSalirAyuda()
+    {
+        if (ayudaMermaFija) return;
+        ayudaOcultarCts?.Cancel();
+        ayudaOcultarCts?.Dispose();
+        ayudaOcultarCts = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(250, ayudaOcultarCts.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+        mostrarAyudaMerma = false;
+        estiloAyuda = "display:none;";
+        StateHasChanged();
+    }
+
+    private void AlClicAyuda()
+    {
+        ayudaMermaFija = !ayudaMermaFija;
+        mostrarAyudaMerma = ayudaMermaFija || mostrarAyudaMerma;
+        if (AyudaVisible) PedirPosicionAyuda();
+        else estiloAyuda = "display:none;";
+    }
+
+    private void PedirPosicionAyuda()
+    {
+        posicionarAyudaPendiente = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (posicionarAyudaPendiente && AyudaVisible)
+        {
+            posicionarAyudaPendiente = false;
+            await PosicionarAyuda();
+        }
+    }
+
+    private async Task PosicionarAyuda()
+    {
+        try
+        {
+            var pos = await JS.InvokeAsync<double[]>("ayudaProveedor.posicionar", "ayuda-merma-ancla", "ayuda-merma-caja");
+            if (pos is { Length: 2 })
+            {
+                estiloAyuda = $"display:block;top:{pos[0]:0}px;left:{pos[1]:0}px;";
+            }
+            else
+            {
+                estiloAyuda = "display:block;";
+            }
+        }
+        catch
+        {
+            estiloAyuda = "display:block;";
+        }
+        StateHasChanged();
+    }
+
     public void Dispose()
     {
         debounceCts?.Cancel();
@@ -1111,6 +1196,8 @@
         proveedorBusquedaCts?.Dispose();
         avisoProveedorCts?.Cancel();
         avisoProveedorCts?.Dispose();
+        ayudaOcultarCts?.Cancel();
+        ayudaOcultarCts?.Dispose();
     }
 
     private sealed record BloqueoEliminar(InsumoApiDto Insumo, string Mensaje, int NumeroRecetas);

@@ -50,7 +50,7 @@
             <div class="rc-grid">
             @foreach (var r in recetas)
             {
-                    <div class="rc-recipe @(costosAbiertos.Contains(r.Id) || preciosAbiertos.Contains(r.Id) ? "rc-recipe-wide" : "")">
+                    <div class="rc-recipe @(costosAbiertos.Contains(r.Id) || preciosAbiertos.Contains(r.Id) || escaladosAbiertos.Contains(r.Id) ? "rc-recipe-wide" : "")">
                     <div class="rc-recipe-img">
                         @if (Api.UrlImagen(r.ImagenUrl) is { } url) { <img src="@url" alt="@r.Nombre" loading="lazy" /> }
                         else { <span>🍽️</span> }
@@ -83,6 +83,9 @@
                             <button class="btn btn-sm btn-outline-secondary mt-2 ms-2" @onclick="() => AlternarPrecio(r.Id)">
                                 @(preciosAbiertos.Contains(r.Id) ? "Ocultar precio sugerido" : "Ver precio sugerido")
                             </button>
+                            <button class="btn btn-sm btn-outline-secondary mt-2 ms-2" @onclick="() => AlternarEscalado(r.Id)">
+                                @(escaladosAbiertos.Contains(r.Id) ? "Ocultar escalado" : "Escalar por porciones")
+                            </button>
 
                             @if (costosAbiertos.Contains(r.Id))
                             {
@@ -91,6 +94,10 @@
                             @if (preciosAbiertos.Contains(r.Id))
                             {
                                 <SugerenciaPrecioVenta RecetaId="r.Id" />
+                            }
+                            @if (escaladosAbiertos.Contains(r.Id))
+                            {
+                                <EscaladoPorcionesPanel RecetaId="r.Id" PorcionesBase="r.PorcionesBase" />
                             }
                     </div>
                     <div class="rc-recipe-actions">
@@ -118,6 +125,7 @@
     private Guid formKey = Guid.NewGuid();
     private readonly HashSet<int> costosAbiertos = new();
     private readonly HashSet<int> preciosAbiertos = new();
+    private readonly HashSet<int> escaladosAbiertos = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -141,6 +149,10 @@
     private void AlternarPrecio(int id)
     {
         if (!preciosAbiertos.Remove(id)) preciosAbiertos.Add(id);
+    }
+    private void AlternarEscalado(int id)
+    {
+        if (!escaladosAbiertos.Remove(id)) escaladosAbiertos.Add(id);
     }
 
     private void Nueva() { editando = null; AbrirForm(); }
