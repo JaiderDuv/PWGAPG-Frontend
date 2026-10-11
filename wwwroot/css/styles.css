@@ -908,3 +908,13 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
     .proveedor-drop-item:hover {
         background-color: #FEF3C7;
     }
+
+.precio-sugerido-destacado {
+    background-color: var(--onb-item-bg);
+    border: 1px solid var(--onb-border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 12px 0;
+    font-size: 1.1rem;
+    color: var(--text-main);
+}

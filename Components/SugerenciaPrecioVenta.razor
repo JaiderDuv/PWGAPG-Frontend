@@ -1,0 +1,129 @@
+﻿@using PWGAPG_Frontend.Models
+@using System.Net.Http.Json
+@implements IDisposable
+@inject HttpClient Http
+
+<div class="cs-panel">
+    <h6 class="mb-2">Precio de venta sugerido</h6>
+
+    @if (cargando)
+    {
+        <span class="text-muted">Calculando...</span>
+    }
+    else
+    {
+        <div class="row g-3 align-items-end mb-2">
+            <div class="col-md-4">
+                <label class="rc-label">Margen deseado (%) *</label>
+                <input type="number" class="form-control" step="0.1" min="0" max="100"
+                       @bind="margen" @bind:event="oninput" @bind:after="OnMargenCambiado" />
+            </div>
+
+            <div class="col-md-8">
+                @if (resultado is not null && resultado.MargenValido && resultado.PrecioSugerido.HasValue)
+                {
+                    <div class="cs-kpis">
+                        <div class="cs-kpi">
+                            <small>Costo por porción</small>
+                            <strong>@Formato.Moneda(resultado.CostoPorPorcion)</strong>
+                        </div>
+                        <div class="cs-kpi cs-kpi-main">
+                            <small>Precio sugerido</small>
+                            <strong>@Formato.Moneda(resultado.PrecioSugerido.Value)</strong>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (resultado is not null)
+        {
+            @foreach (var advertencia in resultado.Advertencias)
+            {
+                <div class="cs-aviso cs-aviso-warn">
+                    <span>⚠️</span>
+                    <div>@advertencia</div>
+                </div>
+            }
+        }
+
+        @if (mensajeError is not null)
+        {
+            <div class="cs-aviso cs-aviso-warn">
+                <span>⚠️</span>
+                <div>@mensajeError</div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public int RecetaId { get; set; }
+
+    private decimal margen = 30;
+    private PrecioSugeridoDTO? resultado;
+    private bool cargando;
+    private string? mensajeError;
+    private CancellationTokenSource? debounceCts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CalcularAsync();
+    }
+
+    private async Task OnMargenCambiado()
+    {
+        debounceCts?.Cancel();
+        debounceCts?.Dispose();
+        debounceCts = new CancellationTokenSource();
+        var token = debounceCts.Token;
+
+        try
+        {
+            await Task.Delay(400, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        await CalcularAsync();
+    }
+
+    private async Task CalcularAsync()
+    {
+        cargando = true;
+        mensajeError = null;
+
+        try
+        {
+            var resp = await Http.PostAsJsonAsync(
+                $"api/recetas/{RecetaId}/precio-sugerido",
+                new SugerirPrecioRequestDTO { MargenDeseado = margen });
+
+            if (resp.IsSuccessStatusCode)
+            {
+                resultado = await resp.Content.ReadFromJsonAsync<PrecioSugeridoDTO>();
+            }
+            else
+            {
+                mensajeError = "No se pudo calcular el precio sugerido.";
+            }
+        }
+        catch
+        {
+            mensajeError = "No se pudo conectar con el servidor.";
+        }
+        finally
+        {
+            cargando = false;
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        debounceCts?.Cancel();
+        debounceCts?.Dispose();
+    }
+}
