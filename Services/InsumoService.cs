@@ -106,6 +106,12 @@ public sealed class InsumoService
         return await CrearResultadoAsync<List<ProveedorDTO>>(response);
     }
 
+    public async Task<InsumoApiResult<List<InsumoProveedorDTO>>> ListarProveedoresDeInsumoAsync(int insumoId)
+    {
+        using var response = await _httpClient.GetAsync($"api/insumos/{insumoId}/proveedores");
+        return await CrearResultadoAsync<List<InsumoProveedorDTO>>(response);
+    }
+
     public async Task<InsumoApiResult<HistorialPreciosDto>> ObtenerHistorialPreciosAsync(int id)
     {
         using var response = await _httpClient.GetAsync($"api/insumos/{id}/historial-precios");
