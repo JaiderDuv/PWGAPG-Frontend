@@ -29,23 +29,44 @@
             <div>
                 <span class="perfil-kicker">HISTORIAL DE PRECIOS</span>
                 <h1>@historial.Nombre</h1>
+                @if (historial.InsumoEliminado)
+                {
+                    <p class="text-muted" style="font-size:0.85rem;">Este insumo fue eliminado. Se conserva su historial de precios.</p>
+                }
                 <p>
-                    Precio actual: <strong>$@historial.PrecioActual.ToString("N2")</strong>
+                    @(historial.InsumoEliminado ? "Último precio registrado" : "Precio actual"): <strong>$@historial.PrecioActual.ToString("N2")</strong>
                     @(string.IsNullOrWhiteSpace(historial.ProveedorActual) ? "" : $"· {historial.ProveedorActual}")
                 </p>
             </div>
         </div>
 
         <section class="insumos-toolbar">
-            <input class="form-control insumos-buscador"
-                   placeholder="Filtrar por proveedor..."
-                   value="@filtroProveedor"
-                   @oninput="OnFiltroProveedorInput" />
+            @if (nombresProveedores is null)
+            {
+                <input class="form-control insumos-buscador"
+                       placeholder="Filtrar por proveedor..."
+                       value="@filtroProveedor"
+                       @oninput="OnFiltroProveedorInput" />
+            }
+            else
+            {
+                <select class="form-select insumos-buscador" value="@filtroProveedor" @onchange="OnFiltroProveedorSelect">
+                    <option value="">Todos los proveedores</option>
+                    @foreach (var nombre in nombresProveedores)
+                    {
+                        <option value="@nombre">@nombre</option>
+                    }
+                </select>
+            }
         </section>
+        @if (nombresProveedores is not null && !nombresProveedores.Any())
+        {
+            <p class="text-muted" style="font-size:0.85rem;">No hay proveedores registrados.</p>
+        }
 
         @if (!gruposFiltrados.Any())
         {
-            <p class="text-muted">No hay registros para el filtro indicado.</p>
+            <p class="text-muted">@MensajeVacioFiltro</p>
         }
         else
         {
@@ -55,27 +76,27 @@
                 <div class="insumos-tabla-wrap" style="margin-bottom: 20px;">
                     <table class="insumos-tabla">
                         <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Precio</th>
-                                <th>Cantidad</th>
-                                <th>P. unitario</th>
-                                <th>Diferencia</th>
-                                <th>Variación vs. anterior</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var entrada in grupo.Entradas)
-                            {
                                 <tr>
-                                    <td>@entrada.Fecha.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                                    <td><strong>$@entrada.Precio.ToString("N2")</strong></td>
-                                    <td>@(entrada.Cantidad.HasValue ? entrada.Cantidad.Value.ToString("N3") : "—")</td>
-                                    <td>@(entrada.PrecioUnitario.HasValue ? $"${entrada.PrecioUnitario.Value:N2}" : "—")</td>
-                                    <td>@TextoDiferencia(entrada)</td>
-                                    <td>@BadgeVariacion(entrada)</td>
+                                    <th>Fecha</th>
+                                    <th>Precio</th>
+                                    <th>Cantidad</th>
+                                    <th>P. unitario</th>
+                                    <th>Diferencia</th>
+                                    <th>Variación vs. anterior</th>
                                 </tr>
-                            }
+                            </thead>
+                            <tbody>
+                                @foreach (var entrada in grupo.Entradas)
+                                {
+                                    <tr>
+                                        <td>@entrada.Fecha.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td><strong>$@entrada.Precio.ToString("N2")</strong></td>
+                                        <td>@(entrada.Cantidad.HasValue ? entrada.Cantidad.Value.ToString("N3") : "—")</td>
+                                        <td>@(entrada.PrecioUnitario.HasValue ? $"${entrada.PrecioUnitario.Value:N2}" : "—")</td>
+                                        <td>@TextoDiferencia(entrada)</td>
+                                        <td>@BadgeVariacion(entrada)</td>
+                                    </tr>
+                                }
                         </tbody>
                     </table>
                 </div>
@@ -91,21 +112,69 @@
     private bool cargando = true;
     private string? mensajeError;
     private string filtroProveedor = string.Empty;
+    private List<string>? nombresProveedores;
+
+    private string MensajeVacioFiltro
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(filtroProveedor))
+            {
+                return "No hay registros para el filtro indicado.";
+            }
+            var prov = filtroProveedor.Trim();
+            if (nombresProveedores is not null
+                && !nombresProveedores.Contains(prov, StringComparer.OrdinalIgnoreCase))
+            {
+                return $"El proveedor '{prov}' no existe.";
+            }
+            return $"El proveedor '{prov}' no tiene movimientos en este insumo.";
+        }
+    }
 
     private List<GrupoProveedor> gruposFiltrados => (historial?.Precios ?? new())
         .GroupBy(e => string.IsNullOrWhiteSpace(e.Proveedor) ? "Sin proveedor" : e.Proveedor.Trim())
         .Select(g => new GrupoProveedor(
             g.Key,
             g.OrderByDescending(e => e.Fecha)
-             .Where(e => string.IsNullOrWhiteSpace(filtroProveedor) ||
-                 (e.Proveedor?.Contains(filtroProveedor.Trim(), StringComparison.OrdinalIgnoreCase) ?? false))
+             .Where(e => CoincideProveedor(e.Proveedor, filtroProveedor))
              .ToList()))
         .Where(g => g.Entradas.Count > 0)
         .OrderBy(g => g.Proveedor)
         .ToList();
 
+    private bool CoincideProveedor(string? valor, string filtro)
+    {
+        if (string.IsNullOrWhiteSpace(filtro)) return true;
+        var v = (valor ?? string.Empty).Trim();
+        var f = filtro.Trim();
+        // Elegido de la lista: coincidencia exacta; escrito a mano: contiene.
+        if (nombresProveedores is not null && nombresProveedores.Contains(f, StringComparer.OrdinalIgnoreCase))
+        {
+            return string.Equals(v, f, StringComparison.OrdinalIgnoreCase);
+        }
+        return v.Contains(f, StringComparison.OrdinalIgnoreCase);
+    }
+
     protected override async Task OnInitializedAsync()
     {
+        try
+        {
+            var provs = await InsumoService.ListarProveedoresNegocioAsync();
+            nombresProveedores = provs.Success && provs.Data is not null
+                ? provs.Data.Select(p => p.Nombre)
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .Select(n => n.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                    .ToList()
+                : new List<string>();
+        }
+        catch
+        {
+            nombresProveedores = null;
+        }
+
         try
         {
             var resultado = await InsumoService.ObtenerHistorialPreciosAsync(Id);
@@ -133,6 +202,11 @@
     }
 
     private void OnFiltroProveedorInput(ChangeEventArgs e)
+    {
+        filtroProveedor = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private void OnFiltroProveedorSelect(ChangeEventArgs e)
     {
         filtroProveedor = e.Value?.ToString() ?? string.Empty;
     }

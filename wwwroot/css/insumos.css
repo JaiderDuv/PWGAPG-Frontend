@@ -191,6 +191,35 @@
     border-bottom: 1px solid #dee2e6;
 }
 
+/* Cabecera con acción (p. ej. Restaurar): la fila completa es la barra gris
+   y el botón de alternar se vuelve transparente para no duplicar fondos. */
+.insumos-acordeon-cabecera-con-accion {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8f9fa;
+    padding: 12px 16px;
+}
+
+.insumos-acordeon-cabecera-con-accion:hover {
+    background: #e9ecef;
+}
+
+.insumos-acordeon-cabecera-con-accion.abierto {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.insumos-acordeon-cabecera-con-accion > .insumos-acordeon-cabecera {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    padding: 0;
+}
+
+.insumos-acordeon-cabecera-con-accion > .insumos-acordeon-cabecera:hover {
+    background: transparent;
+}
+
 .insumos-acordeon-titulo {
     display: flex;
     align-items: baseline;
@@ -207,6 +236,16 @@
 .insumos-acordeon-flecha {
     color: #6c757d;
     font-size: 0.9rem;
+}
+
+.insumos-acordeon-flecha-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #6c757d;
+    font-size: 0.9rem;
+    padding: 4px 6px;
+    flex-shrink: 0;
 }
 
 .insumos-acordeon-item .insumos-tabla-wrap {

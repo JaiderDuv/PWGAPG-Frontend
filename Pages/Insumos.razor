@@ -234,6 +234,14 @@
             <h3 class="onboarding-subtitulo">@(esEdicion ? "Editar insumo" : "Nuevo insumo")</h3>
 
             <EditForm Model="@form" OnSubmit="@GuardarFormulario">
+                @if (esEdicion && camposVaciadosParaProveedorNuevo && !string.IsNullOrWhiteSpace(form.Proveedor))
+                {
+                    <div class="text-muted" style="font-size:0.8rem; margin-bottom:12px;">Asociando nuevo proveedor '@form.Proveedor.Trim()'. Completa unidad, cantidad, costo y merma y guarda para asociarlo.</div>
+                }
+                @if (esEdicion && errores.TryGetValue(nameof(form.Proveedor), out var errProvEdit))
+                {
+                    <div class="text-danger msg-error" style="margin-bottom:12px;">@errProvEdit</div>
+                }
                 <div class="form-group-sm">
                     <label class="auth-label">Nombre * <span class="campo-ayuda-wrap"><span id="ayuda-nombre-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("nombre")' @onmouseenter='() => AlEntrarAyuda("nombre")' @onmouseleave="AlSalirAyuda">?</span></span></label>
                     <span id="ayuda-nombre-caja" class="campo-ayuda-caja" style='@EstiloAyuda("nombre")' @onmouseenter='() => AlEntrarAyuda("nombre")' @onmouseleave="AlSalirAyuda">Nombre con el que identificarás el insumo en recetas e inventario. Debe ser único y de máximo 75 caracteres. Ej.: Harina de trigo.</span>
@@ -286,7 +294,7 @@
                     }
                 </div>
 
-                <div class="onb-grid">
+                <div class="@(esEdicion ? string.Empty : "onb-grid")">
                     <div class="form-group-sm">
                         <label class="auth-label">Costo * <span class="campo-ayuda-wrap"><span id="ayuda-costo-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("costo")' @onmouseenter='() => AlEntrarAyuda("costo")' @onmouseleave="AlSalirAyuda">?</span></span></label>
                         <span id="ayuda-costo-caja" class="campo-ayuda-caja" style='@EstiloAyuda("costo")' @onmouseenter='() => AlEntrarAyuda("costo")' @onmouseleave="AlSalirAyuda">Lo que pagaste por la cantidad indicada arriba. Debe ser mayor a 0 y no superar 999999.99. Se usa para calcular el costo real por receta (con merma incluida).</span>
@@ -297,13 +305,15 @@
                         }
                     </div>
 
+                    @if (!esEdicion)
+                    {
                     <div class="form-group-sm">
-                        <label class="auth-label">Proveedor @(esEdicion ? "*" : "(opcional)") <span class="campo-ayuda-wrap"><span id="ayuda-proveedor-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("proveedor")' @onmouseenter='() => AlEntrarAyuda("proveedor")' @onmouseleave="AlSalirAyuda">?</span></span></label>
-                        <span id="ayuda-proveedor-caja" class="campo-ayuda-caja" style='@EstiloAyuda("proveedor")' @onmouseenter='() => AlEntrarAyuda("proveedor")' @onmouseleave="AlSalirAyuda">Quién te vende este insumo. Escribe para buscar uno existente o crear uno nuevo. Al editar, si cambias el precio debes indicar el proveedor para guardar el historial.</span>
+                        <label class="auth-label">Proveedor * <span class="campo-ayuda-wrap"><span id="ayuda-proveedor-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("proveedor")' @onmouseenter='() => AlEntrarAyuda("proveedor")' @onmouseleave="AlSalirAyuda">?</span></span></label>
+                        <span id="ayuda-proveedor-caja" class="campo-ayuda-caja" style='@EstiloAyuda("proveedor")' @onmouseenter='() => AlEntrarAyuda("proveedor")' @onmouseleave="AlSalirAyuda">Quién te vende este insumo (obligatorio). Escribe para buscar uno existente o crear uno nuevo.</span>
                         <div class="proveedor-drop-wrap">
                             <input class="form-control" value="@form.Proveedor" @oninput="OnProveedorOnInput"
                                    @onfocus="MostrarSugerenciasProveedor" @onblur="OcultarSugerenciasProveedor"
-                                   placeholder="Escribe para buscar o crear (vacío = ninguno)"
+                                   placeholder="Escribe para buscar o crear"
                                    disabled="@cargandoProveedores" autocomplete="off" />
                             @if (mostrarSugerenciasProveedor && sugerenciasActuales.Any())
                             {
@@ -341,7 +351,7 @@
                             }
                             else if (ProveedorNoManejaInsumo())
                             {
-                                <span class="text-danger msg-error" style="font-size:0.8rem;">Ese proveedor no maneja este insumo.</span>
+                                <span class="text-muted" style="font-size:0.8rem;">'@form.Proveedor.Trim()' aún no maneja este insumo. Se vaciaron unidad, cantidad, costo y merma: complétalos y al guardar quedará asociado.</span>
                             }
                             else if (MostrarAvisoSinCoincidencia)
                             {
@@ -353,6 +363,7 @@
                             <span class="text-danger msg-error">@errProv</span>
                         }
                     </div>
+                    }
                 </div>
 
                 <div class="form-group-sm">
@@ -426,6 +437,7 @@
     private List<ProveedorDTO> listaProveedores = new();
     private List<InsumoProveedorDTO> proveedoresDelInsumo = new();
     private string? proveedorAutocompletado;
+    private bool camposVaciadosParaProveedorNuevo;
     private bool cargandoProveedores;
     private string? ayudaActual;
     private bool mostrarAyuda;
@@ -531,7 +543,6 @@
         if (!esEdicion) return false;
         var texto = form.Proveedor?.Trim() ?? string.Empty;
         if (texto.Length == 0) return false;
-        if (!listaProveedores.Any(p => NombreIgual(p.Nombre, texto))) return false;
         return !proveedoresDelInsumo.Any(p => NombreIgual(p.Nombre, texto));
     }
 
@@ -681,21 +692,49 @@
     private static readonly HashSet<string> UnidadesProveedorValidas = new(StringComparer.OrdinalIgnoreCase)
         { "g", "kg", "l", "ml", "oz", "lb", "unidad", "taza" };
 
+    private void VaciarCamposParaNuevoProveedor()
+    {
+        form.UnidadMedida = string.Empty;
+        form.CostoUnitario = null;
+        form.PorcentajeMerma = null;
+        form.Cantidad = null;
+        proveedorAutocompletado = null;
+        camposVaciadosParaProveedorNuevo = true;
+        errores.Remove(nameof(form.CostoUnitario));
+        errores.Remove(nameof(form.Cantidad));
+        errores.Remove(nameof(form.UnidadMedida));
+        errores.Remove(nameof(form.PorcentajeMerma));
+    }
+
     private void AutocompletarDesdeProveedor()
     {
         if (!esEdicion) return;
         var nombre = form.Proveedor?.Trim() ?? string.Empty;
-        if (nombre.Length == 0) return;
+        if (nombre.Length == 0)
+        {
+            proveedorAutocompletado = null;
+            camposVaciadosParaProveedorNuevo = false;
+            return;
+        }
         var asociado = proveedoresDelInsumo.FirstOrDefault(p => NombreIgual(p.Nombre, nombre));
-        if (asociado is null) return;
-        if (string.Equals(proveedorAutocompletado, asociado.Nombre, StringComparison.OrdinalIgnoreCase)) return;
-        form.CostoUnitario = asociado.Costo;
-        form.Cantidad = asociado.Cantidad;
-        if (UnidadesProveedorValidas.Contains(asociado.UnidadMedida)) form.UnidadMedida = asociado.UnidadMedida.Trim().ToLowerInvariant();
-        proveedorAutocompletado = asociado.Nombre;
-        errores.Remove(nameof(form.CostoUnitario));
-        errores.Remove(nameof(form.Cantidad));
-        errores.Remove(nameof(form.UnidadMedida));
+        if (asociado is not null)
+        {
+            camposVaciadosParaProveedorNuevo = false;
+            if (string.Equals(proveedorAutocompletado, asociado.Nombre, StringComparison.OrdinalIgnoreCase)) return;
+            form.CostoUnitario = asociado.Costo;
+            form.Cantidad = asociado.Cantidad;
+            if (UnidadesProveedorValidas.Contains(asociado.UnidadMedida)) form.UnidadMedida = asociado.UnidadMedida.Trim().ToLowerInvariant();
+            proveedorAutocompletado = asociado.Nombre;
+            errores.Remove(nameof(form.CostoUnitario));
+            errores.Remove(nameof(form.Cantidad));
+            errores.Remove(nameof(form.UnidadMedida));
+            return;
+        }
+        // Proveedor que aún no maneja este insumo (existente o nuevo):
+        // se vacían unidad, costo, merma y cantidad una sola vez para no
+        // borrar lo que el usuario ya digite para ese proveedor.
+        if (camposVaciadosParaProveedorNuevo) return;
+        VaciarCamposParaNuevoProveedor();
     }
 
     private async Task CargarAsync()
@@ -823,6 +862,7 @@
         terminoExactoDb = null;
         proveedoresDelInsumo.Clear();
         proveedorAutocompletado = null;
+        camposVaciadosParaProveedorNuevo = false;
         if (!listaProveedores.Any() && !cargandoProveedores)
         {
             await CargarProveedoresAsync();
@@ -856,6 +896,7 @@
         terminoExactoDb = null;
         proveedoresDelInsumo.Clear();
         proveedorAutocompletado = null;
+        camposVaciadosParaProveedorNuevo = false;
         if (!listaProveedores.Any() && !cargandoProveedores)
         {
             await CargarProveedoresAsync();
@@ -884,6 +925,7 @@
         terminoExactoDb = null;
         proveedoresDelInsumo.Clear();
         proveedorAutocompletado = null;
+        camposVaciadosParaProveedorNuevo = false;
     }
 
     private static readonly HashSet<string> CategoriasValidas = new(StringComparer.OrdinalIgnoreCase)
@@ -1015,14 +1057,13 @@
             errores[nameof(form.PorcentajeMerma)] = "La merma debe estar entre 0 y 100 (solo números).";
         }
 
-        if (!string.IsNullOrWhiteSpace(form.Proveedor) && form.Proveedor.Trim().Length > 150)
+        if (string.IsNullOrWhiteSpace(form.Proveedor))
+        {
+            errores[nameof(form.Proveedor)] = "El proveedor es obligatorio.";
+        }
+        else if (form.Proveedor.Trim().Length > 150)
         {
             errores[nameof(form.Proveedor)] = "El proveedor no puede superar los 150 caracteres.";
-        }
-
-        if (ProveedorNoManejaInsumo())
-        {
-            errores[nameof(form.Proveedor)] = "Ese proveedor no maneja este insumo.";
         }
 
         if (form.Cantidad is null)
@@ -1042,7 +1083,7 @@
             form.CostoUnitario.HasValue && form.CostoUnitario.Value != insumoEditando.CostoUnitario &&
             string.IsNullOrWhiteSpace(form.Proveedor))
         {
-            errores[nameof(form.Proveedor)] = "Para cambiar el precio debes indicar el proveedor.";
+            errores[nameof(form.Proveedor)] = "Para cambiar el precio primero indica el proveedor desde la celda Proveedor de la tabla (clic para editar).";
         }
 
         return errores.Count == 0;
@@ -1326,14 +1367,21 @@
                 catch (HttpRequestException)
                 {
                 }
-                if (asociados is not null
-                    && listaProveedores.Any(p => NombreIgual(p.Nombre, texto))
-                    && !asociados.Any(p => NombreIgual(p.Nombre, texto)))
+                var vinculado = asociados?.FirstOrDefault(p => NombreIgual(p.Nombre, texto));
+                if (vinculado is null && asociados is not null)
                 {
-                    mensajeError = "Ese proveedor no maneja este insumo.";
+                    // Proveedor que aún no maneja este insumo: no se guarda solo el
+                    // proveedor (quedaría asociado con los datos viejos). Se abre el
+                    // formulario con unidad, costo, merma y cantidad vacíos para que
+                    // el usuario los complete y al guardar quede asociado.
+                    var nuevoProveedor = texto;
+                    mensajeError = null;
+                    CancelarEdicionRapida();
+                    await AbrirModalEditar(objetivo);
+                    form.Proveedor = nuevoProveedor;
+                    VaciarCamposParaNuevoProveedor();
                     return;
                 }
-                var vinculado = asociados?.FirstOrDefault(p => NombreIgual(p.Nombre, texto));
                 if (vinculado is not null)
                 {
                     request.Proveedor = texto;

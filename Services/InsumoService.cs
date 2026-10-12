@@ -64,8 +64,7 @@ public sealed class InsumoService
         return await CrearResultadoAsync<InsumoApiDto>(response);
     }
 
-    public async Task<InsumoApiResult<InsumoApiDto>> ActualizarParcialAsync(
-        int id, ActualizarInsumoRequest request)
+    public async Task<InsumoApiResult<InsumoApiDto>> ActualizarParcialAsync(        int id, ActualizarInsumoRequest request)
     {
         using var message = new HttpRequestMessage(HttpMethod.Patch, $"api/insumos/{id}")
         {
@@ -91,6 +90,12 @@ public sealed class InsumoService
         }
 
         return await CrearResultadoAsync<EliminarInsumoInfo>(response);
+    }
+
+    public async Task<InsumoApiResult<InsumoApiDto>> RestaurarAsync(int id)
+    {
+        using var response = await _httpClient.PostAsync($"api/insumos/{id}/restaurar", null);
+        return await CrearResultadoAsync<InsumoApiDto>(response);
     }
 
     public async Task<InsumoApiResult<List<ProveedorDTO>>> ListarProveedoresNegocioAsync()
