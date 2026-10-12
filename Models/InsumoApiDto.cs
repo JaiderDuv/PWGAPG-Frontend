@@ -72,6 +72,7 @@ public class HistorialPreciosDto
     public decimal PrecioActual { get; set; }
 
     public bool HistorialCompletoDisponible { get; set; }
+    public bool InsumoEliminado { get; set; }
     public List<HistorialPrecioDto> Precios { get; set; } = new();
 }
 
@@ -87,6 +88,7 @@ public class HistorialPrecioGeneralDto
     public decimal? VariacionPorcentual { get; set; }
     public decimal? Diferencia { get; set; }
     public bool? EsSubida { get; set; }
+    public bool InsumoEliminado { get; set; }
 }
 
 public class HistorialGeneralDto

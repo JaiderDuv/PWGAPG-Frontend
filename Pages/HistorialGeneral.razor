@@ -3,7 +3,6 @@
 @using PWGAPG_Frontend.Models
 @inject PWGAPG_Frontend.Services.InsumoService InsumoService
 @inject NavigationManager Navigation
-@implements IDisposable
 
 <PageTitle>Historial de precios | Chef Metrics</PageTitle>
 
@@ -24,16 +23,34 @@
     {
         <div class="perfil-alerta perfil-alerta-error" role="alert">@mensajeError</div>
     }
+    @if (!string.IsNullOrWhiteSpace(mensajeExito))
+    {
+        <div class="perfil-alerta perfil-alerta-exito" role="status">@mensajeExito</div>
+    }
 
     <section class="insumos-toolbar">
-        <input class="form-control insumos-buscador"
-               placeholder="Filtrar por nombre del insumo..."
-               value="@filtroNombre"
-               @oninput="OnNombreInput" />
-        <input class="form-control insumos-buscador"
-               placeholder="Filtrar por proveedor..."
-               value="@filtroProveedor"
-               @oninput="OnProveedorInput" />
+        @if (nombresProductos is null)
+        {
+            <input class="form-control insumos-buscador"
+                   placeholder="Filtrar por nombre del insumo..."
+                   value="@filtroNombre"
+                   @oninput="OnNombreInput" />
+        }
+        else
+        {
+            <select class="form-select insumos-buscador" value="@filtroNombre" @onchange="OnNombreSelect">
+                <option value="">Todos los productos</option>
+                @foreach (var nombre in nombresProductos)
+                {
+                    <option value="@nombre">@nombre</option>
+                }
+            </select>
+        }
+        <select class="form-select insumos-buscador" value="@estadoFiltro" @onchange="OnEstadoSelect" title="Filtrar por estado">
+            <option value="todos">Todos los estados</option>
+            <option value="activos">No eliminados</option>
+            <option value="eliminados">Eliminados</option>
+        </select>
     </section>
 
     @if (cargando)
@@ -44,45 +61,75 @@
             <p>Estamos consultando los precios de tus insumos.</p>
         </section>
     }
-    else if (!grupos.Any())
+    else if (!gruposVisibles.Any())
     {
-        <p class="text-muted">Ningún producto tiene cambios de precio para los filtros indicados.</p>
+        <p class="text-muted">@MensajeVacio</p>
     }
     else
     {
         <div class="insumos-acordeon">
-            @foreach (var grupo in grupos)
+            @foreach (var grupo in gruposVisibles)
             {
                 <div class="insumos-acordeon-item">
-                    <button type="button"
-                            class="insumos-acordeon-cabecera @(grupo.Abierto ? "abierto" : "")"
-                            @onclick="() => AlternarGrupo(grupo)"
-                            aria-expanded="@grupo.Abierto">
-                        <span class="insumos-acordeon-titulo">
-                            <strong>@grupo.Nombre</strong>
-                            <span class="text-muted">@grupo.Entradas.Count cambio(s)</span>
-                        </span>
-                        <span class="insumos-acordeon-resumen">
-                            @BadgeVariacion(grupo.Entradas[0])
-                            <span class="insumos-acordeon-flecha">@(grupo.Abierto ? "▾" : "▸")</span>
-                        </span>
-                    </button>
+                    @{ var esEliminado = grupo.Entradas.Count > 0 && grupo.Entradas.All(e => e.InsumoEliminado); }
+                    <div class="@(esEliminado ? "insumos-acordeon-cabecera-con-accion" : null) @(esEliminado && grupo.Abierto ? "abierto" : null)">
+                        <button type="button"
+                                class="insumos-acordeon-cabecera @(grupo.Abierto && !esEliminado ? "abierto" : "")"
+                                @onclick="() => AlternarGrupo(grupo)"
+                                aria-expanded="@grupo.Abierto"
+                                aria-label="@(grupo.Abierto ? "Contraer" : "Expandir") historial de @grupo.Nombre">
+                            <span class="insumos-acordeon-titulo">
+                                <strong>@grupo.Nombre</strong>
+                                @if (esEliminado)
+                                {
+                                    <span class="text-muted" style="font-size:0.75rem;">(eliminado)</span>
+                                }
+                                <span class="text-muted">@grupo.Entradas.Count cambio(s)</span>
+                            </span>
+                            @if (!esEliminado)
+                            {
+                                <span class="insumos-acordeon-resumen">
+                                    @BadgeVariacion(grupo.Entradas[0])
+                                    <span class="insumos-acordeon-flecha">@(grupo.Abierto ? "▾" : "▸")</span>
+                                </span>
+                            }
+                        </button>
+                        @if (esEliminado)
+                        {
+                            <button type="button" class="btn-mini-historial"
+                                    style="flex-shrink:0; white-space:nowrap;"
+                                    disabled="@(restaurandoId == grupo.InsumoId)"
+                                    @onclick="() => RestaurarGrupo(grupo)"
+                                    title="Restaurar con sus últimos datos guardados">
+                                @(restaurandoId == grupo.InsumoId ? "Restaurando..." : "↩ Restaurar")
+                            </button>
+                            <span class="insumos-acordeon-resumen" style="flex-shrink:0;">
+                                @BadgeVariacion(grupo.Entradas[0])
+                            </span>
+                            <button type="button" class="insumos-acordeon-flecha-btn"
+                                    @onclick="() => AlternarGrupo(grupo)"
+                                    aria-expanded="@grupo.Abierto"
+                                    aria-label="@(grupo.Abierto ? "Contraer" : "Expandir") historial de @grupo.Nombre">
+                                <span class="insumos-acordeon-flecha">@(grupo.Abierto ? "▾" : "▸")</span>
+                            </button>
+                        }
+                    </div>
 
                     @if (grupo.Abierto)
                     {
                         <div class="insumos-tabla-wrap">
                             <table class="insumos-tabla">
                                 <thead>
-                                    <tr>
-                                        <th>Fecha</th>
-                                        <th>Proveedor</th>
-                                        <th>Precio</th>
-                                        <th>Cantidad</th>
-                                        <th>P. unitario</th>
-                                        <th>Diferencia</th>
-                                        <th>Variación</th>
-                                        <th></th>
-                                    </tr>
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Proveedor</th>
+                                            <th>Precio</th>
+                                            <th>Cantidad</th>
+                                            <th>P. unitario</th>
+                                            <th>Diferencia</th>
+                                            <th>Variación</th>
+                                            <th></th>
+                                        </tr>
                                 </thead>
                                 <tbody>
                                     @foreach (var entrada in grupo.Entradas)
@@ -118,49 +165,130 @@
     private HistorialGeneralDto? historial;
     private bool cargando = true;
     private string? mensajeError;
+    private string? mensajeExito;
     private string filtroNombre = string.Empty;
-    private string filtroProveedor = string.Empty;
+    private string estadoFiltro = "todos";
+    private int? restaurandoId;
 
     private List<GrupoProducto> grupos = new();
+    private List<HistorialPrecioGeneralDto> todosPrecios = new();
+    private List<string>? nombresProductos;
+    private readonly HashSet<string> nombresEliminados = new(StringComparer.OrdinalIgnoreCase);
 
-    // Debounce: una sola petición 400 ms después de dejar de escribir.
-    private CancellationTokenSource? debounceCts;
+    private List<GrupoProducto> gruposVisibles => estadoFiltro switch
+    {
+        "activos" => grupos.Where(g => g.Entradas.Any(e => !e.InsumoEliminado)).ToList(),
+        "eliminados" => grupos.Where(g => g.Entradas.Count > 0 && g.Entradas.All(e => e.InsumoEliminado)).ToList(),
+        _ => grupos
+    };
 
+    private string MensajeVacio => "Ningún producto tiene cambios de precio para los filtros indicados.";
     protected override async Task OnInitializedAsync()
     {
+        await CargarListasAsync();
         await CargarAsync();
     }
 
-    private async Task OnNombreInput(ChangeEventArgs e)
+    private void OnNombreInput(ChangeEventArgs e)
     {
         filtroNombre = e.Value?.ToString() ?? string.Empty;
-        await ReiniciarDebounceAsync();
+        ReconstruirGrupos();
     }
 
-    private async Task OnProveedorInput(ChangeEventArgs e)
+    private void OnNombreSelect(ChangeEventArgs e)
     {
-        filtroProveedor = e.Value?.ToString() ?? string.Empty;
-        await ReiniciarDebounceAsync();
+        filtroNombre = e.Value?.ToString() ?? string.Empty;
+        ReconstruirGrupos();
     }
 
-    private async Task ReiniciarDebounceAsync()
+    private void OnEstadoSelect(ChangeEventArgs e)
     {
-        debounceCts?.Cancel();
-        debounceCts?.Dispose();
-        debounceCts = new CancellationTokenSource();
-        var token = debounceCts.Token;
+        estadoFiltro = e.Value?.ToString() ?? "todos";
+    }
 
+    private async Task CargarListasAsync()
+    {
         try
         {
-            await Task.Delay(400, token);
+            var insumos = await InsumoService.ListarAsync("", "nombre", "asc", "", "", true, 1, 100);
+            var registrados = (insumos.Success && insumos.Data is not null
+                ? insumos.Data.Datos.Select(i => i.Nombre)
+                : Enumerable.Empty<string>())
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Select(n => n.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            nombresProductos = registrados
+                .Concat(nombresEliminados.Where(n => !registrados.Contains(n, StringComparer.OrdinalIgnoreCase)))
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
-        catch (TaskCanceledException)
+        catch
         {
-            return;
+            nombresProductos = null;
         }
+    }
 
-        await CargarAsync();
-        StateHasChanged();
+    private async Task RestaurarGrupo(GrupoProducto grupo)
+    {
+        mensajeError = null;
+        mensajeExito = null;
+        restaurandoId = grupo.InsumoId;
+        try
+        {
+            var resultado = await InsumoService.RestaurarAsync(grupo.InsumoId);
+            if (resultado.Success)
+            {
+                mensajeExito = $"El insumo «{grupo.Nombre}» fue restaurado con sus últimos datos guardados.";
+                nombresEliminados.RemoveWhere(n => NombreIgualLocal(n, grupo.Nombre));
+                await CargarListasAsync();
+                await CargarAsync();
+            }
+            else
+            {
+                mensajeError = resultado.Message ?? "No se pudo restaurar el insumo.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            mensajeError = "No fue posible conectar con el servidor.";
+        }
+        finally
+        {
+            restaurandoId = null;
+        }
+    }
+
+    private static bool NombreIgualLocal(string a, string b) =>
+        string.Equals(a?.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private void ReconstruirGrupos()
+    {
+        var abiertos = grupos.Where(g => g.Abierto).Select(g => g.InsumoId).ToHashSet();
+        grupos = (todosPrecios)
+            .Where(e => CoincideFiltro(e.NombreInsumo, filtroNombre, nombresProductos))
+            .GroupBy(e => e.InsumoId)
+            .Select(g => new GrupoProducto(
+                g.Key,
+                g.First().NombreInsumo,
+                g.OrderByDescending(e => e.Fecha).ToList(),
+                abiertos.Contains(g.Key)))
+            .OrderByDescending(g => g.Entradas[0].Fecha)
+            .ToList();
+    }
+
+    private static bool CoincideFiltro(string? valor, string filtro, List<string>? lista)
+    {
+        if (string.IsNullOrWhiteSpace(filtro)) return true;
+        var v = (valor ?? string.Empty).Trim();
+        var f = filtro.Trim();
+        // Elegido de la lista: coincidencia exacta; escrito a mano: contiene.
+        if (lista is not null && lista.Contains(f, StringComparer.OrdinalIgnoreCase))
+        {
+            return string.Equals(v, f, StringComparison.OrdinalIgnoreCase);
+        }
+        return v.Contains(f, StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task CargarAsync()
@@ -170,19 +298,23 @@
 
         try
         {
-            var resultado = await InsumoService.ObtenerHistorialGeneralAsync(filtroNombre, filtroProveedor);
+            var resultado = await InsumoService.ObtenerHistorialGeneralAsync(null, null);
             if (resultado.Success && resultado.Data is not null)
             {
                 historial = resultado.Data;
-                grupos = (historial?.Precios ?? new())
-                    .GroupBy(e => e.InsumoId)
-                    .Select(g => new GrupoProducto(
-                        g.Key,
-                        g.First().NombreInsumo,
-                        g.OrderByDescending(e => e.Fecha).ToList(),
-                        false))
-                    .OrderByDescending(g => g.Entradas[0].Fecha)
-                    .ToList();
+                todosPrecios = historial?.Precios ?? new();
+                foreach (var e in todosPrecios.Where(e => e.InsumoEliminado))
+                {
+                    nombresEliminados.Add(e.NombreInsumo);
+                }
+                if (nombresProductos is not null)
+                {
+                    nombresProductos = nombresProductos
+                        .Concat(nombresEliminados.Where(n => !nombresProductos.Contains(n, StringComparer.OrdinalIgnoreCase)))
+                        .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                }
+                ReconstruirGrupos();
             }
             else if (resultado.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -256,11 +388,5 @@
         public string Nombre { get; }
         public List<HistorialPrecioGeneralDto> Entradas { get; }
         public bool Abierto { get; set; }
-    }
-
-    public void Dispose()
-    {
-        debounceCts?.Cancel();
-        debounceCts?.Dispose();
     }
 }
