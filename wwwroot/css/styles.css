@@ -857,6 +857,23 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
     gap: 8px;
 }
 
+.celda-editable {
+    cursor: pointer;
+    border-bottom: 1px dashed transparent;
+    display: inline-block;
+    min-width: 24px;
+}
+
+    .celda-editable:hover {
+        border-bottom-color: #D97706;
+        background-color: #FFFBEB;
+        border-radius: 4px;
+    }
+
+.input-edicion-rapida {
+    min-width: 90px;
+}
+
 .campo-ayuda {
     display: inline-flex;
     align-items: center;
