@@ -73,23 +73,22 @@
                                             {
                                                 <span class="badge-barato">Más barato</span>
                                             }
-                                    </div>
-                                </td>
-                                <td class="text-muted" style="font-size:0.85rem;">
-                                    @(string.IsNullOrWhiteSpace(p.Telefono) ? "Sin teléfono" : p.Telefono)<br />
-                                    @(string.IsNullOrWhiteSpace(p.Correo) ? "Sin correo" : p.Correo)
-                                </td>
-                                <td>@p.Cantidad.ToString("0.###")</td>
-                                <td>@p.UnidadMedida</td>
-                                <td>$@p.Costo.ToString("N2")</td>
-                                
-                        <td>
-                            <div class="proveedor-acciones">
-                                <button type="button" class="btn-mini-editar"
-                                        @onclick="() => AbrirModalEditar(p)">
-                                    Editar
-                                </button>
-                                @if (!p.EsPrincipal)
+                                        </div>
+                                    </td>
+                                    <td class="text-muted" style="font-size:0.85rem;">
+                                        @(string.IsNullOrWhiteSpace(p.Telefono) ? "Sin teléfono" : p.Telefono)<br />
+                                        @(string.IsNullOrWhiteSpace(p.Correo) ? "Sin correo" : p.Correo)
+                                    </td>
+                                    <td>@p.Cantidad.ToString("0.###")</td>
+                                    <td>@p.UnidadMedida</td>
+                                    <td>$@p.Costo.ToString("N2")</td>
+                                    <td>
+                                        <div class="proveedor-acciones">
+                                            <button type="button" class="btn-mini-editar"
+                                                    @onclick="() => AbrirModalEditar(p)">
+                                                Editar
+                                            </button>
+                                            @if (!p.EsPrincipal)
                                             {
                                                 <button type="button" class="btn-mini-principal"
                                                         @onclick="() => MarcarPrincipal(p.ProveedorId)">
@@ -110,62 +109,82 @@
             }
             else
             {
-                <p class="text-muted">
-                    Aún no hay proveedores asociados a este insumo.
-                </p>
+                <p class="text-muted">Aún no hay proveedores asociados a este insumo.</p>
             }
         }
     </div>
 </div>
 
-@* ===================== MODAL EDITAR ===================== *@
 @if (mostrarModalEditar && editando is not null)
 {
     <div class="confirm-overlay">
         <div class="socio-modal">
             <h3 class="onboarding-subtitulo">Editar proveedor</h3>
-            <p class="text-muted"
-               style="font-size:0.8rem; margin-top:-8px; margin-bottom:14px;">
+            <p class="text-muted" style="font-size:0.8rem; margin-top:-8px; margin-bottom:14px;">
                 Los campos marcados con * son obligatorios.
             </p>
 
-            <EditForm Model="@formularioEditar" OnValidSubmit="@GuardarEdicion">
-                <DataAnnotationsValidator />
+            <EditForm Model="@formularioEditar" OnSubmit="@GuardarEdicion" novalidate>
 
                 <div class="form-group-sm">
                     <label class="auth-label">Nombre *</label>
-                    <InputText @bind-Value="formularioEditar.Nombre" class="form-control" />
-                    <ValidationMessage For="@(() => formularioEditar.Nombre)"
-                                       class="text-danger msg-error" />
+                    <input class="form-control @(erroresEditar.ContainsKey("Nombre") ? "is-invalid" : "")"
+                           value="@formularioEditar.Nombre"
+                           @oninput="e => OnEditarNombre(e.Value?.ToString())" />
+                    @if (erroresEditar.TryGetValue("Nombre", out var eNombre))
+                    {
+                        <div class="text-danger msg-error">@eNombre</div>
+                    }
                 </div>
+
                 <div class="form-group-sm">
                     <label class="auth-label">Teléfono</label>
-                    <InputText @bind-Value="formularioEditar.Telefono"
-                               class="form-control" placeholder="Opcional" />
-                    <ValidationMessage For="@(() => formularioEditar.Telefono)"
-                                       class="text-danger msg-error" />
+                    <input class="form-control @(erroresEditar.ContainsKey("Telefono") ? "is-invalid" : "")"
+                           placeholder="Opcional"
+                           value="@formularioEditar.Telefono"
+                           @oninput="e => OnEditarTelefono(e.Value?.ToString())" />
+                    @if (erroresEditar.TryGetValue("Telefono", out var eTel))
+                    {
+                        <div class="text-danger msg-error">@eTel</div>
+                    }
                 </div>
+
                 <div class="form-group-sm">
                     <label class="auth-label">Correo</label>
-                    <InputText @bind-Value="formularioEditar.Correo"
-                               class="form-control" placeholder="Opcional" />
-                    <ValidationMessage For="@(() => formularioEditar.Correo)"
-                                       class="text-danger msg-error" />
+                    <input class="form-control @(erroresEditar.ContainsKey("Correo") ? "is-invalid" : "")"
+                           placeholder="Opcional"
+                           value="@formularioEditar.Correo"
+                           @oninput="e => OnEditarCorreo(e.Value?.ToString())" />
+                    @if (erroresEditar.TryGetValue("Correo", out var eCorreo))
+                    {
+                        <div class="text-danger msg-error">@eCorreo</div>
+                    }
                 </div>
+
                 <p class="text-muted" style="font-size:0.75rem; margin-top:-4px;">
                     Nombre, teléfono y correo son del proveedor: el cambio aplica a todos los insumos donde aparece.
                 </p>
 
                 <div class="onb-grid">
                     <div class="form-group-sm">
-                        <label class="auth-label">Cantidad *</label>
-                        <InputNumber @bind-Value="formularioEditar.Cantidad"
-                                     class="form-control" min="0.001" step="any" />
-                        <ValidationMessage For="@(() => formularioEditar.Cantidad)"
-                                           class="text-danger msg-error" />
+                        <label class="auth-label">
+                            Cantidad *<span class="campo-ayuda"
+                                            data-tip="Indica la cantidad numérica o el tamaño del producto (por ejemplo: 500).">?</span>
+                        </label>
+                        <input type="number" step="any" min="0.001"
+                               class="form-control @(erroresEditar.ContainsKey("Cantidad") ? "is-invalid" : "")"
+                               value="@formularioEditar.CantidadTexto"
+                               @oninput="e => OnEditarInput(nameof(formularioEditar.CantidadTexto), e.Value?.ToString())" />
+                        @if (erroresEditar.TryGetValue("Cantidad", out var eCant))
+                        {
+                            <div class="text-danger msg-error">@eCant</div>
+                        }
                     </div>
                     <div class="form-group-sm">
-                        <label class="auth-label">Unidad *</label>
+                        <label class="auth-label">
+                            Unidad *<span class="campo-ayuda"
+                                          data-tip="Indica en qué se mide la cantidad del producto (por ejemplo: Gramos, Kilos, Litros, Unidades).">?</span>
+                        </label>
                         <InputSelect @bind-Value="formularioEditar.UnidadMedida" class="form-select">
                             <option value="">Selecciona...</option>
                             <option value="g">g</option>
@@ -177,17 +196,26 @@
                             <option value="unidad">unidad</option>
                             <option value="taza">taza</option>
                         </InputSelect>
-                        <ValidationMessage For="@(() => formularioEditar.UnidadMedida)"
-                                           class="text-danger msg-error" />
+                        @if (erroresEditar.TryGetValue("UnidadMedida", out var eUnidad))
+                        {
+                            <div class="text-danger msg-error">@eUnidad</div>
+                        }
                     </div>
                 </div>
 
                 <div class="form-group-sm">
-                    <label class="auth-label">Precio *</label>
-                    <InputNumber @bind-Value="formularioEditar.Costo"
-                                 class="form-control" min="0.01" step="any" />
-                    <ValidationMessage For="@(() => formularioEditar.Costo)"
-                                       class="text-danger msg-error" />
+                    <label class="auth-label">
+                        Precio *<span class="campo-ayuda"
+                                      data-tip="Es el costo total que tiene esa cantidad específica del producto (por ejemplo: el precio completo de la bolsa de 500 gramos).">?</span>
+                    </label>
+                    <input type="number" step="any" min="0.01"
+                           class="form-control @(erroresEditar.ContainsKey("Costo") ? "is-invalid" : "")"
+                           value="@formularioEditar.CostoTexto"
+                           @oninput="e => OnEditarInput(nameof(formularioEditar.CostoTexto), e.Value?.ToString())" />
+                    @if (erroresEditar.TryGetValue("Costo", out var eCosto))
+                    {
+                        <div class="text-danger msg-error">@eCosto</div>
+                    }
                 </div>
 
                 @if (mensajeErrorModal != null)
@@ -196,9 +224,7 @@
                 }
 
                 <div class="confirm-acciones" style="margin-top:16px;">
-                    <button type="button" class="btn-outline" @onclick="CerrarModalEditar">
-                        Cancelar
-                    </button>
+                    <button type="button" class="btn-outline" @onclick="CerrarModalEditar">Cancelar</button>
                     <button type="submit" class="btn-solid" disabled="@guardando">
                         @(guardando ? "Guardando..." : "Guardar")
                     </button>
@@ -208,14 +234,12 @@
     </div>
 }
 
-@* ===================== MODAL AGREGAR ===================== *@
 @if (mostrarModalAgregar)
 {
     <div class="confirm-overlay">
         <div class="socio-modal">
             <h3 class="onboarding-subtitulo">Agregar proveedor</h3>
-            <p class="text-muted"
-               style="font-size:0.8rem; margin-top:-8px; margin-bottom:14px;">
+            <p class="text-muted" style="font-size:0.8rem; margin-top:-8px; margin-bottom:14px;">
                 Los campos marcados con * son obligatorios.
             </p>
 
@@ -233,8 +257,7 @@
                 </button>
             </div>
 
-            <EditForm Model="@formularioAgregar" OnValidSubmit="@AgregarProveedor">
-                <DataAnnotationsValidator />
+            <EditForm Model="@formularioAgregar" OnSubmit="@AgregarProveedor" novalidate>
 
                 @if (modoProveedor == "existente")
                 {
@@ -249,9 +272,7 @@
                         </select>
                         @if (mostrarErrorSeleccion)
                         {
-                            <span class="text-danger msg-error">
-                                Seleccione un proveedor.
-                            </span>
+                            <span class="text-danger msg-error">Seleccione un proveedor.</span>
                         }
                     </div>
                 }
@@ -259,36 +280,59 @@
                 {
                     <div class="form-group-sm">
                         <label class="auth-label">Nombre *</label>
-                        <InputText @bind-Value="formularioAgregar.Nombre"
-                                   class="form-control" />
-                        <ValidationMessage For="@(() => formularioAgregar.Nombre)"
-                                           class="text-danger msg-error" />
+                        <input class="form-control @(erroresAgregar.ContainsKey("Nombre") ? "is-invalid" : "")"
+                               value="@formularioAgregar.Nombre"
+                               @oninput="e => OnAgregarNombre(e.Value?.ToString())" />
+                        @if (erroresAgregar.TryGetValue("Nombre", out var eNomA))
+                        {
+                            <div class="text-danger msg-error">@eNomA</div>
+                        }
                     </div>
                     <div class="form-group-sm">
                         <label class="auth-label">Teléfono</label>
-                        <InputText @bind-Value="formularioAgregar.Telefono"
-                                   class="form-control" placeholder="Opcional" />
+                        <input class="form-control @(erroresAgregar.ContainsKey("Telefono") ? "is-invalid" : "")"
+                               placeholder="Opcional"
+                               value="@formularioAgregar.Telefono"
+                               @oninput="e => OnAgregarTelefono(e.Value?.ToString())" />
+                        @if (erroresAgregar.TryGetValue("Telefono", out var eTelA))
+                        {
+                            <div class="text-danger msg-error">@eTelA</div>
+                        }
                     </div>
                     <div class="form-group-sm">
                         <label class="auth-label">Correo</label>
-                        <InputText @bind-Value="formularioAgregar.Correo"
-                                   class="form-control" placeholder="Opcional" />
+                        <input class="form-control @(erroresAgregar.ContainsKey("Correo") ? "is-invalid" : "")"
+                               placeholder="Opcional"
+                               value="@formularioAgregar.Correo"
+                               @oninput="e => OnAgregarCorreo(e.Value?.ToString())" />
+                        @if (erroresAgregar.TryGetValue("Correo", out var eCorreoA))
+                        {
+                            <div class="text-danger msg-error">@eCorreoA</div>
+                        }
                     </div>
                 }
 
                 <div class="onb-grid">
                     <div class="form-group-sm">
-                        <label class="auth-label">Cantidad *</label>
-                        <InputNumber @bind-Value="formularioAgregar.Cantidad"
-                                     class="form-control" min="0.001" step="any"
-                                     placeholder="Ej.: 500" />
-                        <ValidationMessage For="@(() => formularioAgregar.Cantidad)"
-                                           class="text-danger msg-error" />
+                        <label class="auth-label">
+                            Cantidad *<span class="campo-ayuda"
+                                            data-tip="Indica la cantidad numérica o el tamaño del producto (por ejemplo: 500).">?</span>
+                        </label>
+                        <input type="number" step="any" min="0.001" placeholder="Ej.: 500"
+                               class="form-control @(erroresAgregar.ContainsKey("Cantidad") ? "is-invalid" : "")"
+                               value="@formularioAgregar.CantidadTexto"
+                               @oninput="e => OnAgregarInput(nameof(formularioAgregar.CantidadTexto), e.Value?.ToString())" />
+                        @if (erroresAgregar.TryGetValue("Cantidad", out var eCantA))
+                        {
+                            <div class="text-danger msg-error">@eCantA</div>
+                        }
                     </div>
                     <div class="form-group-sm">
-                        <label class="auth-label">Unidad *</label>
-                        <InputSelect @bind-Value="formularioAgregar.UnidadMedida"
-                                     class="form-select">
+                        <label class="auth-label">
+                            Unidad *<span class="campo-ayuda"
+                                          data-tip="Indica en qué se mide la cantidad del producto (por ejemplo: Gramos, Kilos, Litros, Unidades).">?</span>
+                        </label>
+                        <InputSelect @bind-Value="formularioAgregar.UnidadMedida" class="form-select">
                             <option value="">Selecciona...</option>
                             <option value="g">g</option>
                             <option value="kg">kg</option>
@@ -299,17 +343,26 @@
                             <option value="unidad">unidad</option>
                             <option value="taza">taza</option>
                         </InputSelect>
-                        <ValidationMessage For="@(() => formularioAgregar.UnidadMedida)"
-                                           class="text-danger msg-error" />
+                        @if (erroresAgregar.TryGetValue("UnidadMedida", out var eUnidadA))
+                        {
+                            <div class="text-danger msg-error">@eUnidadA</div>
+                        }
                     </div>
                 </div>
 
                 <div class="form-group-sm">
-                    <label class="auth-label">Precio *</label>
-                    <InputNumber @bind-Value="formularioAgregar.Costo"
-                                 class="form-control" />
-                    <ValidationMessage For="@(() => formularioAgregar.Costo)"
-                                       class="text-danger msg-error" />
+                    <label class="auth-label">
+                        Precio *<span class="campo-ayuda"
+                                      data-tip="Es el costo total que tiene esa cantidad específica del producto (por ejemplo: el precio completo de la bolsa de 500 gramos).">?</span>
+                    </label>
+                    <input type="number" step="any" min="0.01"
+                           class="form-control @(erroresAgregar.ContainsKey("Costo") ? "is-invalid" : "")"
+                           value="@formularioAgregar.CostoTexto"
+                           @oninput="e => OnAgregarInput(nameof(formularioAgregar.CostoTexto), e.Value?.ToString())" />
+                    @if (erroresAgregar.TryGetValue("Costo", out var eCostoA))
+                    {
+                        <div class="text-danger msg-error">@eCostoA</div>
+                    }
                 </div>
 
                 @if (mensajeErrorModal != null)
@@ -344,17 +397,15 @@
 
     private List<InsumoProveedorDTO> proveedoresAsociados = new();
     private List<ProveedorDTO> disponibles = new();
+    private string nombreInsumo = string.Empty;
+    private string unidadInsumo = string.Empty;
 
-    // Modal agregar
     private bool mostrarModalAgregar = false;
     private string modoProveedor = "nuevo";
     private int? proveedorExistenteId;
     private ProveedorNuevoDTO formularioAgregar = new();
     private bool mostrarErrorSeleccion;
-    private string nombreInsumo = string.Empty;
-    private string unidadInsumo = string.Empty;
 
-    // Modal editar
     private bool mostrarModalEditar = false;
     private bool guardando = false;
     private bool recargarAlCerrar = false;
@@ -364,10 +415,11 @@
     private bool mostrarConfirmEliminar = false;
     private InsumoProveedorDTO? proveedorAEliminar;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await CargarDatos();
-    }
+    private Dictionary<string, string> erroresEditar = new();
+    private Dictionary<string, string> erroresAgregar = new();
+
+
+    protected override async Task OnInitializedAsync() => await CargarDatos();
 
     private async Task CargarDatos()
     {
@@ -389,22 +441,15 @@
 
             var respAsociados = await Http.GetAsync($"api/insumos/{InsumoId}/proveedores");
             if (respAsociados.IsSuccessStatusCode)
-            {
                 proveedoresAsociados = await respAsociados.Content
                     .ReadFromJsonAsync<List<InsumoProveedorDTO>>() ?? new();
-            }
             else
-            {
                 mensajeError = "No se pudo cargar la información de proveedores.";
-            }
 
-            var respDisponibles = await Http.GetAsync(
-                $"api/insumos/{InsumoId}/proveedores-disponibles");
+            var respDisponibles = await Http.GetAsync($"api/insumos/{InsumoId}/proveedores-disponibles");
             if (respDisponibles.IsSuccessStatusCode)
-            {
                 disponibles = await respDisponibles.Content
                     .ReadFromJsonAsync<List<ProveedorDTO>>() ?? new();
-            }
         }
         catch
         {
@@ -416,7 +461,6 @@
         }
     }
 
-    // ---------- Modal editar ----------
 
     private void AbrirModalEditar(InsumoProveedorDTO p)
     {
@@ -427,9 +471,14 @@
             Telefono = p.Telefono,
             Correo = p.Correo,
             Cantidad = p.Cantidad,
+            CantidadTexto = p.Cantidad.ToString("0.##",
+                System.Globalization.CultureInfo.InvariantCulture),
             UnidadMedida = p.UnidadMedida,
-            Costo = p.Costo
+            Costo = p.Costo,
+            CostoTexto = p.Costo.ToString("0.##",
+                System.Globalization.CultureInfo.InvariantCulture)
         };
+        erroresEditar.Clear();
         mensajeErrorModal = null;
         mensajeError = null;
         mensajeExito = null;
@@ -452,6 +501,7 @@
     private async Task GuardarEdicion()
     {
         if (editando is null) return;
+        if (!ValidarEditar()) return;
 
         mensajeErrorModal = null;
         guardando = true;
@@ -492,7 +542,6 @@
                     return;
                 }
 
-                // Ya quedó guardado: si el precio falla, el reintento no lo vuelve a enviar.
                 editando.Nombre = nombre;
                 editando.Telefono = telefono;
                 editando.Correo = correo;
@@ -503,12 +552,7 @@
             {
                 var resp = await Http.PatchAsJsonAsync(
                     $"api/insumos/{InsumoId}/proveedores/{editando.ProveedorId}/costo",
-                    new
-                    {
-                        Costo = f.Costo,
-                        Cantidad = f.Cantidad,
-                        UnidadMedida = f.UnidadMedida
-                    });
+                    new { Costo = f.Costo, Cantidad = f.Cantidad, UnidadMedida = f.UnidadMedida });
 
                 if (!resp.IsSuccessStatusCode)
                 {
@@ -533,11 +577,15 @@
         }
     }
 
-    // ---------- Modal agregar ----------
-
     private void AbrirModalAgregar()
     {
-        formularioAgregar = new ProveedorNuevoDTO { UnidadMedida = unidadInsumo };
+        formularioAgregar = new ProveedorNuevoDTO
+        {
+            UnidadMedida = unidadInsumo,
+            CantidadTexto = string.Empty,
+            CostoTexto = string.Empty
+        };
+        erroresAgregar.Clear();
         proveedorExistenteId = null;
         mostrarErrorSeleccion = false;
         mensajeErrorModal = null;
@@ -555,12 +603,19 @@
         formularioAgregar.Nombre = modo == "existente" ? "placeholder" : string.Empty;
         formularioAgregar.Telefono = null;
         formularioAgregar.Correo = null;
+
+        // Evita errores viejos al alternar entre "existente" y "nuevo"
+        erroresAgregar.Remove("Nombre");
+        erroresAgregar.Remove("Telefono");
+        erroresAgregar.Remove("Correo");
     }
 
     private async Task AgregarProveedor()
     {
         mensajeErrorModal = null;
         mostrarErrorSeleccion = false;
+
+        if (!ValidarAgregar()) return;
 
         formularioAgregar.Telefono = string.IsNullOrWhiteSpace(formularioAgregar.Telefono)
             ? null : formularioAgregar.Telefono.Trim();
@@ -611,7 +666,6 @@
         }
     }
 
-    // ---------- Marcar principal ----------
 
     private async Task MarcarPrincipal(int proveedorId)
     {
@@ -636,8 +690,6 @@
             mensajeError = "No se pudo conectar con el servidor.";
         }
     }
-
-    // ---------- Eliminar ----------
 
     private void PedirDesasociar(InsumoProveedorDTO proveedor)
     {
@@ -675,7 +727,308 @@
         proveedorAEliminar = null;
     }
 
-    // ---------- Utilidades ----------
+
+    // ───────── Validaciones reutilizables (tiempo real y al guardar) ─────────
+
+    private static string? MsgNombre(string? v)
+    {
+        if (string.IsNullOrWhiteSpace(v))
+            return "El nombre del proveedor es obligatorio.";
+        if (v.Trim().Length > 75)
+            return "El nombre no puede superar los 75 caracteres.";
+        return null;
+    }
+
+    private static string? MsgTelefono(string? v)
+    {
+        if (string.IsNullOrWhiteSpace(v)) return null; // opcional
+        return System.Text.RegularExpressions.Regex.IsMatch(v.Trim(), @"^3\d{9}$")
+            ? null
+            : "El teléfono debe tener 10 dígitos y empezar por 3.";
+    }
+
+    private static string? MsgCorreo(string? v)
+    {
+        if (string.IsNullOrWhiteSpace(v)) return null; // opcional
+        return System.Text.RegularExpressions.Regex.IsMatch(v.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+            ? null
+            : "Ingresa un correo electrónico válido.";
+    }
+
+    private static void PonerError(Dictionary<string, string> errores, string campo, string? mensaje)
+    {
+        if (mensaje is null) errores.Remove(campo);
+        else errores[campo] = mensaje;
+    }
+
+
+    // ───────── Handlers en tiempo real ─────────
+
+    private void OnEditarNombre(string? v)
+    {
+        formularioEditar.Nombre = v ?? string.Empty;
+        PonerError(erroresEditar, "Nombre", MsgNombre(v));
+    }
+
+    private void OnEditarTelefono(string? v)
+    {
+        formularioEditar.Telefono = v;
+        PonerError(erroresEditar, "Telefono", MsgTelefono(v));
+    }
+
+    private void OnEditarCorreo(string? v)
+    {
+        formularioEditar.Correo = v;
+        PonerError(erroresEditar, "Correo", MsgCorreo(v));
+    }
+
+    private void OnAgregarNombre(string? v)
+    {
+        formularioAgregar.Nombre = v ?? string.Empty;
+        PonerError(erroresAgregar, "Nombre", MsgNombre(v));
+    }
+
+    private void OnAgregarTelefono(string? v)
+    {
+        formularioAgregar.Telefono = v;
+        PonerError(erroresAgregar, "Telefono", MsgTelefono(v));
+    }
+
+    private void OnAgregarCorreo(string? v)
+    {
+        formularioAgregar.Correo = v;
+        PonerError(erroresAgregar, "Correo", MsgCorreo(v));
+    }
+
+
+    private void OnEditarInput(string campo, string? valor)
+    {
+        if (campo == nameof(formularioEditar.CantidadTexto))
+        {
+            formularioEditar.CantidadTexto = valor ?? string.Empty;
+            ValidarCampoEditar("Cantidad");
+        }
+        else if (campo == nameof(formularioEditar.CostoTexto))
+        {
+            formularioEditar.CostoTexto = valor ?? string.Empty;
+            ValidarCampoEditar("Costo");
+        }
+    }
+
+    private void OnAgregarInput(string campo, string? valor)
+    {
+        if (campo == nameof(formularioAgregar.CantidadTexto))
+        {
+            formularioAgregar.CantidadTexto = valor ?? string.Empty;
+            ValidarCampoAgregar("Cantidad");
+        }
+        else if (campo == nameof(formularioAgregar.CostoTexto))
+        {
+            formularioAgregar.CostoTexto = valor ?? string.Empty;
+            ValidarCampoAgregar("Costo");
+        }
+    }
+
+
+    private void ValidarCampoEditar(string campo)
+    {
+        erroresEditar.Remove(campo);
+
+        if (campo == "Cantidad")
+        {
+            var texto = formularioEditar.CantidadTexto?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(texto))
+            {
+                erroresEditar["Cantidad"] = "La cantidad es obligatoria.";
+                return;
+            }
+            if (!decimal.TryParse(texto, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var v))
+                erroresEditar["Cantidad"] = "Ingresa un número válido para la cantidad.";
+            else if (v <= 0)
+                erroresEditar["Cantidad"] = "La cantidad debe ser mayor a 0.";
+            else
+            {
+                var max = EsUnidadPequena(formularioEditar.UnidadMedida) ? 999.99m : 999999.99m;
+                if (v > max)
+                    erroresEditar["Cantidad"] = $"La cantidad no puede superar {max:N2}.";
+                else if (Math.Round(v, 2) != v)
+                    erroresEditar["Cantidad"] = "La cantidad admite máximo 2 decimales.";
+                else
+                    formularioEditar.Cantidad = v;
+            }
+        }
+        else if (campo == "Costo")
+        {
+            var texto = formularioEditar.CostoTexto?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(texto))
+            {
+                erroresEditar["Costo"] = "El precio es obligatorio.";
+                return;
+            }
+            if (!decimal.TryParse(texto, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var v))
+                erroresEditar["Costo"] = "Ingresa un número válido para el precio.";
+            else if (v < 0.01m)
+                erroresEditar["Costo"] = "El precio debe ser mayor a 0.";
+            else if (v > 999999.99m)
+                erroresEditar["Costo"] = "El precio no puede superar 999.999,99.";
+            else if (Math.Round(v, 2) != v)
+                erroresEditar["Costo"] = "El precio admite máximo 2 decimales.";
+            else
+                formularioEditar.Costo = v;
+        }
+    }
+
+    private void ValidarCampoAgregar(string campo)
+    {
+        erroresAgregar.Remove(campo);
+
+        if (campo == "Cantidad")
+        {
+            var texto = formularioAgregar.CantidadTexto?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(texto))
+            {
+                erroresAgregar["Cantidad"] = "La cantidad es obligatoria.";
+                return;
+            }
+            if (!decimal.TryParse(texto, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var v))
+                erroresAgregar["Cantidad"] = "Ingresa un número válido para la cantidad.";
+            else if (v <= 0)
+                erroresAgregar["Cantidad"] = "La cantidad debe ser mayor a 0.";
+            else
+            {
+                var max = EsUnidadPequena(formularioAgregar.UnidadMedida) ? 999.99m : 999999.99m;
+                if (v > max)
+                    erroresAgregar["Cantidad"] = $"La cantidad no puede superar {max:N2}.";
+                else if (Math.Round(v, 2) != v)
+                    erroresAgregar["Cantidad"] = "La cantidad admite máximo 2 decimales.";
+                else
+                    formularioAgregar.Cantidad = v;
+            }
+        }
+        else if (campo == "Costo")
+        {
+            var texto = formularioAgregar.CostoTexto?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(texto))
+            {
+                erroresAgregar["Costo"] = "El precio es obligatorio.";
+                return;
+            }
+            if (!decimal.TryParse(texto, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var v))
+                erroresAgregar["Costo"] = "Ingresa un número válido para el precio.";
+            else if (v < 0.01m)
+                erroresAgregar["Costo"] = "El precio debe ser mayor a 0.";
+            else if (v > 999999.99m)
+                erroresAgregar["Costo"] = "El precio no puede superar 999.999,99.";
+            else if (Math.Round(v, 2) != v)
+                erroresAgregar["Costo"] = "El precio admite máximo 2 decimales.";
+            else
+                formularioAgregar.Costo = v;
+        }
+    }
+
+    private bool ValidarEditar()
+    {
+        erroresEditar.Clear();
+        var f = formularioEditar;
+
+        PonerError(erroresEditar, "Nombre", MsgNombre(f.Nombre));
+        PonerError(erroresEditar, "Telefono", MsgTelefono(f.Telefono));
+        PonerError(erroresEditar, "Correo", MsgCorreo(f.Correo));
+
+        if (string.IsNullOrWhiteSpace(f.UnidadMedida))
+            erroresEditar["UnidadMedida"] = "Selecciona una unidad.";
+
+        if (string.IsNullOrWhiteSpace(f.CantidadTexto))
+            erroresEditar["Cantidad"] = "La cantidad es obligatoria.";
+        else if (!decimal.TryParse(f.CantidadTexto, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out var cant))
+            erroresEditar["Cantidad"] = "Ingresa un número válido para la cantidad.";
+        else if (cant <= 0)
+            erroresEditar["Cantidad"] = "La cantidad debe ser mayor a 0.";
+        else
+        {
+            var max = EsUnidadPequena(f.UnidadMedida) ? 999.99m : 999999.99m;
+            if (cant > max)
+                erroresEditar["Cantidad"] = $"La cantidad no puede superar {max:N2}.";
+            else if (Math.Round(cant, 2) != cant)
+                erroresEditar["Cantidad"] = "La cantidad admite máximo 2 decimales.";
+            else
+                f.Cantidad = cant;
+        }
+
+        if (string.IsNullOrWhiteSpace(f.CostoTexto))
+            erroresEditar["Costo"] = "El precio es obligatorio.";
+        else if (!decimal.TryParse(f.CostoTexto, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out var costo))
+            erroresEditar["Costo"] = "Ingresa un número válido para el precio.";
+        else if (costo < 0.01m)
+            erroresEditar["Costo"] = "El precio debe ser mayor a 0.";
+        else if (costo > 999999.99m)
+            erroresEditar["Costo"] = "El precio no puede superar 999.999,99.";
+        else if (Math.Round(costo, 2) != costo)
+            erroresEditar["Costo"] = "El precio admite máximo 2 decimales.";
+        else
+            f.Costo = costo;
+
+        return erroresEditar.Count == 0;
+    }
+
+    private bool ValidarAgregar()
+    {
+        erroresAgregar.Clear();
+        var f = formularioAgregar;
+
+        if (modoProveedor == "nuevo")
+        {
+            PonerError(erroresAgregar, "Nombre", MsgNombre(f.Nombre));
+            PonerError(erroresAgregar, "Telefono", MsgTelefono(f.Telefono));
+            PonerError(erroresAgregar, "Correo", MsgCorreo(f.Correo));
+        }
+
+        if (string.IsNullOrWhiteSpace(f.UnidadMedida))
+            erroresAgregar["UnidadMedida"] = "Selecciona una unidad.";
+
+        if (string.IsNullOrWhiteSpace(f.CantidadTexto))
+            erroresAgregar["Cantidad"] = "La cantidad es obligatoria.";
+        else if (!decimal.TryParse(f.CantidadTexto, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out var cant))
+            erroresAgregar["Cantidad"] = "Ingresa un número válido para la cantidad.";
+        else if (cant <= 0)
+            erroresAgregar["Cantidad"] = "La cantidad debe ser mayor a 0.";
+        else
+        {
+            var max = EsUnidadPequena(f.UnidadMedida) ? 999.99m : 999999.99m;
+            if (cant > max)
+                erroresAgregar["Cantidad"] = $"La cantidad no puede superar {max:N2}.";
+            else if (Math.Round(cant, 2) != cant)
+                erroresAgregar["Cantidad"] = "La cantidad admite máximo 2 decimales.";
+            else
+                f.Cantidad = cant;
+        }
+
+        if (string.IsNullOrWhiteSpace(f.CostoTexto))
+            erroresAgregar["Costo"] = "El precio es obligatorio.";
+        else if (!decimal.TryParse(f.CostoTexto, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out var costo))
+            erroresAgregar["Costo"] = "Ingresa un número válido para el precio.";
+        else if (costo < 0.01m)
+            erroresAgregar["Costo"] = "El precio debe ser mayor a 0.";
+        else if (costo > 999999.99m)
+            erroresAgregar["Costo"] = "El precio no puede superar 999.999,99.";
+        else if (Math.Round(costo, 2) != costo)
+            erroresAgregar["Costo"] = "El precio admite máximo 2 decimales.";
+        else
+            f.Costo = costo;
+
+        return erroresAgregar.Count == 0;
+    }
+
+    private static bool EsUnidadPequena(string? u) =>
+        u != null && (u == "unidad" || u == "taza");
 
     private async Task<string> ExtraerMensajeError(HttpResponseMessage resp)
     {
@@ -704,26 +1057,15 @@
         return "No se pudo completar la acción. Verifica los datos e intenta de nuevo.";
     }
 
-    // ---------- Modelo del formulario de edición ----------
     private class EdicionProveedorModel
     {
-        [Required(ErrorMessage = "El nombre del proveedor es obligatorio.")]
-        [StringLength(150, ErrorMessage = "El nombre no puede superar los 150 caracteres.")]
         public string Nombre { get; set; } = string.Empty;
-
-        [RegularExpression(@"^$|^3\d{9}$", ErrorMessage = "El teléfono debe tener 10 dígitos y empezar por 3.")]
         public string? Telefono { get; set; }
-
-        [RegularExpression(@"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$", ErrorMessage = "Ingrese un correo electrónico válido.")]
         public string? Correo { get; set; }
-
-        [Range(0.01, double.MaxValue, ErrorMessage = "La cantidad debe ser mayor a 0.")]
         public decimal Cantidad { get; set; }
-
-        [Required(ErrorMessage = "La unidad es obligatoria.")]
+        public string CantidadTexto { get; set; } = string.Empty;
         public string UnidadMedida { get; set; } = string.Empty;
-
-        [Range(0.01, double.MaxValue, ErrorMessage = "El precio debe ser mayor a 0.")]
         public decimal Costo { get; set; }
+        public string CostoTexto { get; set; } = string.Empty;
     }
 }
