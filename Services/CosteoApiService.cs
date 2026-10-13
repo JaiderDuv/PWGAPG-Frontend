@@ -9,8 +9,17 @@ public class CosteoApiService
     private readonly HttpClient _http;
     public CosteoApiService(HttpClient http) => _http = http;
 
-    public async Task<ApiResultado<CostoRecetaDto>> ObtenerCostoAsync(int recetaId) =>
-        await Leer<CostoRecetaDto>(await _http.GetAsync($"api/recetas/{recetaId}/costo"));
+    public async Task<ApiResultado<CostoRecetaDto>> ObtenerCostoAsync(int recetaId, IEnumerable<int>? costosFijosIds = null)
+    {
+        // Sin selección (null) = todos. Selección vacía se envía como -1 (id imposible)
+        // porque una query sin valores no permite distinguir "ninguno" de "todos".
+        var ids = costosFijosIds is null ? null
+            : (costosFijosIds.Any() ? costosFijosIds : new[] { -1 });
+        var url = $"api/recetas/{recetaId}/costo";
+        if (ids is not null)
+            url += "?" + string.Join("&", ids.Select(id => $"costosFijosIds={id}"));
+        return await Leer<CostoRecetaDto>(await _http.GetAsync(url));
+    }
 
     public async Task<ApiResultado<EscaladoRecetaDto>> ObtenerEscaladoAsync(int recetaId, int porciones) =>
         await Leer<EscaladoRecetaDto>(await _http.GetAsync($"api/recetas/{recetaId}/escalado?porciones={porciones}"));
