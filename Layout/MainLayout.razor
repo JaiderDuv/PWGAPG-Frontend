@@ -2,8 +2,7 @@
 @inject PWGAPG_Frontend.Services.AuthService AuthService
 @inject PWGAPG_Frontend.Services.PerfilService PerfilService
 @inject NavigationManager Navigation
-@inject IJSRuntime JS
-@implements IAsyncDisposable
+@implements IDisposable
 
 <header class="navbar">
     <div class="logo-container">
@@ -23,7 +22,6 @@
             <NavLink class="nav-link" href="recetas">Recetas</NavLink>
             <NavLink class="nav-link" href="costos-fijos">Costos fijos</NavLink>
 
-            <!-- Contenedor relativo del perfil -->
             <div class="user-profile-menu">
                 <button type="button" class="avatar-btn" @onclick="ToggleMenu" aria-label="Menú de usuario">
                     @if (!string.IsNullOrEmpty(AuthService.UrlFotoPerfil) && AuthService.UrlFotoPerfil != "images/default-avatar.png")
@@ -79,12 +77,10 @@
 
 @code {
     private bool mostrarMenu = false;
-    private bool vigilanciaIniciada = false;
-    private DotNetObjectReference<MainLayout>? dotNetRef;
 
     protected override void OnInitialized()
     {
-        AuthService.OnChange += ManejarCambioAuth;
+        AuthService.OnChange += StateHasChanged;
         Navigation.LocationChanged += OnLocationChanged;
         VerificarOnboardingPendiente();
     }
@@ -104,40 +100,6 @@
         }
     }
 
-    private async void ManejarCambioAuth()
-    {
-        StateHasChanged();
-        if (AuthService.IsAuthenticated)
-        {
-            await IniciarVigilanciaInactividad();
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && AuthService.IsAuthenticated)
-        {
-            await IniciarVigilanciaInactividad();
-        }
-    }
-
-    private async Task IniciarVigilanciaInactividad()
-    {
-        if (vigilanciaIniciada) return;
-        vigilanciaIniciada = true;
-
-        dotNetRef = DotNetObjectReference.Create(this);
-        await JS.InvokeVoidAsync("chefMetricsInactividad.iniciar", dotNetRef, 15);
-    }
-
-    [JSInvokable]
-    public async Task SesionExpiradaPorInactividad()
-    {
-        vigilanciaIniciada = false;
-        await AuthService.CerrarSesionAsync();
-        Navigation.NavigateTo("login", forceLoad: true);
-    }
-
     private void ToggleMenu()
     {
         mostrarMenu = !mostrarMenu;
@@ -148,26 +110,12 @@
         mostrarMenu = false;
         await PerfilService.RevocarPermisoAsync();
         await AuthService.CerrarSesionAsync();
-        vigilanciaIniciada = false;
         Navigation.NavigateTo("/", replace: true);
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        AuthService.OnChange -= ManejarCambioAuth;
+        AuthService.OnChange -= StateHasChanged;
         Navigation.LocationChanged -= OnLocationChanged;
-
-        if (dotNetRef != null)
-        {
-            try
-            {
-                await JS.InvokeVoidAsync("chefMetricsInactividad.detener");
-            }
-            catch
-            {
-                // La página ya se está descargando; no pasa nada si esto falla.
-            }
-            dotNetRef.Dispose();
-        }
     }
 }

@@ -11,11 +11,18 @@
         <div>
             <span class="inventario-eyebrow">PROVEEDORES</span>
             <h1 class="inventario-titulo">Proveedores</h1>
-            <p class="inventario-subtitulo">Los proveedores de tu negocio. Entra a un insumo para ver qué te cobra cada uno.</p>
+            <p class="inventario-subtitulo">
+                Los proveedores de tu negocio. Entra a un insumo para ver qué te cobra cada uno.
+            </p>
         </div>
         <div style="display:flex; gap:10px;">
-            <button type="button" class="btn-outline" @onclick='() => Navigation.NavigateTo("insumos-proveedores")'>Asignar a un insumo</button>
-            <button type="button" class="btn-solid" @onclick="AbrirModalNuevo">+ Nuevo proveedor</button>
+            <button type="button" class="btn-outline"
+                    @onclick='() => Navigation.NavigateTo("insumos-proveedores")'>
+                Asignar a un insumo
+            </button>
+            <button type="button" class="btn-solid" @onclick="AbrirModalNuevo">
+                + Nuevo proveedor
+            </button>
         </div>
     </div>
 
@@ -26,7 +33,8 @@
     else
     {
         <div class="inventario-toolbar">
-            <input type="text" class="form-control inventario-busqueda" placeholder="Buscar por nombre, teléfono o correo..."
+            <input type="text" class="form-control inventario-busqueda"
+                   placeholder="Buscar por nombre, teléfono o correo..."
                    @bind="textoBusqueda" @bind:event="oninput" />
 
             <select class="form-select inventario-orden" @bind="orden">
@@ -60,8 +68,14 @@
                                 <td class="text-muted">@(p.Telefono ?? "—")</td>
                                 <td class="text-muted">@(p.Correo ?? "—")</td>
                                 <td class="inventario-acciones">
-                                    <button type="button" class="btn-mini-editar" @onclick="() => AbrirModalEditar(p)">Editar</button>
-                                    <button type="button" class="btn-mini-eliminar" @onclick="() => PedirEliminar(p)">Eliminar</button>
+                                    <button type="button" class="btn-mini-editar"
+                                            @onclick="() => AbrirModalEditar(p)">
+                                        Editar
+                                    </button>
+                                    <button type="button" class="btn-mini-eliminar"
+                                            @onclick="() => PedirEliminar(p)">
+                                        Eliminar
+                                    </button>
                                 </td>
                             </tr>
                         }
@@ -69,47 +83,59 @@
                     else
                     {
                         <tr>
-                            <td colspan="4" class="text-muted" style="text-align:center; padding:24px;">
-                                @(proveedores.Any() ? "No hay proveedores que coincidan con la búsqueda." : "Aún no tienes proveedores registrados.")
-                            </td>
-                        </tr>
-                    }
+                            <td colspan="4" class="text-muted"
+                                style="text-align:center; padding:24px;">
+                                @(proveedores.Any()
+                                                        ? "No hay proveedores que coincidan con la búsqueda."
+                                                        : "Aún no tienes proveedores registrados.")
+                    </td>
+                </tr>
+                                }
                 </tbody>
             </table>
         </div>
 
-        <Paginador Pagina="pagina" Total="ProveedoresBaseFiltrados.Count" TamanoPagina="TamanoPagina" PaginaChanged="CambiarPagina" />
+        <Paginador Pagina="pagina" Total="ProveedoresBaseFiltrados.Count"
+                   TamanoPagina="TamanoPagina" PaginaChanged="CambiarPagina" />
     }
 </div>
 
+@* ── Modal nuevo / editar ── *@
 @if (mostrarModal)
 {
     <div class="confirm-overlay">
         <div class="socio-modal">
-            <h3 class="onboarding-subtitulo">@(proveedorEditando != null ? "Editar proveedor" : "Nuevo proveedor")</h3>
+            <h3 class="onboarding-subtitulo">
+                @(proveedorEditando != null ? "Editar proveedor" : "Nuevo proveedor")
+            </h3>
             <p class="text-muted" style="font-size:0.8rem; margin-top:-8px; margin-bottom:14px;">
                 Los campos marcados con * son obligatorios.
             </p>
 
-            <EditForm EditContext="@editContext" OnValidSubmit="@Guardar">
+            <EditForm EditContext="@editContext" OnValidSubmit="@Guardar" novalidate>
                 <DataAnnotationsValidator />
 
                 <div class="form-group-sm">
                     <label class="auth-label">Nombre *</label>
                     <InputText @bind-Value="formulario.Nombre" class="form-control" />
-                    <ValidationMessage For="@(() => formulario.Nombre)" class="text-danger msg-error" />
+                    <ValidationMessage For="@(() => formulario.Nombre)"
+                                       class="text-danger msg-error" />
                 </div>
 
                 <div class="form-group-sm">
                     <label class="auth-label">Teléfono</label>
-                    <InputText @bind-Value="formulario.Telefono" class="form-control" placeholder="Opcional" />
-                    <ValidationMessage For="@(() => formulario.Telefono)" class="text-danger msg-error" />
+                    <InputText @bind-Value="formulario.Telefono" class="form-control"
+                               placeholder="Opcional" />
+                    <ValidationMessage For="@(() => formulario.Telefono)"
+                                       class="text-danger msg-error" />
                 </div>
 
                 <div class="form-group-sm">
                     <label class="auth-label">Correo</label>
-                    <InputText @bind-Value="formulario.Correo" class="form-control" placeholder="Opcional" />
-                    <ValidationMessage For="@(() => formulario.Correo)" class="text-danger msg-error" />
+                    <InputText @bind-Value="formulario.Correo" class="form-control"
+                               placeholder="Opcional" />
+                    <ValidationMessage For="@(() => formulario.Correo)"
+                                       class="text-danger msg-error" />
                 </div>
 
                 @if (mensajeErrorModal != null)
@@ -118,7 +144,10 @@
                 }
 
                 <div class="confirm-acciones" style="margin-top:16px;">
-                    <button type="button" class="btn-outline" @onclick="() => mostrarModal = false">Cancelar</button>
+                    <button type="button" class="btn-outline"
+                            @onclick="() => mostrarModal = false">
+                        Cancelar
+                    </button>
                     <button type="submit" class="btn-solid">Guardar</button>
                 </div>
             </EditForm>
@@ -126,10 +155,60 @@
     </div>
 }
 
-<ConfirmDialog Visible="@mostrarConfirmEliminar"
-               Mensaje="@mensajeConfirmEliminar"
+@* ── Confirmación eliminar sin insumos ── *@
+<ConfirmDialog Visible="@mostrarConfirmSimple"
+               Mensaje="@mensajeConfirmSimple"
                OnConfirmar="ConfirmarEliminar"
-               OnCancelar="() => mostrarConfirmEliminar = false" />
+               OnCancelar="() => mostrarConfirmSimple = false" />
+
+@* ── Confirmación eliminar CON insumos ligados ── *@
+@if (mostrarConfirmConInsumos && chequeoActual is not null)
+{
+    <div class="confirm-overlay">
+        <div class="socio-modal">
+            <h3 class="onboarding-subtitulo" style="color:#DC2626;">
+                ⚠️ Proveedor ligado a insumos
+            </h3>
+
+            <p style="font-size:0.9rem; margin-bottom:8px;">
+                <strong>«@chequeoActual.Nombre»</strong> está asociado a
+                @chequeoActual.NombresInsumos.Count insumo(s):
+            </p>
+
+            <ul style="margin:0 0 12px 18px; font-size:0.88rem; color:#4A5568;">
+                @foreach (var nombre in chequeoActual.NombresInsumos)
+                {
+                    <li>@nombre</li>
+                }
+            </ul>
+
+            <p style="font-size:0.88rem; color:#4A5568; margin-bottom:16px;">
+                Si continúas, el proveedor se eliminará permanentemente y se desvinculará
+                de todos esos insumos. Esta acción <strong>no se puede deshacer</strong>.
+            </p>
+
+            @if (mensajeErrorEliminar != null)
+            {
+                <div class="text-danger msg-error" style="margin-bottom:8px;">
+                    @mensajeErrorEliminar
+                </div>
+            }
+
+            <div class="confirm-acciones">
+                <button type="button" class="btn-outline"
+                        @onclick="() => { mostrarConfirmConInsumos = false; chequeoActual = null; }">
+                    Cancelar
+                </button>
+                <button type="button" class="btn-solid"
+                        style="background:#DC2626; border-color:#DC2626;"
+                        disabled="@eliminando"
+                        @onclick="ConfirmarEliminarConInsumos">
+                    @(eliminando ? "Eliminando..." : "Sí, eliminar")
+                </button>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private bool cargando = true;
@@ -166,25 +245,31 @@
     }
 
     private List<ProveedorDTO> proveedoresFiltrados =>
-        ProveedoresBaseFiltrados.Skip((pagina - 1) * TamanoPagina).Take(TamanoPagina).ToList();
-    private void CambiarPagina(int nuevaPagina)
-    {
-        pagina = nuevaPagina;
-    }
+        ProveedoresBaseFiltrados
+            .Skip((pagina - 1) * TamanoPagina)
+            .Take(TamanoPagina)
+            .ToList();
 
+    private void CambiarPagina(int nuevaPagina) => pagina = nuevaPagina;
+
+    // ── Modal nuevo/editar ──────────────────────────────────────────────────
     private bool mostrarModal = false;
     private ProveedorFormDTO formulario = new();
     private ProveedorDTO? proveedorEditando;
     private string? mensajeErrorModal;
 
-    private bool mostrarConfirmEliminar = false;
-    private string mensajeConfirmEliminar = "¿Estás seguro de eliminar este proveedor?";
+    // ── Eliminar simple (sin insumos) ───────────────────────────────────────
+    private bool mostrarConfirmSimple = false;
+    private string mensajeConfirmSimple = string.Empty;
     private ProveedorDTO? proveedorAEliminar;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await CargarProveedores();
-    }
+    // ── Eliminar con insumos ────────────────────────────────────────────────
+    private bool mostrarConfirmConInsumos = false;
+    private ChequeoEliminarProveedorDTO? chequeoActual;
+    private string? mensajeErrorEliminar;
+    private bool eliminando = false;
+
+    protected override async Task OnInitializedAsync() => await CargarProveedores();
 
     private async Task CargarProveedores()
     {
@@ -195,13 +280,9 @@
         {
             var resp = await Http.GetAsync("api/negocios/mio/proveedores");
             if (resp.IsSuccessStatusCode)
-            {
                 proveedores = await resp.Content.ReadFromJsonAsync<List<ProveedorDTO>>() ?? new();
-            }
             else
-            {
                 mensajeError = "No se pudo cargar la lista de proveedores.";
-            }
         }
         catch
         {
@@ -225,7 +306,12 @@
     private void AbrirModalEditar(ProveedorDTO proveedor)
     {
         proveedorEditando = proveedor;
-        formulario = new ProveedorFormDTO { Nombre = proveedor.Nombre, Telefono = proveedor.Telefono, Correo = proveedor.Correo };
+        formulario = new ProveedorFormDTO
+        {
+            Nombre = proveedor.Nombre,
+            Telefono = proveedor.Telefono,
+            Correo = proveedor.Correo
+        };
         editContext = new EditContext(formulario);
         mensajeErrorModal = null;
         mostrarModal = true;
@@ -235,8 +321,10 @@
     {
         mensajeErrorModal = null;
 
-        formulario.Telefono = string.IsNullOrWhiteSpace(formulario.Telefono) ? null : formulario.Telefono.Trim();
-        formulario.Correo = string.IsNullOrWhiteSpace(formulario.Correo) ? null : formulario.Correo.Trim();
+        formulario.Telefono = string.IsNullOrWhiteSpace(formulario.Telefono)
+            ? null : formulario.Telefono.Trim();
+        formulario.Correo = string.IsNullOrWhiteSpace(formulario.Correo)
+            ? null : formulario.Correo.Trim();
 
         try
         {
@@ -260,16 +348,56 @@
         }
     }
 
-    private void PedirEliminar(ProveedorDTO proveedor)
+    // ── Flujo de eliminación ────────────────────────────────────────────────
+
+    private async Task PedirEliminar(ProveedorDTO proveedor)
     {
         proveedorAEliminar = proveedor;
-        mensajeConfirmEliminar = $"¿Estás seguro de eliminar a \"{proveedor.Nombre}\"?";
-        mostrarConfirmEliminar = true;
+        mensajeErrorEliminar = null;
+
+        try
+        {
+            var resp = await Http.GetAsync(
+                $"api/proveedores/{proveedor.Id}/chequear-eliminar");
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                mensajeError = "No se pudo verificar el proveedor.";
+                return;
+            }
+
+            var chequeo = await resp.Content
+                .ReadFromJsonAsync<ChequeoEliminarProveedorDTO>();
+
+            if (chequeo is null)
+            {
+                mensajeError = "Respuesta inesperada del servidor.";
+                return;
+            }
+
+            if (chequeo.TieneInsumos)
+            {
+                // Mostrar modal con detalle de insumos
+                chequeoActual = chequeo;
+                mostrarConfirmConInsumos = true;
+            }
+            else
+            {
+                // Confirmar simple sin insumos
+                mensajeConfirmSimple =
+                    $"¿Estás seguro de eliminar a \"{proveedor.Nombre}\"? Esta acción no se puede deshacer.";
+                mostrarConfirmSimple = true;
+            }
+        }
+        catch
+        {
+            mensajeError = "No se pudo conectar con el servidor.";
+        }
     }
 
     private async Task ConfirmarEliminar()
     {
-        mostrarConfirmEliminar = false;
+        mostrarConfirmSimple = false;
         if (proveedorAEliminar == null) return;
 
         mensajeError = null;
@@ -277,13 +405,9 @@
         {
             var resp = await Http.DeleteAsync($"api/proveedores/{proveedorAEliminar.Id}");
             if (resp.IsSuccessStatusCode)
-            {
                 await CargarProveedores();
-            }
             else
-            {
                 mensajeError = await ExtraerMensajeError(resp);
-            }
         }
         catch
         {
@@ -293,6 +417,38 @@
         proveedorAEliminar = null;
     }
 
+    private async Task ConfirmarEliminarConInsumos()
+    {
+        if (chequeoActual == null) return;
+
+        mensajeErrorEliminar = null;
+        eliminando = true;
+
+        try
+        {
+            var resp = await Http.DeleteAsync($"api/proveedores/{chequeoActual.ProveedorId}");
+            if (resp.IsSuccessStatusCode)
+            {
+                mostrarConfirmConInsumos = false;
+                chequeoActual = null;
+                proveedorAEliminar = null;
+                await CargarProveedores();
+            }
+            else
+            {
+                mensajeErrorEliminar = await ExtraerMensajeError(resp);
+            }
+        }
+        catch
+        {
+            mensajeErrorEliminar = "No se pudo conectar con el servidor.";
+        }
+        finally
+        {
+            eliminando = false;
+        }
+    }
+
     private async Task<string> ExtraerMensajeError(HttpResponseMessage resp)
     {
         try
@@ -300,14 +456,10 @@
             var cuerpo = await resp.Content.ReadAsStringAsync();
             using var doc = System.Text.Json.JsonDocument.Parse(cuerpo);
             var root = doc.RootElement;
-
             if (root.TryGetProperty("mensaje", out var mensaje))
-            {
                 return mensaje.GetString() ?? "No se pudo completar la acción.";
-            }
         }
         catch { }
-
         return "No se pudo completar la acción. Verifica los datos e intenta de nuevo.";
     }
 }
