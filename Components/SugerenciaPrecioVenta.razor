@@ -41,7 +41,6 @@
             @foreach (var advertencia in resultado.Advertencias)
             {
                 <div class="cs-aviso cs-aviso-warn">
-                    <span>⚠️</span>
                     <div>@advertencia</div>
                 </div>
             }
@@ -50,7 +49,6 @@
         @if (mensajeError is not null)
         {
             <div class="cs-aviso cs-aviso-warn">
-                <span>⚠️</span>
                 <div>@mensajeError</div>
             </div>
         }

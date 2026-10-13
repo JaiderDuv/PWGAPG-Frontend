@@ -211,7 +211,7 @@
                             <td class="insumos-acciones">
                                 <button type="button" class="btn-mini-editar" @onclick="() => AbrirModalEditar(insumo)">Editar</button>
                                 <button type="button" class="btn-mini-historial" @onclick='() => Navigation.NavigateTo($"insumos/{insumo.Id}/historial")' title="Ver historial de precios">Historial</button>
-                                <button type="button" class="btn-mini-eliminar" @onclick="() => PedirEliminar(insumo)" aria-label="Eliminar @insumo.Nombre">🗑</button>
+                                <button type="button" class="btn-mini-eliminar" @onclick="() => PedirEliminar(insumo)" aria-label="Eliminar @insumo.Nombre">Eliminar</button>
                             </td>
                         </tr>
                     }

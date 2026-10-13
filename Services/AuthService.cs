@@ -319,42 +319,6 @@ namespace PWGAPG_Frontend.Services
             NotifyStateChanged();
         }
 
-        private static bool TokenVigente(string? token)
-        {
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                return false;
-            }
-
-            try
-            {
-                var sections = token.Split('.');
-                if (sections.Length != 3)
-                {
-                    return false;
-                }
-
-                var payload = sections[1].Replace('-', '+').Replace('_', '/');
-                payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
-                using var document = JsonDocument.Parse(Convert.FromBase64String(payload));
-                return document.RootElement.TryGetProperty("exp", out var expiration) &&
-                    expiration.TryGetInt64(out var unixExpiration) &&
-                    DateTimeOffset.FromUnixTimeSeconds(unixExpiration) > DateTimeOffset.UtcNow.AddSeconds(30);
-            }
-            catch (FormatException)
-            {
-                return false;
-            }
-            catch (JsonException)
-            {
-                return false;
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-                return false;
-            }
-        }
-
         private void NotifyStateChanged() => OnChange?.Invoke();
     }
 }

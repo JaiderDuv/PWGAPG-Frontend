@@ -87,6 +87,43 @@
     font-size: .9rem;
 }
 
+.cs-fijos {
+    list-style: none;
+    margin: .5rem 0 0;
+    padding: 0;
+}
+
+    .cs-fijos li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .6rem;
+        padding: .35rem 0;
+        border-top: 1px dashed var(--cm-border);
+    }
+
+    .cs-fijos label {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        cursor: pointer;
+        font-size: .9rem;
+        margin: 0;
+    }
+
+.cs-fijos-aporte {
+    font-size: .85rem;
+    color: var(--cm-muted);
+    white-space: nowrap;
+}
+
+.cs-fijos-acciones {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-top: .4rem;
+}
+
 .cs-table thead th {
     font-size: .75rem;
     text-transform: uppercase;

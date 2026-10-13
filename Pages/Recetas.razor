@@ -41,7 +41,6 @@
         else if (recetas.Count == 0)
         {
             <div class="rc-empty">
-                <span>🍽️</span>
                 <p>Aún no tienes recetas. Crea la primera.</p>
             </div>
         }
@@ -53,7 +52,7 @@
                     <div class="rc-recipe @(costosAbiertos.Contains(r.Id) || preciosAbiertos.Contains(r.Id) || escaladosAbiertos.Contains(r.Id) ? "rc-recipe-wide" : "")">
                     <div class="rc-recipe-img">
                         @if (Api.UrlImagen(r.ImagenUrl) is { } url) { <img src="@url" alt="@r.Nombre" loading="lazy" /> }
-                        else { <span>🍽️</span> }
+                        else { <span class="rc-sin-imagen">Sin imagen</span> }
                         <small class="rc-id">#@r.Id</small>
                     </div>
                     <div class="rc-recipe-body">
@@ -77,27 +76,37 @@
                             @if (!string.IsNullOrWhiteSpace(r.Instrucciones)) { <p class="rc-instr">@r.Instrucciones</p> }
                         </details>
 
-                            <button class="btn btn-sm btn-outline-secondary mt-2" @onclick="() => AlternarCosto(r.Id)">
-                                @(costosAbiertos.Contains(r.Id) ? "Ocultar costo real" : "Ver costo real")
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary mt-2 ms-2" @onclick="() => AlternarPrecio(r.Id)">
-                                @(preciosAbiertos.Contains(r.Id) ? "Ocultar precio sugerido" : "Ver precio sugerido")
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary mt-2 ms-2" @onclick="() => AlternarEscalado(r.Id)">
-                                @(escaladosAbiertos.Contains(r.Id) ? "Ocultar escalado" : "Escalar por porciones")
-                            </button>
+                            <div class="rc-analysis">
+                                <span class="rc-analysis-label">Análisis</span>
+                                <div class="rc-analysis-btns">
+                                    <button class="btn btn-sm @(costosAbiertos.Contains(r.Id) ? "btn-primary" : "btn-outline-secondary")" @onclick="() => AlternarCosto(r.Id)">
+                                        @(costosAbiertos.Contains(r.Id) ? "Ocultar costo real" : "Ver costo real")
+                                    </button>
+                                    <button class="btn btn-sm @(preciosAbiertos.Contains(r.Id) ? "btn-primary" : "btn-outline-secondary")" @onclick="() => AlternarPrecio(r.Id)">
+                                        @(preciosAbiertos.Contains(r.Id) ? "Ocultar precio sugerido" : "Ver precio sugerido")
+                                    </button>
+                                    <button class="btn btn-sm @(escaladosAbiertos.Contains(r.Id) ? "btn-primary" : "btn-outline-secondary")" @onclick="() => AlternarEscalado(r.Id)">
+                                        @(escaladosAbiertos.Contains(r.Id) ? "Ocultar escalado" : "Escalar por porciones")
+                                    </button>
+                                </div>
+                            </div>
 
-                            @if (costosAbiertos.Contains(r.Id))
+                            @if (costosAbiertos.Contains(r.Id) || preciosAbiertos.Contains(r.Id) || escaladosAbiertos.Contains(r.Id))
                             {
-                                <CostoRecetaPanel RecetaId="r.Id" />
-                            }
-                            @if (preciosAbiertos.Contains(r.Id))
-                            {
-                                <SugerenciaPrecioVenta RecetaId="r.Id" />
-                            }
-                            @if (escaladosAbiertos.Contains(r.Id))
-                            {
-                                <EscaladoPorcionesPanel RecetaId="r.Id" PorcionesBase="r.PorcionesBase" />
+                                <div class="rc-panel-zone">
+                                    @if (costosAbiertos.Contains(r.Id))
+                                    {
+                                        <CostoRecetaPanel RecetaId="r.Id" />
+                                    }
+                                    @if (preciosAbiertos.Contains(r.Id))
+                                    {
+                                        <SugerenciaPrecioVenta RecetaId="r.Id" />
+                                    }
+                                    @if (escaladosAbiertos.Contains(r.Id))
+                                    {
+                                        <EscaladoPorcionesPanel RecetaId="r.Id" PorcionesBase="r.PorcionesBase" />
+                                    }
+                                </div>
                             }
                     </div>
                     <div class="rc-recipe-actions">
