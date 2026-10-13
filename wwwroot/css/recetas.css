@@ -365,3 +365,81 @@
     color: var(--cm-danger);
     font-size: .85rem;
 }
+
+/* Combo buscable de insumos (formulario de receta) */
+.rc-combo {
+    position: relative;
+}
+
+.rc-combo-lista {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    max-height: 220px;
+    overflow-y: auto;
+    margin-top: .2rem;
+    padding: .25rem;
+    background: #fff;
+    border: 1px solid var(--cm-border);
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.12);
+}
+
+.rc-combo-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    width: 100%;
+    padding: .45rem .6rem;
+    border: 0;
+    background: transparent;
+    border-radius: 8px;
+    text-align: left;
+    cursor: pointer;
+}
+
+    .rc-combo-item:hover:not(:disabled) {
+        background: var(--cm-soft);
+    }
+
+    .rc-combo-item:disabled {
+        opacity: .45;
+        cursor: not-allowed;
+    }
+
+.rc-combo-nombre {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rc-combo-meta {
+    color: var(--cm-muted);
+    white-space: nowrap;
+    font-size: .8rem;
+}
+
+.rc-combo-vacio {
+    padding: .5rem .6rem;
+    color: var(--cm-muted);
+    font-size: .85rem;
+}
+
+.rc-combo-seleccionado {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    padding: .4rem .6rem;
+    background: var(--cm-soft);
+    border: 1px solid var(--cm-border);
+    border-radius: 10px;
+}
+
+    .rc-combo-seleccionado small {
+        font-size: .8rem;
+    }

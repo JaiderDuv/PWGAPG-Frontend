@@ -44,9 +44,10 @@
                     <div class="col-md-6">
                         <label class="rc-label">Se reparte por *</label>
                         <InputSelect class="form-select" @bind-Value="modelo.UnidadProrrateo">
-                            @foreach (var u in Unidades) { <option value="@u.Key">@u.Value</option> }
+                            @foreach (var u in OpcionesUnidad) { <option value="@u.Key">@u.Value</option> }
                         </InputSelect>
                         <ValidationMessage For="() => modelo.UnidadProrrateo" class="rc-error" />
+                        <small class="text-muted">1 unidad de prorrateo = 1 preparación completa de la receta: el costo fijo se reparte una sola vez por preparación, no por cada ingrediente ni por cada porción.</small>
                     </div>
                     <div class="col-md-6">
                         <label class="rc-label">Valor divisor *</label>
@@ -62,10 +63,10 @@
                     </div>
                 </div>
 
-                @if (modelo.MontoMensual > 0 && modelo.ValorDivisor > 0)
+                @if (modelo.MontoMensual > 0 && modelo.ValorDivisor is { } divisor && divisor > 0)
                 {
                     <div class="cs-preview">
-                        Aporte por unidad de prorrateo: <strong>@Formato.Moneda(modelo.MontoMensual / modelo.ValorDivisor)</strong>
+                        Aporte por unidad de prorrateo: <strong>@Formato.Moneda(modelo.MontoMensual / divisor)</strong>
                     </div>
                 }
 
@@ -151,16 +152,41 @@
                OnCancelar="CancelarEliminar" />
 
 @code {
-    // Valores permitidos por CK_CostoFijo_UnidadProrrateo en la BD.
+    // Unidades ofrecidas al crear o editar.
+    // 'horas_produccion' se retiró: el sistema no registra la duración de cada
+    // receta, así que no puede prorratear por hora real de producción.
     private static readonly Dictionary<string, string> Unidades = new()
     {
         ["recetas_activas"] = "Recetas activas",
-        ["horas_produccion"] = "Horas de producción",
         ["unidades_producidas"] = "Unidades producidas"
     };
 
+    // Etiquetas de la tabla: incluyen valores heredados que aún pueden existir
+    // en la base de datos (se conservan, pero ya no se ofrecen).
+    private static readonly Dictionary<string, string> Etiquetas = new()
+    {
+        ["recetas_activas"] = "Recetas activas",
+        ["unidades_producidas"] = "Unidades producidas",
+        ["horas_produccion"] = "Horas de producción (valor heredado)"
+    };
+
     private static string Etiqueta(string valor) =>
-        Unidades.TryGetValue(valor, out var e) ? e : valor;
+        Etiquetas.TryGetValue(valor, out var e) ? e : valor;
+
+    // Al editar un costo fijo con unidad heredada ('horas_produccion'), la opción
+    // se muestra en el selector para que el usuario vea qué tiene: puede conservarla
+    // (el backend la acepta como valor heredado) o cambiarla por una válida.
+    private IEnumerable<KeyValuePair<string, string>> OpcionesUnidad
+    {
+        get
+        {
+            var lista = new Dictionary<string, string>(Unidades);
+            if (!string.IsNullOrEmpty(modelo.UnidadProrrateo) &&
+                !Unidades.ContainsKey(modelo.UnidadProrrateo))
+                lista[modelo.UnidadProrrateo] = Etiqueta(modelo.UnidadProrrateo);
+            return lista;
+        }
+    }
 
     private List<CostoFijoDto>? costos;
     private CostoFijoDto? editando, aEliminar;
@@ -258,8 +284,9 @@
         [Required(ErrorMessage = "Selecciona la unidad de prorrateo.")]
         public string UnidadProrrateo { get; set; } = "unidades_producidas";
 
+        [Required(ErrorMessage = "El valor divisor es obligatorio.")]
         [Range(0.01, 1000000, ErrorMessage = "El valor divisor debe estar entre 0,01 y 1.000.000.")]
-        public decimal ValorDivisor { get; set; } = 1;
+        public decimal? ValorDivisor { get; set; }
 
         public bool Activo { get; set; } = true;
     }

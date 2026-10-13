@@ -86,14 +86,43 @@
                     var tieneError = erroresFila.ContainsKey(fila);
                     <tr>
                         <td>
-                            <select class="form-select @(tieneError ? "is-invalid" : "")" value="@fila.InsumoId"
-                                    @onchange="e => AlSeleccionarInsumo(fila, e.Value?.ToString())">
-                                <option value="0">-- Selecciona --</option>
-                                @foreach (var i in Insumos)
-                                {
-                                    <option value="@i.Id" disabled="@YaElegido(i.Id, fila)">@i.Nombre (@i.UnidadMedida)</option>
-                                }
-                            </select>
+                            @if (fila.InsumoId == 0)
+                            {
+                                <div class="rc-combo">
+                                    <input type="text" class="form-control @(tieneError ? "is-invalid" : "")"
+                                           placeholder="Buscar insumo..." maxlength="100"
+                                           value="@fila.Busqueda"
+                                           @oninput="e => { fila.Busqueda = e.Value?.ToString() ?? string.Empty; fila.MostrarLista = true; }"
+                                           @onfocus="() => fila.MostrarLista = true"
+                                           @onblur="() => AlPerderFoco(fila)" />
+                                    @if (fila.MostrarLista)
+                                    {
+                                        var coincidencias = InsumosFiltrados(fila).ToList();
+                                        <div class="rc-combo-lista">
+                                            @foreach (var i in coincidencias)
+                                            {
+                                                <button type="button" class="rc-combo-item" disabled="@YaElegido(i.Id, fila)"
+                                                        title="@(YaElegido(i.Id, fila) ? "Ya está en otra línea de esta receta" : "")"
+                                                        @onclick="() => SeleccionarInsumo(fila, i)">
+                                                    <span class="rc-combo-nombre">@i.Nombre</span>
+                                                    <small class="rc-combo-meta">@i.UnidadMedida · @Formato.Moneda(i.CostoUnitario)</small>
+                                                </button>
+                                            }
+                                            @if (coincidencias.Count == 0)
+                                            {
+                                                <div class="rc-combo-vacio">Sin coincidencias para "@fila.Busqueda"</div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="rc-combo-seleccionado">
+                                    <span>@NombreInsumo(fila.InsumoId) <small class="text-muted">(@UnidadDeInsumo(fila.InsumoId))</small></span>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => LimpiarInsumo(fila)">Cambiar</button>
+                                </div>
+                            }
                         </td>
                        <td>
                          <InputNumber class="@ClaseInput(tieneError)" @bind-Value="fila.Cantidad"
@@ -215,13 +244,46 @@
     private bool YaElegido(int insumoId, Fila actual) =>
         modelo.Filas.Any(f => f != actual && f.InsumoId == insumoId);
 
-    private void AlSeleccionarInsumo(Fila fila, string? valor)
+    // ---------- Combo buscable de insumos ----------
+    private IEnumerable<InsumoOpcionDto> InsumosFiltrados(Fila fila)
     {
-        fila.InsumoId = int.TryParse(valor, out var id) ? id : 0;
-        var insumo = Insumos.FirstOrDefault(i => i.Id == fila.InsumoId);
-        if (insumo is not null) fila.UnidadMedida = insumo.UnidadMedida;
+        var b = (fila.Busqueda ?? "").Trim();
+        return b.Length == 0
+            ? Insumos.OrderBy(i => i.Nombre, StringComparer.OrdinalIgnoreCase)
+            : Insumos.Where(i => i.Nombre.Contains(b, StringComparison.OrdinalIgnoreCase))
+                     .OrderBy(i => i.Nombre, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private void SeleccionarInsumo(Fila fila, InsumoOpcionDto insumo)
+    {
+        fila.InsumoId = insumo.Id;
+        fila.UnidadMedida = insumo.UnidadMedida;   // unidad natural del insumo
+        fila.Busqueda = "";
+        fila.MostrarLista = false;
         erroresFila.Remove(fila);
     }
+
+    private void LimpiarInsumo(Fila fila)
+    {
+        fila.InsumoId = 0;
+        fila.UnidadMedida = "g";
+        fila.Busqueda = "";
+        fila.MostrarLista = true;
+    }
+
+    // El blur se procesa con un retardo para que alcance a registrarse el clic en un item.
+    private async Task AlPerderFoco(Fila fila)
+    {
+        await Task.Delay(150);
+        fila.MostrarLista = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string NombreInsumo(int id) =>
+        Insumos.FirstOrDefault(i => i.Id == id)?.Nombre ?? $"Insumo #{id}";
+
+    private string UnidadDeInsumo(int id) =>
+        Insumos.FirstOrDefault(i => i.Id == id)?.UnidadMedida ?? "";
 
     private IEnumerable<string> UnidadesCompatibles(Fila fila)
     {
@@ -322,5 +384,8 @@
         public int InsumoId { get; set; }
         public decimal Cantidad { get; set; }
         public string UnidadMedida { get; set; } = "g";
+        // Estado del combo buscable de insumos (no se envía al backend).
+        public string Busqueda { get; set; } = "";
+        public bool MostrarLista { get; set; }
     }
 }

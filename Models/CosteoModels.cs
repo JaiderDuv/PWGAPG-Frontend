@@ -62,7 +62,7 @@ public class CrearCostoFijoDto
     public string Nombre { get; set; } = "";
     public decimal MontoMensual { get; set; }
     public string UnidadProrrateo { get; set; } = "unidades_producidas";
-    public decimal ValorDivisor { get; set; } = 1;
+    public decimal? ValorDivisor { get; set; }   // obligatorio: ya no tiene default 1
     public bool Activo { get; set; } = true;
 }
 
