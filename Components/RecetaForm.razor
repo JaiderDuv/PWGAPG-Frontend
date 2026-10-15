@@ -295,8 +295,12 @@
     private decimal CostoDeFila(Fila f)
     {
         var i = Insumos.FirstOrDefault(x => x.Id == f.InsumoId);
-        return i is null || f.Cantidad <= 0 ? 0 :
-            ConversorUnidades.CostoLinea(f.Cantidad, f.UnidadMedida, i.UnidadMedida, i.CostoUnitario, i.PorcentajeMerma);
+        if (i is null || f.Cantidad <= 0) return 0;
+        // CostoUnitario es el total del paquete (Cantidad): se divide para el precio por unidad.
+        var costoPorUnidad = i.Cantidad.HasValue && i.Cantidad.Value > 0
+            ? i.CostoUnitario / i.Cantidad.Value
+            : i.CostoUnitario;
+        return ConversorUnidades.CostoLinea(f.Cantidad, f.UnidadMedida, i.UnidadMedida, costoPorUnidad, i.PorcentajeMerma);
     }
 
     private decimal CostoTotal => modelo.Filas.Sum(CostoDeFila);

@@ -36,6 +36,7 @@ public class InsumoOpcionDto
     public string Nombre { get; set; } = "";
     public string UnidadMedida { get; set; } = "";
     public decimal CostoUnitario { get; set; }
+    public decimal? Cantidad { get; set; }
     public decimal PorcentajeMerma { get; set; }
 }
 
