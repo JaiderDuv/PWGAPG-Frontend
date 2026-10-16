@@ -1,0 +1,428 @@
+@using System.ComponentModel.DataAnnotations
+@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Services
+@inject MenuApiService MenuApi
+@inject RecetaApiService RecetaApi
+
+<div class="rc-card rc-form">
+    <div class="rc-card-header">
+        <h5 class="mb-0">@(Editando is null ? "Nuevo producto" : $"Editar producto #{Editando.Id}")</h5>
+    </div>
+
+    <EditForm Model="modelo" OnValidSubmit="Guardar" OnInvalidSubmit="AlInvalido" class="rc-card-body" novalidate>
+        <DataAnnotationsValidator />
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="rc-label">Nombre * <small class="text-muted">(@(modelo.Nombre?.Length ?? 0)/75)</small></label>
+                <InputText class="form-control" @bind-Value="modelo.Nombre" maxlength="75"
+                           placeholder="Ej: Caja Mixta de Panes" />
+                <ValidationMessage For="() => modelo.Nombre" class="rc-error" />
+            </div>
+            <div class="col-md-3">
+                <label class="rc-label">Precio base</label>
+                <input class="form-control" readonly
+                       value="@(costoPreview is not null ? Formato.Moneda(costoPreview.CostoTotal) : (calculando ? "Calculando..." : "$ 0"))"
+                       placeholder="$ 0" />
+                <small class="text-muted">Suma automática: recetas + empaques.</small>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <div class="form-check">
+                    <InputCheckbox class="form-check-input" id="pm-activo" @bind-Value="modelo.Activo" />
+                    <label class="form-check-label" for="pm-activo">Activo (vigente en el menú)</label>
+                </div>
+            </div>
+        </div>
+
+        <h6 class="rc-section-title mt-4">Recetas del producto * (mínimo una)</h6>
+        @if (!recetasDisponibles.Any())
+        {
+            <div class="alert alert-warning">Aún no tienes recetas. Crea al menos una en el apartado Recetas.</div>
+        }
+        <div class="table-responsive">
+            <table class="table rc-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Receta</th>
+                        <th style="width:160px">Cantidad</th>
+                        <th style="width:50px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var f in modelo.FilasReceta)
+                    {
+                        <tr>
+                            <td>
+                                <select class="form-select" @bind="f.RecetaId" @bind:after="AlCambiarComposicion">
+                                    <option value="0">Selecciona...</option>
+                                    @foreach (var r in recetasDisponibles)
+                                    {
+                                        <option value="@r.Id">@r.Nombre</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <input type="number" class="form-control" min="0.001" max="10000" step="0.001"
+                                       @bind="f.Cantidad" @bind:event="oninput" @bind:after="AlCambiarComposicion" />
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        @onclick="() => QuitarReceta(f)" title="Quitar">×</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AgregarReceta">+ Agregar receta</button>
+        @if (errorRecetas is not null) { <div class="rc-error mt-2">@errorRecetas</div> }
+
+        <h6 class="rc-section-title mt-4">Empaques / insumos directos <small class="text-muted">(opcional, solo costeo)</small></h6>
+        <p class="text-muted small">No se almacenan (sin cambios de BD): se usan para el costo en vivo y la sugerencia de precio.</p>
+        <div class="table-responsive">
+            <table class="table rc-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Insumo</th>
+                        <th style="width:140px">Cantidad</th>
+                        <th style="width:120px">Unidad</th>
+                        <th style="width:50px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var f in modelo.FilasEmpaque)
+                    {
+                        <tr>
+                            <td>
+                                <select class="form-select" @bind="f.InsumoId" @bind:after="() => AlCambiarInsumo(f)">
+                                    <option value="0">Selecciona...</option>
+                                    @foreach (var i in insumosDisponibles)
+                                    {
+                                        <option value="@i.Id">@i.Nombre</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <input type="number" class="form-control" min="0.001" step="0.001"
+                                       @bind="f.Cantidad" @bind:event="oninput" @bind:after="AlCambiarComposicion" />
+                            </td>
+                            <td>
+                                <select class="form-select" @bind="f.UnidadMedida" @bind:after="AlCambiarComposicion">
+                                    @foreach (var u in Unidades) { <option value="@u">@u</option> }
+                                </select>
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        @onclick="() => QuitarEmpaque(f)" title="Quitar">×</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AgregarEmpaque">+ Agregar empaque</button>
+
+        <div class="cs-preview mt-3">
+            @if (costoPreview is not null)
+            {
+                <span>Costo en vivo: <strong>@Formato.Moneda(costoPreview.CostoTotal)</strong></span>
+                <span class="text-muted"> (recetas @Formato.Moneda(costoPreview.CostoRecetas) + empaques @Formato.Moneda(costoPreview.CostoInsumosDirectos))</span>
+            }
+            else if (calculando)
+            {
+                <span class="text-muted">Calculando costo...</span>
+            }
+            else
+            {
+                <span class="text-muted">Agrega al menos una receta para ver el costo en vivo.</span>
+            }
+        </div>
+
+        <div class="row g-3 mt-2">
+            <div class="col-md-4">
+                <label class="rc-label">Margen de ganancia % <small class="text-muted">(sobre precio base)</small></label>
+                <input type="number" class="form-control" min="1" max="99" step="0.5" @bind="margenSugerido" />
+            </div>
+            <div class="col-md-8 d-flex align-items-end gap-2">
+                <button type="button" class="btn btn-outline-secondary" @onclick="SugerirPrecio" disabled="@sugiriendo">
+                    @(sugiriendo ? "Sugiriendo..." : "Sugerir precio")
+                </button>
+                @if (precioSugerido?.PrecioSugerido.HasValue == true)
+                {
+                    <span class="text-muted">Puedes colocar <strong>@Formato.Moneda(precioSugerido.PrecioSugerido.Value)</strong> en Precio de venta:</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="UsarSugerido">Usar</button>
+                }
+            </div>
+        </div>
+        @if (errorSugerido is not null) { <div class="rc-error mt-2">@errorSugerido</div> }
+
+        <div class="row g-3 mt-2">
+            <div class="col-md-6">
+                <label class="rc-label">Precio de venta</label>
+                <InputNumber class="form-control" @bind-Value="modelo.PrecioVenta"
+                             min="0.01" max="999999.99" step="0.01" placeholder="Ej: 25000"
+                             ParsingErrorMessage="El precio debe ser un número válido." />
+                <ValidationMessage For="() => modelo.PrecioVenta" class="rc-error" />
+                <small class="text-muted">Máximo 6 dígitos (999.999,99). Se reescribe con “Usar”.</small>
+                @if (MargenRealResultante.HasValue)
+                {
+                    <small class="d-block mt-1">Margen real resultante: <strong>@MargenRealResultante.Value.ToString("0.##") %</strong>
+                    <span class="text-muted">(es el que verás en el inicio)</span></small>
+                }
+            </div>
+        </div>
+
+        @if (errorForm is not null) { <div class="alert alert-danger mt-3">@errorForm</div> }
+
+        <div class="d-flex gap-2 justify-content-end mt-3">
+            <button type="button" class="btn btn-outline-secondary" @onclick="OnCancelar" disabled="@guardando">Cancelar</button>
+            <button type="submit" class="btn btn-primary" disabled="@guardando">
+                @(guardando ? "Guardando..." : "Guardar")
+            </button>
+        </div>
+    </EditForm>
+</div>
+
+<ConfirmDialog Visible="mostrarAvisoMargen"
+               Mensaje="@mensajeAvisoMargen"
+               OnConfirmar="ConfirmarMargen"
+               OnCancelar="CancelarMargen" />
+
+@code {
+    [Parameter] public ProductoMenuDetalleDto? Editando { get; set; }
+    [Parameter] public EventCallback<string?> OnGuardado { get; set; }
+    [Parameter] public EventCallback OnCancelar { get; set; }
+
+    private static readonly string[] Unidades = ["g", "kg", "ml", "l", "oz", "lb", "unidad", "taza"];
+
+    private ProductoMenuFormModelo modelo = new();
+    private List<RecetaDto> recetasDisponibles = new();
+    private List<InsumoOpcionDto> insumosDisponibles = new();
+    private bool guardando, calculando, sugiriendo;
+    private string? errorForm, errorRecetas, errorSugerido;
+    private CostoProductoDto? costoPreview;
+    private PrecioSugeridoProductoDto? precioSugerido;
+    private decimal margenSugerido = 30;
+    private System.Threading.CancellationTokenSource? debounceCts;
+    private bool mostrarAvisoMargen;
+    private string mensajeAvisoMargen = "";
+    private bool margenConfirmado;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resRec = await RecetaApi.ListarAsync(null);
+        if (resRec.Exito && resRec.Datos is not null) recetasDisponibles = resRec.Datos;
+        insumosDisponibles = await RecetaApi.ListarInsumosAsync();
+
+        if (Editando is not null)
+        {
+            modelo = new ProductoMenuFormModelo
+            {
+                Nombre = Editando.Nombre,
+                PrecioVenta = Editando.PrecioVenta,
+                Activo = Editando.Activo,
+                FilasReceta = Editando.Recetas.Select(r => new ProductoMenuFormModelo.FilaReceta
+                {
+                    RecetaId = r.RecetaId, Cantidad = r.Cantidad
+                }).ToList()
+            };
+        }
+        else
+        {
+            modelo.FilasReceta.Add(new ProductoMenuFormModelo.FilaReceta());
+        }
+        _ = ActualizarPreview();
+    }
+
+    private void AgregarReceta() => modelo.FilasReceta.Add(new ProductoMenuFormModelo.FilaReceta());
+    private void QuitarReceta(ProductoMenuFormModelo.FilaReceta f)
+    {
+        modelo.FilasReceta.Remove(f);
+        _ = ActualizarPreview();
+    }
+    private void AgregarEmpaque() => modelo.FilasEmpaque.Add(new ProductoMenuFormModelo.FilaEmpaque());
+    private void QuitarEmpaque(ProductoMenuFormModelo.FilaEmpaque f)
+    {
+        modelo.FilasEmpaque.Remove(f);
+        _ = ActualizarPreview();
+    }
+
+    private void AlCambiarComposicion() => _ = ActualizarPreview();
+
+    private void AlCambiarInsumo(ProductoMenuFormModelo.FilaEmpaque f)
+    {
+        // Trae la unidad preconfigurada del insumo; el usuario aún puede cambiarla manual.
+        var ins = insumosDisponibles.FirstOrDefault(i => i.Id == f.InsumoId);
+        if (ins is not null && !string.IsNullOrWhiteSpace(ins.UnidadMedida)
+            && Unidades.Contains(ins.UnidadMedida, StringComparer.OrdinalIgnoreCase))
+            f.UnidadMedida = Unidades.First(u => string.Equals(u, ins.UnidadMedida, StringComparison.OrdinalIgnoreCase));
+        _ = ActualizarPreview();
+    }
+
+    private async Task ActualizarPreview()
+    {
+        debounceCts?.Cancel();
+        debounceCts = new System.Threading.CancellationTokenSource();
+        var token = debounceCts.Token;
+        try { await Task.Delay(200, token); }
+        catch (TaskCanceledException) { return; }
+
+        var recetas = modelo.FilasReceta
+            .Where(f => f.RecetaId > 0 && f.Cantidad > 0)
+            .Select(f => new RecetaEnProductoDto { RecetaId = f.RecetaId, Cantidad = f.Cantidad })
+            .ToList();
+        if (recetas.Count == 0) { costoPreview = null; StateHasChanged(); return; }
+
+        calculando = true; StateHasChanged();
+        var empaques = modelo.FilasEmpaque
+            .Where(f => f.InsumoId > 0 && f.Cantidad > 0)
+            .Select(f => new InsumoDirectoDto { InsumoId = f.InsumoId, Cantidad = f.Cantidad, UnidadMedida = f.UnidadMedida })
+            .ToList();
+        var res = await MenuApi.CostoPreviewAsync(recetas, empaques);
+        if (!token.IsCancellationRequested)
+        {
+            costoPreview = res.Exito ? res.Datos : null;
+            calculando = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SugerirPrecio()
+    {
+        errorSugerido = null;
+        if (margenSugerido <= 0 || margenSugerido >= 100)
+        {
+            errorSugerido = "El margen debe estar entre 1 y 99.";
+            return;
+        }
+        // Avisos de margen con confirmación: <5% insuficiente, >75% excesivo.
+        if (!margenConfirmado)
+        {
+            if (margenSugerido < 5)
+            {
+                mensajeAvisoMargen = $"El margen de {margenSugerido:0.##}% puede ser insuficiente (menor al 5%). ¿Deseas continuar con la sugerencia?";
+                mostrarAvisoMargen = true;
+                return;
+            }
+            if (margenSugerido > 75)
+            {
+                mensajeAvisoMargen = $"El margen de {margenSugerido:0.##}% implica un costo excesivo para el cliente (mayor al 75%). ¿Deseas continuar con la sugerencia?";
+                mostrarAvisoMargen = true;
+                return;
+            }
+        }
+        margenConfirmado = false;
+        sugiriendo = true;
+        var recetas = modelo.FilasReceta
+            .Where(f => f.RecetaId > 0 && f.Cantidad > 0)
+            .Select(f => new RecetaEnProductoDto { RecetaId = f.RecetaId, Cantidad = f.Cantidad })
+            .ToList();
+        if (recetas.Count == 0)
+        {
+            errorSugerido = "Agrega al menos una receta válida.";
+            sugiriendo = false;
+            return;
+        }
+        var empaques = modelo.FilasEmpaque
+            .Where(f => f.InsumoId > 0 && f.Cantidad > 0)
+            .Select(f => new InsumoDirectoDto { InsumoId = f.InsumoId, Cantidad = f.Cantidad, UnidadMedida = f.UnidadMedida })
+            .ToList();
+        var res = await MenuApi.PrecioPreviewAsync(recetas, empaques, margenSugerido);
+        sugiriendo = false;
+        if (!res.Exito) { errorSugerido = res.Mensaje; return; }
+        precioSugerido = res.Datos;
+    }
+
+    private async Task ConfirmarMargen()
+    {
+        mostrarAvisoMargen = false;
+        margenConfirmado = true;
+        await SugerirPrecio();
+    }
+
+    private void CancelarMargen()
+    {
+        mostrarAvisoMargen = false;
+        margenConfirmado = false;
+    }
+
+    private void UsarSugerido()
+    {
+        // Única vía que reescribe el precio: siempre la misma acción.
+        if (precioSugerido?.PrecioSugerido.HasValue == true)
+            modelo.PrecioVenta = decimal.Ceiling(precioSugerido.PrecioSugerido.Value / 100m) * 100;
+    }
+
+    // Margen real con la misma fórmula del inicio: (precio − costo) ÷ costo × 100.
+    private decimal? MargenRealResultante =>
+        modelo.PrecioVenta.HasValue && modelo.PrecioVenta.Value > 0
+            && costoPreview is not null && costoPreview.CostoTotal > 0
+            ? decimal.Round((modelo.PrecioVenta.Value - costoPreview.CostoTotal) / costoPreview.CostoTotal * 100m, 2)
+            : null;
+
+    private void AlInvalido() => errorForm = "Revisa los campos: hay valores no válidos.";
+
+    private async Task Guardar()
+    {
+        errorForm = errorRecetas = null;
+
+        // Validación de negocio: mínimo una receta, sin repetidas, cantidades numéricas.
+        var validas = modelo.FilasReceta.Where(f => f.RecetaId > 0).ToList();
+        if (validas.Count == 0) { errorRecetas = "El producto necesita al menos una receta."; return; }
+        if (validas.Select(f => f.RecetaId).Distinct().Count() != validas.Count)
+        {
+            errorRecetas = "Hay recetas repetidas en el producto.";
+            return;
+        }
+        foreach (var f in validas)
+        {
+            if (f.Cantidad <= 0) { errorRecetas = "La cantidad de cada receta debe ser mayor a 0."; return; }
+            if (decimal.Round(f.Cantidad, 3) != f.Cantidad) { errorRecetas = "La cantidad admite máximo 3 decimales."; return; }
+        }
+        // Precio de venta editable: validación de 6 dígitos con aviso en español.
+        if (modelo.PrecioVenta.HasValue && modelo.PrecioVenta.Value <= 0)
+        {
+            errorForm = "El precio de venta debe ser mayor a 0.";
+            return;
+        }
+        if (modelo.PrecioVenta.HasValue && modelo.PrecioVenta.Value > 999999.99m)
+        {
+            errorForm = "El precio de venta no puede exceder los 6 dígitos (máximo 999.999,99).";
+            return;
+        }
+        // Todo hacia arriba a la centena al guardar (143 → 200).
+        if (modelo.PrecioVenta.HasValue)
+            modelo.PrecioVenta = decimal.Ceiling(modelo.PrecioVenta.Value / 100m) * 100;
+        // El backend conserva sus validaciones (6 dígitos, >0).
+
+        guardando = true;
+        var recetas = validas.Select(f => new RecetaEnProductoDto { RecetaId = f.RecetaId, Cantidad = f.Cantidad }).ToList();
+
+        ApiResultado<ProductoMenuDetalleDto> res;
+        if (Editando is null)
+        {
+            res = await MenuApi.CrearAsync(new CrearProductoMenuDto
+            {
+                Nombre = modelo.Nombre.Trim(),
+                PrecioVenta = modelo.PrecioVenta,
+                Activo = modelo.Activo,
+                Recetas = recetas
+            });
+        }
+        else
+        {
+            // PUT estandarizado: reemplazo total.
+            res = await MenuApi.ActualizarPutAsync(Editando.Id, new ActualizarProductoMenuDto
+            {
+                Nombre = modelo.Nombre.Trim(),
+                PrecioVenta = modelo.PrecioVenta,
+                Activo = modelo.Activo,
+                Recetas = recetas
+            });
+        }
+        guardando = false;
+
+        if (!res.Exito) { errorForm = res.Mensaje; return; }
+        await OnGuardado.InvokeAsync(Editando is null ? "Producto creado correctamente." : "Producto actualizado correctamente.");
+    }
+}
