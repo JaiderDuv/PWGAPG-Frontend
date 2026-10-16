@@ -1,0 +1,112 @@
+@page "/menu/{Id:int}"
+@attribute [Authorize]
+@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Services
+@inject MenuApiService Api
+@inject NavigationManager Navigation
+
+<div class="rc-page container py-4">
+    <button class="btn btn-sm btn-outline-secondary mb-3" @onclick='() => Navigation.NavigateTo("menu")'>← Volver al menú</button>
+
+    @if (cargando)
+    {
+        <p class="text-muted">Cargando...</p>
+    }
+    else if (error is not null)
+    {
+        <div class="alert alert-danger">@error</div>
+    }
+    else if (producto is not null)
+    {
+        <div class="rc-header">
+            <div>
+                <h2 class="rc-title">@producto.Nombre</h2>
+                <p class="rc-subtitle">
+                    @(producto.Activo ? "Vigente en el menú" : "Inactivo: no hace parte del menú vigente")
+                    · @producto.NumRecetas receta(s)
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <span class="btn @(producto.Activo ? "btn-outline-success" : "btn-outline-secondary") disabled" aria-disabled="true">
+                    @(producto.Activo ? "Activo" : "Inactivo")
+                </span>
+            </div>
+        </div>
+
+        <div class="rc-card mt-3 @(producto.Activo ? "" : "cs-inactivo")">
+            <div class="rc-card-body">
+                <div class="cs-grid">
+                    <div><small>Precio venta</small><strong>@(producto.PrecioVenta.HasValue ? Formato.Moneda(producto.PrecioVenta.Value) : "—")</strong></div>
+                    <div><small>Costo recetas</small><strong>@Formato.Moneda(producto.CostoRecetas)</strong></div>
+                    <div><small>Costo total</small><strong>@Formato.Moneda(producto.CostoTotal)</strong></div>
+                    <div><small>Margen real</small><strong>@(producto.MargenReal.HasValue ? producto.MargenReal.Value.ToString("0.##") + " %" : "—")</strong></div>
+                </div>
+
+                <h6 class="rc-section-title mt-3">Recetas que lo componen</h6>
+                <div class="table-responsive">
+                    <table class="table rc-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Receta</th>
+                                <th class="text-end">Cantidad</th>
+                                <th class="text-end">Costo unidad</th>
+                                <th class="text-end">Costo aportado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in producto.Recetas)
+                            {
+                                <tr>
+                                    <td>@r.Nombre</td>
+                                    <td class="text-end">@r.Cantidad.ToString("0.###")</td>
+                                    <td class="text-end">@Formato.Moneda(r.CostoUnitario)</td>
+                                    <td class="text-end">@Formato.Moneda(r.CostoAportado)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (producto.InsumosDirectos.Any())
+                {
+                    <h6 class="rc-section-title mt-3">Empaques directos</h6>
+                    <ul class="rc-ingredients">
+                        @foreach (var i in producto.InsumosDirectos)
+                        {
+                            <li><span>@i.Nombre (@i.Cantidad.ToString("0.###") @i.UnidadReceta)</span><span>@Formato.Moneda(i.CostoAportado)</span></li>
+                        }
+                    </ul>
+                }
+
+                @if (producto.Advertencias.Any())
+                {
+                    <div class="mt-2">
+                        @foreach (var a in producto.Advertencias)
+                        {
+                            <div class="alert alert-warning py-1">@a</div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private ProductoMenuDetalleDto? producto;
+    private bool cargando = true;
+    private string? error;
+
+    protected override async Task OnParametersSetAsync() => await Cargar();
+
+    private async Task Cargar()
+    {
+        cargando = true; error = null;
+        var res = await Api.ObtenerAsync(Id);
+        cargando = false;
+        if (!res.Exito) { error = res.Mensaje; producto = null; return; }
+        producto = res.Datos;
+    }
+}

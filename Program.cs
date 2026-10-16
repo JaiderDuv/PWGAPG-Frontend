@@ -16,6 +16,7 @@ builder.Services.AddScoped<PerfilService>();
 builder.Services.AddScoped<InsumoService>();
 builder.Services.AddScoped<RecetaApiService>();
 builder.Services.AddScoped<CosteoApiService>();
+builder.Services.AddScoped<MenuApiService>();
 builder.Services.AddTransient<BearerAuthorizationHandler>();
 builder.Services.AddHttpClient("Api", c => c.BaseAddress = new Uri(apiUrl))
     .AddHttpMessageHandler<BearerAuthorizationHandler>();

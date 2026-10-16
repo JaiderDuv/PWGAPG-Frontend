@@ -1,0 +1,185 @@
+@page "/menu"
+@attribute [Authorize]
+@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Services
+@using PWGAPG_Frontend.Components
+@inject MenuApiService Api
+@inject NavigationManager Navigation
+
+<style>
+    .menu-tabla th, .menu-tabla td { padding: 0.85rem 1.25rem; vertical-align: middle; }
+    .menu-tabla td:last-child { white-space: nowrap; }
+</style>
+
+<div class="rc-page container py-4">
+    <div class="rc-header">
+        <div>
+            <h2 class="rc-title">Menú</h2>
+            <p class="rc-subtitle">Tus productos: recetas con su cantidad, costo, precio y margen.</p>
+        </div>
+        @if (!mostrarForm)
+        {
+            <button class="btn btn-primary" @onclick="Nuevo">+ Nuevo producto</button>
+        }
+    </div>
+
+    @if (mensajeOk is not null) { <div class="alert alert-success">@mensajeOk</div> }
+    @if (error is not null) { <div class="alert alert-danger">@error</div> }
+
+    @if (mostrarForm)
+    {
+        <ProductoMenuForm @key="formKey" Editando="editando"
+                          OnGuardado="AlGuardar" OnCancelar="CerrarForm" />
+    }
+    else
+    {
+        <div class="rc-toolbar">
+            <input class="form-control" placeholder="Buscar producto por nombre..." maxlength="75"
+                   @bind="busqueda" @bind:event="oninput" @onkeyup="BuscarConEnter" />
+            <button class="btn btn-outline-secondary" @onclick="Cargar">Buscar</button>
+            <label class="insumos-check">
+                <input type="checkbox" @bind="incluirInactivos" @bind:after="Cargar" />
+                Incluir inactivos
+            </label>
+            @if (productos is not null) { <span class="rc-count">@productos.Count producto(s)</span> }
+        </div>
+
+        @if (productos is null)
+        {
+            <p class="text-muted">Cargando...</p>
+        }
+        else if (productos.Count == 0)
+        {
+            <div class="rc-empty">
+                <p>Aún no tienes productos. Crea el primero con “Nuevo producto”.</p>
+            </div>
+        }
+        else
+        {
+            <div class="rc-card">
+                <div class="table-responsive">
+                    <table class="table cs-table menu-tabla align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th class="text-end">Precio venta</th>
+                                <th class="text-end">Costo</th>
+                                <th class="text-end">Margen real</th>
+                                <th>Estado</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in productos)
+                            {
+                                <tr class="@(p.Activo ? "" : "cs-inactivo")">
+                                    <td>
+                                        <strong>@p.Nombre</strong>
+                                        <br /><small class="text-muted">@p.NumRecetas receta(s)</small>
+                                    </td>
+                                    <td class="text-end">@(p.PrecioVenta.HasValue ? Formato.Moneda(p.PrecioVenta.Value) : "—")</td>
+                                    <td class="text-end">@Formato.Moneda(p.CostoTotal)</td>
+                                    <td class="text-end">@(p.MargenReal.HasValue ? p.MargenReal.Value.ToString("0.##") + " %" : "—")</td>
+                                    <td>
+                                        <button class="btn btn-sm @(p.Activo ? "btn-outline-success" : "btn-outline-secondary")"
+                                                @onclick="() => CambiarEstado(p)" title="Clic para activar/desactivar">
+                                            @(p.Activo ? "Activo" : "Inactivo")
+                                        </button>
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => VerDetalle(p.Id)">Detalle</button>
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => Editar(p)">Editar</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => PedirEliminar(p)">Eliminar</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<ConfirmDialog Visible="mostrarConfirm"
+               Mensaje="@($"¿Eliminar el producto '{aEliminar?.Nombre}' para siempre? Esta acción no se puede deshacer.")"
+               OnConfirmar="ConfirmarEliminar"
+               OnCancelar="CancelarEliminar" />
+
+@code {
+    private List<ProductoMenuDto>? productos;
+    private ProductoMenuDetalleDto? editando, aEliminar;
+    private bool mostrarForm, mostrarConfirm, incluirInactivos = true;
+    private string? busqueda, error, mensajeOk;
+    private Guid formKey = Guid.NewGuid();
+
+    protected override async Task OnInitializedAsync() => await Cargar();
+
+    private async Task Cargar()
+    {
+        var res = await Api.ListarAsync(busqueda, incluirInactivos);
+        if (res.Exito) { productos = res.Datos; error = null; }
+        else { productos = new(); error = res.Mensaje; }
+    }
+
+    private async Task BuscarConEnter(KeyboardEventArgs e) { if (e.Key == "Enter") await Cargar(); }
+
+    private void Nuevo() { editando = null; AbrirForm(); }
+
+    private async Task Editar(ProductoMenuDto p)
+    {
+        var res = await Api.ObtenerAsync(p.Id);
+        if (!res.Exito) { error = res.Mensaje; return; }
+        editando = res.Datos;
+        AbrirForm();
+    }
+
+    private void AbrirForm()
+    {
+        mensajeOk = error = null;
+        formKey = Guid.NewGuid();
+        mostrarForm = true;
+    }
+
+    private void CerrarForm() => mostrarForm = false;
+
+    private async Task AlGuardar(string? aviso)
+    {
+        mostrarForm = false;
+        mensajeOk = aviso ?? "Producto guardado correctamente.";
+        await Cargar();
+    }
+
+    private void VerDetalle(int id) => Navigation.NavigateTo($"menu/{id}");
+
+    private async Task CambiarEstado(ProductoMenuDto p)
+    {
+        // PATCH con un solo campo: no se pierden los demás datos.
+        var res = await Api.ActualizarPatchAsync(p.Id, new PatchProductoMenuDto { Activo = !p.Activo });
+        if (!res.Exito) { error = res.Mensaje; return; }
+        mensajeOk = null; error = null;
+        await Cargar();
+    }
+
+    private void PedirEliminar(ProductoMenuDto p)
+    {
+        // Se elimina con el mismo DTO de detalle para confirmar el nombre.
+        aEliminar = new ProductoMenuDetalleDto
+        {
+            Id = p.Id, Nombre = p.Nombre, PrecioVenta = p.PrecioVenta,
+            CostoTotal = p.CostoTotal, Activo = p.Activo
+        };
+        mostrarConfirm = true;
+    }
+    private void CancelarEliminar() { mostrarConfirm = false; aEliminar = null; }
+
+    private async Task ConfirmarEliminar()
+    {
+        mostrarConfirm = false;
+        var res = await Api.EliminarAsync(aEliminar!.Id);
+        if (res.Exito) { mensajeOk = "Producto eliminado correctamente."; error = null; }
+        else { error = res.Mensaje; mensajeOk = null; }
+        aEliminar = null;
+        await Cargar();
+    }
+}

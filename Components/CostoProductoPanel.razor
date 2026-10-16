@@ -1,0 +1,138 @@
+@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Services
+@inject MenuApiService Api
+
+@if (cargando && costo is null)
+{
+    <p class="text-muted mb-0">Calculando costo del producto...</p>
+}
+else if (error is not null)
+{
+    <div class="alert alert-danger mb-0">@error</div>
+}
+else if (costo is not null)
+{
+    @if (costo.SinCostosFijos)
+    {
+        <div class="alert alert-warning">
+            <strong>No hay costos fijos configurados.</strong>
+            El costo puede estar subestimado. <a href="costos-fijos">Configurar costos fijos</a>
+        </div>
+    }
+
+    @foreach (var a in costo.Advertencias.Where(a => !a.StartsWith("No hay costos fijos")))
+    {
+        <div class="alert alert-warning py-1">@a</div>
+    }
+
+    <div class="cs-grid">
+        <div><small>Costo recetas</small><strong>@Formato.Moneda(costo.CostoRecetas)</strong></div>
+        <div><small>Empaques directos</small><strong>@Formato.Moneda(costo.CostoInsumosDirectos)</strong></div>
+        <div><small>Costo total</small><strong>@Formato.Moneda(costo.CostoTotal)</strong></div>
+        <div>
+            <small>Margen real</small>
+            <strong>@(costo.MargenReal.HasValue ? costo.MargenReal.Value.ToString("0.##") + " %" : "—")</strong>
+        </div>
+    </div>
+
+    <details class="mt-2">
+        <summary>Ver composición (@costo.Recetas.Count receta(s))</summary>
+        <ul class="rc-ingredients">
+            @foreach (var r in costo.Recetas)
+            {
+                <li>
+                    <span>@r.Nombre × @r.Cantidad.ToString("0.###")</span>
+                    <span>@Formato.Moneda(r.CostoAportado)</span>
+                </li>
+            }
+        </ul>
+    </details>
+
+    <div class="row g-2 mt-2">
+        <div class="col-md-4">
+            <label class="rc-label">Margen %</label>
+            <input type="number" class="form-control" min="1" max="99" step="0.5" @bind="margen" />
+        </div>
+        <div class="col-md-8 d-flex align-items-end">
+            <button class="btn btn-sm btn-outline-secondary" @onclick="Sugerir" disabled="@sugiriendo">
+                @(sugiriendo ? "Sugiriendo..." : "Sugerir precio")
+            </button>
+        </div>
+    </div>
+    @if (sugerido is not null)
+    {
+        <div class="cs-preview mt-2">
+            Precio sugerido: <strong>@(sugerido.PrecioSugerido.HasValue ? Formato.Moneda(sugerido.PrecioSugerido.Value) : "—")</strong>
+            <span class="text-muted">(costo @Formato.Moneda(sugerido.CostoTotal), margen @sugerido.MargenDeseado%)</span>
+        </div>
+    }
+    @if (errorSugerido is not null) { <div class="rc-error mt-1">@errorSugerido</div> }
+}
+
+<ConfirmDialog Visible="mostrarAvisoMargen"
+               Mensaje="@mensajeAvisoMargen"
+               OnConfirmar="ConfirmarMargen"
+               OnCancelar="CancelarMargen" />
+
+@code {
+    [Parameter] public int ProductoId { get; set; }
+
+    private CostoProductoDto? costo;
+    private PrecioSugeridoProductoDto? sugerido;
+    private bool cargando = true, sugiriendo;
+    private string? error, errorSugerido;
+    private decimal margen = 30;
+    private bool mostrarAvisoMargen, margenConfirmado;
+    private string mensajeAvisoMargen = "";
+
+    protected override async Task OnParametersSetAsync() => await Cargar();
+
+    private async Task Cargar()
+    {
+        cargando = true; error = null;
+        var res = await Api.ObtenerCostoAsync(ProductoId);
+        cargando = false;
+        if (!res.Exito) { error = res.Mensaje; costo = null; return; }
+        costo = res.Datos;
+    }
+
+    private async Task Sugerir()
+    {
+        errorSugerido = null;
+        if (margen <= 0 || margen >= 100) { errorSugerido = "El margen debe estar entre 1 y 99."; return; }
+        if (!margenConfirmado)
+        {
+            if (margen < 5)
+            {
+                mensajeAvisoMargen = $"El margen de {margen:0.##}% puede ser insuficiente (menor al 5%). ¿Deseas continuar con la sugerencia?";
+                mostrarAvisoMargen = true;
+                return;
+            }
+            if (margen > 75)
+            {
+                mensajeAvisoMargen = $"El margen de {margen:0.##}% implica un costo excesivo para el cliente (mayor al 75%). ¿Deseas continuar con la sugerencia?";
+                mostrarAvisoMargen = true;
+                return;
+            }
+        }
+        margenConfirmado = false;
+        sugiriendo = true;
+        var res = await Api.PrecioSugeridoAsync(ProductoId, margen);
+        sugiriendo = false;
+        if (!res.Exito) { errorSugerido = res.Mensaje; return; }
+        sugerido = res.Datos;
+    }
+
+    private async Task ConfirmarMargen()
+    {
+        mostrarAvisoMargen = false;
+        margenConfirmado = true;
+        await Sugerir();
+    }
+
+    private void CancelarMargen()
+    {
+        mostrarAvisoMargen = false;
+        margenConfirmado = false;
+    }
+}
