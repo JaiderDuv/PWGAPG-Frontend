@@ -1013,3 +1013,199 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
         opacity: 1;
         visibility: visible;
     }
+
+.pm-fila {
+    cursor: pointer;
+}
+
+.pm-fila-riesgo {
+    background-color: #fff3f2;
+}
+
+.pm-fila-sin-datos {
+    opacity: 0.75;
+}
+
+.pm-texto-riesgo {
+    color: #b42318;
+}
+
+.pm-alerta {
+    font-size: 1rem;
+}
+
+.pm-badge-sin-datos {
+    display: inline-block;
+    font-size: 0.78rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.pm-toolbar {
+    flex-wrap: wrap;
+    row-gap: 8px;
+}
+
+.pm-input-busqueda {
+    flex: 1 1 200px;
+    min-width: 160px;
+}
+
+.pm-input-numero {
+    width: 110px;
+    flex: 0 0 auto;
+}
+
+.pm-input-margen {
+    width: 90px;
+    flex: 0 0 auto;
+}
+
+.pm-input-umbral {
+    max-width: 110px;
+}
+
+/* Ícono de ayuda con tooltip al pasar el mouse */
+.pm-ayuda-icono {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    color: #495057;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: help;
+}
+
+.pm-ayuda-tooltip {
+    display: none;
+    position: absolute;
+    top: 24px;
+    left: 0;
+    z-index: 20;
+    width: 280px;
+    background-color: #212529;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 400;
+    line-height: 1.4;
+    padding: 10px 12px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.pm-ayuda-icono:hover .pm-ayuda-tooltip,
+.pm-ayuda-icono:focus .pm-ayuda-tooltip {
+    display: block;
+}
+
+/* Nota de campos obligatorios, mismo tono que otras páginas */
+.pm-nota-obligatorio {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 10px;
+}
+
+/* Filtros con etiqueta visible, compactos en una fila */
+.pm-filtro-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pm-filtro-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.pm-filtro-busqueda {
+    flex: 1 1 180px;
+    min-width: 150px;
+}
+
+.pm-filtro-orden {
+    min-width: 130px;
+}
+
+.pm-filtro-acciones {
+    justify-content: flex-end;
+}
+
+/* Modal de edición de margen */
+.pm-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+}
+
+.pm-modal-box {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    padding: 24px;
+    width: 420px;
+    max-width: 92vw;
+}
+
+.pm-modal-datos {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+    .pm-modal-datos > div {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+.pm-modal-sugerido {
+    font-size: 0.9rem;
+}
+
+.cs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin-top: 8px;
+}
+
+    .cs-grid > div {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .cs-grid small {
+        color: #6c757d;
+        font-size: 0.78rem;
+    }
+
+    .cs-grid strong {
+        font-size: 1.05rem;
+    }
+
+.pm-aviso-suave {
+    background-color: #fff4e5;
+    color: #92400e;
+    border-radius: 12px;
+    padding: 10px 16px;
+    text-align: center;
+    font-size: 0.85rem;
+    margin-top: 8px;
+    max-width: 420px;
+}
