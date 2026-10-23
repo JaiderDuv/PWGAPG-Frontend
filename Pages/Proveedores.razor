@@ -5,6 +5,8 @@
 @using System.Net.Http.Json
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@using System.Globalization
+@using System.Text
 
 <div class="inventario-container">
     <div class="inventario-header">
@@ -117,9 +119,25 @@
 
                 <div class="form-group-sm">
                     <label class="auth-label">Nombre *</label>
-                    <InputText @bind-Value="formulario.Nombre" class="form-control" />
+                    <input type="text"
+                           class="form-control"
+                           value="@formulario.Nombre"
+                           @oninput="AlEscribirNombre" />
                     <ValidationMessage For="@(() => formulario.Nombre)"
                                        class="text-danger msg-error" />
+
+                    @if (sugerenciasNombre.Any())
+                    {
+                        <div class="sugerencias-proveedor">
+                            <span class="sugerencias-proveedor-titulo">
+                                Proveedores similares que ya tienes:
+                            </span>
+                            @foreach (var s in sugerenciasNombre)
+                            {
+                                <div class="sugerencias-proveedor-item">@s.Nombre</div>
+                            }
+                        </div>
+                    }
                 </div>
 
                 <div class="form-group-sm">
@@ -219,28 +237,62 @@
     private EditContext? editContext;
 
     private string _textoBusqueda = string.Empty;
+    private static string SoloDigitos(string? texto) =>
+    new string((texto ?? string.Empty).Where(char.IsDigit).ToArray());
     private string textoBusqueda
     {
         get => _textoBusqueda;
         set { _textoBusqueda = value; pagina = 1; }
     }
+    private static string Normalizar(string? texto)
+    {
+        if (string.IsNullOrWhiteSpace(texto)) return string.Empty;
+
+        var formaD = texto.Trim().Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder();
+
+        foreach (var c in formaD)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                sb.Append(c);
+        }
+
+        return sb.ToString().Normalize(NormalizationForm.FormC).ToLowerInvariant();
+    }
     private string orden = "asc";
+
+    private List<ProveedorDTO> sugerenciasNombre
+    {
+        get
+        {
+            var termino = Normalizar(formulario.Nombre);
+            if (termino.Length == 0) return new();
+
+            return proveedores
+                .Where(p => p.Id != proveedorEditando?.Id &&
+                            Normalizar(p.Nombre).Contains(termino))
+                .OrderBy(p => p.Nombre)
+                .Take(5)
+                .ToList();
+        }
+    }
 
     private List<ProveedorDTO> ProveedoresBaseFiltrados
     {
         get
         {
-            var lista = string.IsNullOrWhiteSpace(textoBusqueda)
-                ? proveedores
-                : proveedores.Where(p =>
-                    p.Nombre.Contains(textoBusqueda, StringComparison.OrdinalIgnoreCase) ||
-                    (p.Telefono?.Contains(textoBusqueda, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (p.Correo?.Contains(textoBusqueda, StringComparison.OrdinalIgnoreCase) ?? false))
-                  .ToList();
+            var termino = Normalizar(textoBusqueda);
+            var terminoDigitos = SoloDigitos(textoBusqueda);
+
+            var filtrados = proveedores.Where(p =>
+                string.IsNullOrWhiteSpace(termino) ||
+                Normalizar(p.Nombre).Contains(termino) ||
+                Normalizar(p.Correo).Contains(termino) ||
+                (terminoDigitos.Length > 0 && SoloDigitos(p.Telefono).Contains(terminoDigitos))).ToList();
 
             return orden == "desc"
-                ? lista.OrderByDescending(p => p.Nombre).ToList()
-                : lista.OrderBy(p => p.Nombre).ToList();
+                ? filtrados.OrderByDescending(p => p.Nombre).ToList()
+                : filtrados.OrderBy(p => p.Nombre).ToList();
         }
     }
 
@@ -252,18 +304,15 @@
 
     private void CambiarPagina(int nuevaPagina) => pagina = nuevaPagina;
 
-    // ── Modal nuevo/editar ──────────────────────────────────────────────────
     private bool mostrarModal = false;
     private ProveedorFormDTO formulario = new();
     private ProveedorDTO? proveedorEditando;
     private string? mensajeErrorModal;
 
-    // ── Eliminar simple (sin insumos) ───────────────────────────────────────
     private bool mostrarConfirmSimple = false;
     private string mensajeConfirmSimple = string.Empty;
     private ProveedorDTO? proveedorAEliminar;
 
-    // ── Eliminar con insumos ────────────────────────────────────────────────
     private bool mostrarConfirmConInsumos = false;
     private ChequeoEliminarProveedorDTO? chequeoActual;
     private string? mensajeErrorEliminar;
@@ -346,6 +395,12 @@
         {
             mensajeErrorModal = "No se pudo conectar con el servidor.";
         }
+    }
+
+    private void AlEscribirNombre(ChangeEventArgs e)
+    {
+        formulario.Nombre = e.Value?.ToString() ?? string.Empty;
+        editContext?.NotifyFieldChanged(editContext.Field(nameof(formulario.Nombre)));
     }
 
     // ── Flujo de eliminación ────────────────────────────────────────────────

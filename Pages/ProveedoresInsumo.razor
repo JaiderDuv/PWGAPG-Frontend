@@ -4,6 +4,8 @@
 @using PWGAPG_Frontend.Components
 @using System.Net.Http.Json
 @using System.ComponentModel.DataAnnotations
+@using System.Globalization
+@using System.Text
 @inject HttpClient Http
 @inject NavigationManager Navigation
 
@@ -263,16 +265,33 @@
                 {
                     <div class="form-group-sm">
                         <label class="auth-label">Proveedor *</label>
-                        <select class="form-select" @bind="proveedorExistenteId">
-                            <option value="">-- Seleccione --</option>
-                            @foreach (var d in disponibles)
+                        <div class="proveedor-drop-wrap">
+                            <input type="text" class="form-control"
+                                   placeholder="Escribe para buscar..."
+                                   value="@textoProveedor"
+                                   @oninput="AlEscribirProveedor"
+                                   @onfocus="() => mostrarLista = true" />
+
+                            @if (mostrarLista && coincidenciasExistentes.Any())
                             {
-                                <option value="@d.Id">@d.Nombre</option>
+                                <div class="proveedor-drop-lista">
+                                    @foreach (var d in coincidenciasExistentes)
+                                    {
+                                        <button type="button" class="proveedor-drop-item"
+                                                @onclick="() => SeleccionarProveedor(d)">
+                                            @d.Nombre
+                                        </button>
+                                    }
+                                </div>
                             }
-                        </select>
+                            else if (mostrarLista && textoProveedor.Length > 0)
+                            {
+                                <small class="text-muted">No hay proveedores que coincidan.</small>
+                            }
+                        </div>
                         @if (mostrarErrorSeleccion)
                         {
-                            <span class="text-danger msg-error">Seleccione un proveedor.</span>
+                            <span class="text-danger msg-error">Seleccione un proveedor de la lista.</span>
                         }
                     </div>
                 }
@@ -286,6 +305,19 @@
                         @if (erroresAgregar.TryGetValue("Nombre", out var eNomA))
                         {
                             <div class="text-danger msg-error">@eNomA</div>
+                        }
+
+                        @if (sugerenciasNombre.Any())
+                        {
+                            <div class="sugerencias-proveedor">
+                                <span class="sugerencias-proveedor-titulo">
+                                    Proveedores similares que ya tienes:
+                                </span>
+                                @foreach (var s in sugerenciasNombre)
+                                {
+                                    <div class="sugerencias-proveedor-item">@s.Nombre</div>
+                                }
+                            </div>
                         }
                     </div>
                     <div class="form-group-sm">
@@ -397,12 +429,15 @@
 
     private List<InsumoProveedorDTO> proveedoresAsociados = new();
     private List<ProveedorDTO> disponibles = new();
+    private List<ProveedorDTO> todosLosProveedores = new();
     private string nombreInsumo = string.Empty;
     private string unidadInsumo = string.Empty;
 
     private bool mostrarModalAgregar = false;
     private string modoProveedor = "nuevo";
     private int? proveedorExistenteId;
+    private string textoProveedor = string.Empty;
+    private bool mostrarLista = false;
     private ProveedorNuevoDTO formularioAgregar = new();
     private bool mostrarErrorSeleccion;
 
@@ -449,6 +484,12 @@
             var respDisponibles = await Http.GetAsync($"api/insumos/{InsumoId}/proveedores-disponibles");
             if (respDisponibles.IsSuccessStatusCode)
                 disponibles = await respDisponibles.Content
+                    .ReadFromJsonAsync<List<ProveedorDTO>>() ?? new();
+
+            // Todos los proveedores del negocio (para las sugerencias al crear uno nuevo)
+            var respTodos = await Http.GetAsync("api/negocios/mio/proveedores");
+            if (respTodos.IsSuccessStatusCode)
+                todosLosProveedores = await respTodos.Content
                     .ReadFromJsonAsync<List<ProveedorDTO>>() ?? new();
         }
         catch
@@ -587,6 +628,8 @@
         };
         erroresAgregar.Clear();
         proveedorExistenteId = null;
+        textoProveedor = string.Empty;
+        mostrarLista = false;
         mostrarErrorSeleccion = false;
         mensajeErrorModal = null;
         mensajeError = null;
@@ -600,6 +643,9 @@
         modoProveedor = modo;
         mostrarErrorSeleccion = false;
         mensajeErrorModal = null;
+        textoProveedor = string.Empty;
+        mostrarLista = false;
+        proveedorExistenteId = null;
         formularioAgregar.Nombre = modo == "existente" ? "placeholder" : string.Empty;
         formularioAgregar.Telefono = null;
         formularioAgregar.Correo = null;
@@ -608,6 +654,54 @@
         erroresAgregar.Remove("Nombre");
         erroresAgregar.Remove("Telefono");
         erroresAgregar.Remove("Correo");
+    }
+
+    // ───────── Modo "Elegir existente": buscador con lista ─────────
+
+    private List<ProveedorDTO> coincidenciasExistentes
+    {
+        get
+        {
+            var termino = Normalizar(textoProveedor);
+            return disponibles
+                .Where(p => termino.Length == 0 || Normalizar(p.Nombre).Contains(termino))
+                .OrderBy(p => p.Nombre)
+                .Take(8)
+                .ToList();
+        }
+    }
+
+    private void AlEscribirProveedor(ChangeEventArgs e)
+    {
+        textoProveedor = e.Value?.ToString() ?? string.Empty;
+        proveedorExistenteId = null;      // si edita el texto, debe volver a elegir
+        mostrarErrorSeleccion = false;
+        mostrarLista = true;
+    }
+
+    private void SeleccionarProveedor(ProveedorDTO p)
+    {
+        proveedorExistenteId = p.Id;
+        textoProveedor = p.Nombre;
+        mostrarLista = false;
+        mostrarErrorSeleccion = false;
+    }
+
+    // ───────── Modo "Crear nuevo": sugerencias de similares ─────────
+
+    private List<ProveedorDTO> sugerenciasNombre
+    {
+        get
+        {
+            var termino = Normalizar(formularioAgregar.Nombre);
+            if (termino.Length == 0) return new();
+
+            return todosLosProveedores
+                .Where(p => Normalizar(p.Nombre).Contains(termino))
+                .OrderBy(p => p.Nombre)
+                .Take(5)
+                .ToList();
+        }
     }
 
     private async Task AgregarProveedor()
@@ -1029,6 +1123,23 @@
 
     private static bool EsUnidadPequena(string? u) =>
         u != null && (u == "unidad" || u == "taza");
+
+    // Quita tildes y pasa a minúsculas para comparar textos sin importar acentos ni mayúsculas.
+    private static string Normalizar(string? texto)
+    {
+        if (string.IsNullOrWhiteSpace(texto)) return string.Empty;
+
+        var formaD = texto.Trim().Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder();
+
+        foreach (var c in formaD)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                sb.Append(c);
+        }
+
+        return sb.ToString().Normalize(NormalizationForm.FormC).ToLowerInvariant();
+    }
 
     private async Task<string> ExtraerMensajeError(HttpResponseMessage resp)
     {
