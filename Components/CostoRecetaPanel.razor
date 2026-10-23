@@ -15,14 +15,22 @@ else
     }
     @if (costo is not null)
     {
-    @* Aviso: sin costos fijos configurados *@
+    @* Aviso: el cálculo actual no incluye costos fijos *@
     @if (costo.SinCostosFijos)
     {
         <div class="cs-aviso cs-aviso-warn">
             <div>
-                <strong>No hay costos fijos configurados.</strong>
-                El costo fijo prorrateado es $ 0, por lo que el costo completo puede estar subestimado.
-                <a href="costos-fijos">Configurar costos fijos</a>
+                @if (costo.HayCostosFijosConfigurados)
+                {
+                    <strong>Este cálculo no incluye costos fijos.</strong>
+                    <text>No marcaste ninguno; el costo fijo prorrateado es $ 0. Puedes seleccionarlos abajo.</text>
+                }
+                else
+                {
+                    <strong>No hay costos fijos configurados.</strong>
+                    <text>El costo fijo prorrateado es $ 0, por lo que el costo completo puede estar subestimado.</text>
+                    <a href="costos-fijos">Configurar costos fijos</a>
+                }
             </div>
         </div>
     }

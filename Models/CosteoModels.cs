@@ -26,6 +26,7 @@ public class CostoRecetaDto
     public decimal CostoTotal { get; set; }
     public decimal CostoPorPorcion { get; set; }
     public bool SinCostosFijos { get; set; }
+    public bool HayCostosFijosConfigurados { get; set; }
     public List<string> Advertencias { get; set; } = new();
     public List<LineaCostoDto> Lineas { get; set; } = new();
 }
@@ -43,6 +44,7 @@ public class EscaladoRecetaDto
     public decimal CostoTotal { get; set; }
     public decimal CostoPorPorcion { get; set; }
     public bool SinCostosFijos { get; set; }
+    public bool HayCostosFijosConfigurados { get; set; }
     public List<string> Advertencias { get; set; } = new();
     public List<LineaCostoDto> Lineas { get; set; } = new();
 }

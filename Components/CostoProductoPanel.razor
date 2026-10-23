@@ -15,9 +15,19 @@ else if (costo is not null)
     @if (costo.SinCostosFijos)
     {
         <div class="alert alert-info">
-            <strong>No hay costos fijos configurados.</strong>
-            El precio sugerido usa el costo directo; configura los fijos para calcular el costo completo
-            y el punto de equilibrio. <a href="costos-fijos">Configurar costos fijos</a>
+            @if (costo.HayCostosFijosConfigurados)
+            {
+                <strong>Este cálculo no incluye costos fijos.</strong>
+                <text>El costo fijo prorrateado es $ 0.</text>
+            }
+            else
+            {
+                <strong>No hay costos fijos configurados.</strong>
+                <text>
+                    El precio sugerido usa el costo directo; configura los fijos para calcular el costo completo
+                    y el punto de equilibrio. <a href="costos-fijos">Configurar costos fijos</a>
+                </text>
+            }
         </div>
     }
 

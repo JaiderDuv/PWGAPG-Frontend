@@ -94,9 +94,9 @@
                         <label class="rc-label">
                             Valor divisor *
                             <span class="campo-ayuda" tabindex="0"
-                                  data-tip="Total de unidades al mes según el criterio elegido. Cuota por preparación = monto mensual ÷ divisor. Ej.: si produces 1.000 preparaciones, escribe 1.000. Con 1, todo el costo se carga a una sola preparación.">?</span>
+                                  data-tip="Total de unidades al mes según el criterio elegido. Cuota por preparación = monto mensual ÷ divisor. Ej.: si produces 1.000 preparaciones, escribe 1.000. El mínimo es 1; con 1, todo el costo se carga a una sola preparación.">?</span>
                         </label>
-                        <InputNumber class="form-control" @bind-Value="modelo.ValorDivisor" min="0.01" step="0.01" />
+                        <InputNumber class="form-control" @bind-Value="modelo.ValorDivisor" min="1" step="1" />
                         <ValidationMessage For="() => modelo.ValorDivisor" class="rc-error" />
                         <small class="text-muted">Cantidad total al mes (ej. 500). Cada unidad es una preparación completa de receta.</small>
                     </div>
@@ -126,12 +126,13 @@
                     </div>
                 }
 
-                @if (modelo.ValorDivisor == 1)
+                @if (modelo.ValorDivisor is { } divisorBajo && divisorBajo < 10)
                 {
                     <div class="cs-aviso cs-aviso-warn mt-2">
                         <div>
-                            <strong>Revisa el divisor:</strong> con 1, todo el monto mensual se asigna a una sola preparación.
-                            Si produces más preparaciones al mes, escribe ese total para repartir el costo.
+                            <strong>Revisa el divisor:</strong> con menos de 10 preparaciones al mes, la cuota
+                            prorrateada puede quedar muy alta. Verifica que el total corresponda a tu producción real.
+                            Con 1, todo el monto mensual se asigna a una sola preparación.
                         </div>
                     </div>
                 }
@@ -183,12 +184,12 @@
                             <td><span class="badge rounded-pill text-bg-light">@Categoria(c)</span></td>
                             <td class="text-end">@Formato.Moneda(c.MontoMensual)</td>
                             <td>@Etiqueta(c.UnidadProrrateo)</td>
-                            <td class="text-end" title="@(c.ValorDivisor <= 1 ? "Con divisor 1, todo el monto se asigna a una sola preparación. Si produces más al mes, edita el costo y escribe el total." : null)">
+                            <td class="text-end" title="@(c.ValorDivisor < 10 ? "Con menos de 10 preparaciones al mes, la cuota prorrateada puede quedar muy alta. Verifica que el divisor corresponda a tu producción real." : null)">
                                 @c.ValorDivisor.ToString("0.##")
-                                @if (c.ValorDivisor <= 1)
+                                @if (c.ValorDivisor < 10)
                                 {
                                     <span class="campo-ayuda" tabindex="0"
-                                          data-tip="Con divisor 1, todo el monto se asigna a una sola preparación. Si produces más al mes, edita el costo y escribe el total.">?</span>
+                                          data-tip="Con menos de 10 preparaciones al mes, la cuota prorrateada puede quedar muy alta. Verifica que el divisor corresponda a tu producción real.">?</span>
                                 }
                             </td>
                             <td class="text-end">@Formato.Moneda(Aporte(c))</td>
@@ -515,7 +516,7 @@
         public string UnidadProrrateo { get; set; } = "unidades_producidas";
 
         [Required(ErrorMessage = "El valor divisor es obligatorio.")]
-        [Range(0.01, 1000000, ErrorMessage = "El valor divisor debe estar entre 0,01 y 1.000.000.")]
+        [Range(1, 1000000, ErrorMessage = "El valor divisor debe estar entre 1 y 1.000.000.")]
         public decimal? ValorDivisor { get; set; }
 
         public bool Activo { get; set; } = true;

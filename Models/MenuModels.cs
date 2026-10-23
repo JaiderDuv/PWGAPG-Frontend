@@ -139,6 +139,7 @@ public class CostoProductoDto
     public decimal? MargenDirecto { get; set; }
 
     public bool SinCostosFijos { get; set; }
+    public bool HayCostosFijosConfigurados { get; set; }
     public List<RecetaDetalleProductoDto> Recetas { get; set; } = new();
     public List<InsumoDirectoDetalleDto> InsumosDirectos { get; set; } = new();
     public List<string> Advertencias { get; set; } = new();

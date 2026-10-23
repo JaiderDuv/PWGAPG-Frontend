@@ -1,4 +1,4 @@
-﻿@page "/menu/evaluacion"
+@page "/menu/evaluacion"
 @attribute [Authorize]
 @using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Services
@@ -28,11 +28,12 @@
                 <span class="pm-ayuda-icono" tabindex="0">
                     ?
                     <span class="pm-ayuda-tooltip">
-                        El margen directo es el porcentaje que queda del precio después de descontar
-                        ingredientes y empaques (costo directo). Los costos fijos no se cargan a cada
-                        producto: se cubren con el punto de equilibrio.
+                        El margen directo descuenta ingredientes y empaques. El margen real descuenta
+                        además la cuota de costos fijos. Los costos fijos no se cargan a cada producto
+                        para el precio: se cubren con el punto de equilibrio.
                         <br /><br />
-                        Los productos con margen directo por debajo de este valor quedan marcados "en riesgo".
+                        Un producto queda "en riesgo" si su margen directo <strong>o</strong> su margen
+                        real están por debajo de este valor.
                     </span>
                 </span>
 
@@ -168,7 +169,7 @@
                                     <td @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">
                                         @if (p.EnRiesgo)
                                         {
-                                            <span class="pm-alerta" title="Por debajo del umbral">⚠️</span>
+                                            <span class="pm-alerta" title="Margen directo o real por debajo del umbral">⚠️</span>
                                         }
                                     </td>
                                     <td @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">@p.Nombre</td>
@@ -357,7 +358,7 @@
             evaluacion.UmbralMargenMinimo = umbralEditado;
             foreach (var p in evaluacion.Productos)
             {
-                p.EnRiesgo = p.MargenDirecto.HasValue && p.MargenDirecto.Value < umbralEditado;
+                p.EnRiesgo = EstaEnRiesgo(p.MargenDirecto, p.MargenReal, umbralEditado);
             }
             AplicarFiltros();
         }
@@ -540,11 +541,17 @@
             item.MargenDirecto = actualizado.MargenDirecto;
             item.MargenReal = actualizado.MargenReal;
             item.MargenNoCalculable = !actualizado.MargenDirecto.HasValue;
-            item.EnRiesgo = actualizado.MargenDirecto.HasValue && actualizado.MargenDirecto.Value < umbralEditado;
+            item.EnRiesgo = EstaEnRiesgo(actualizado.MargenDirecto, actualizado.MargenReal, umbralEditado);
         }
 
         AplicarFiltros();
         mensajeExito = $"El precio de \"{productoEditando.Nombre}\" se actualizó a {Formato.Moneda(actualizado.PrecioVenta ?? 0)}. Ya se refleja en la página de Menú.";
         CerrarModalEditar();
     }
+
+    // El riesgo se evalúa con ambos márgenes: el directo y el real (con fijos).
+    // Un producto no queda "sin riesgo" si su margen real está por debajo del umbral.
+    private static bool EstaEnRiesgo(decimal? margenDirecto, decimal? margenReal, decimal umbral) =>
+        (margenDirecto.HasValue && margenDirecto.Value < umbral)
+        || (margenReal.HasValue && margenReal.Value < umbral);
 }
