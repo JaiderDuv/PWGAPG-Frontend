@@ -63,7 +63,7 @@
                         </div>
                         <div class="rc-price">
                             <div><small>Costo de insumos</small><strong>@Formato.Moneda(r.CostoTotal)</strong></div>
-                            <div><small>Por porción</small><strong>@Formato.Moneda(r.CostoPorPorcion)</strong></div>
+                            <div><small>Por porción (insumos)</small><strong>@Formato.Moneda(r.CostoPorPorcion)</strong></div>
                         </div>
                         <details>
                             <summary>Ver ingredientes</summary>
@@ -80,7 +80,7 @@
                                 <span class="rc-analysis-label">Análisis</span>
                                 <div class="rc-analysis-btns">
                                     <button class="btn btn-sm @(costosAbiertos.Contains(r.Id) ? "btn-primary" : "btn-outline-secondary")" @onclick="() => AlternarCosto(r.Id)">
-                                        @(costosAbiertos.Contains(r.Id) ? "Ocultar costo real" : "Ver costo real")
+                                        @(costosAbiertos.Contains(r.Id) ? "Ocultar costo y fijos" : "Ver costo y fijos")
                                     </button>
                                     <button class="btn btn-sm @(preciosAbiertos.Contains(r.Id) ? "btn-primary" : "btn-outline-secondary")" @onclick="() => AlternarPrecio(r.Id)">
                                         @(preciosAbiertos.Contains(r.Id) ? "Ocultar precio sugerido" : "Ver precio sugerido")

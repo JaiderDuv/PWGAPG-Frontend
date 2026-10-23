@@ -11,21 +11,42 @@ public class CosteoApiService
 
     public async Task<ApiResultado<CostoRecetaDto>> ObtenerCostoAsync(int recetaId, IEnumerable<int>? costosFijosIds = null)
     {
-        // Sin selección (null) = todos. Selección vacía se envía como -1 (id imposible)
-        // porque una query sin valores no permite distinguir "ninguno" de "todos".
-        var ids = costosFijosIds is null ? null
-            : (costosFijosIds.Any() ? costosFijosIds : new[] { -1 });
+        // Sin IDs (null o lista vacía) no se envía el parámetro: el backend
+        // interpreta "ningún costo fijo" y devuelve el costo directo.
+        // Para incluir fijos hay que enviar sus IDs explícitamente; así el
+        // valor por defecto nunca absorbe todos los costos fijos.
+        var query = ConstruirIds(costosFijosIds);
         var url = $"api/recetas/{recetaId}/costo";
-        if (ids is not null)
-            url += "?" + string.Join("&", ids.Select(id => $"costosFijosIds={id}"));
+        if (query.Length > 0) url += "?" + query;
         return await Leer<CostoRecetaDto>(await _http.GetAsync(url));
     }
 
-    public async Task<ApiResultado<EscaladoRecetaDto>> ObtenerEscaladoAsync(int recetaId, int porciones) =>
-        await Leer<EscaladoRecetaDto>(await _http.GetAsync($"api/recetas/{recetaId}/escalado?porciones={porciones}"));
+    public async Task<ApiResultado<EscaladoRecetaDto>> ObtenerEscaladoAsync(
+        int recetaId, int porciones, IEnumerable<int>? costosFijosIds = null)
+    {
+        var url = $"api/recetas/{recetaId}/escalado?porciones={porciones}";
+        var query = ConstruirIds(costosFijosIds);
+        if (query.Length > 0) url += "&" + query;
+        return await Leer<EscaladoRecetaDto>(await _http.GetAsync(url));
+    }
+
+    // Query string de costosFijosIds. Sin IDs devuelve cadena vacía (ningún
+    // fijo); para todos hay que pasar la lista completa de IDs.
+    private static string ConstruirIds(IEnumerable<int>? costosFijosIds)
+    {
+        if (costosFijosIds is null) return "";
+        return string.Join("&", costosFijosIds
+            .Distinct()
+            .Where(id => id > 0)
+            .Select(id => $"costosFijosIds={id}"));
+    }
 
     public async Task<ApiResultado<List<CostoFijoDto>>> ListarCostosFijosAsync() =>
         await Leer<List<CostoFijoDto>>(await _http.GetAsync("api/costos-fijos?incluirInactivos=true"));
+
+    // Punto de equilibrio mensual: ventas mínimas para cubrir los costos fijos.
+    public async Task<ApiResultado<PuntoEquilibrioDto>> ObtenerPuntoEquilibrioAsync() =>
+        await Leer<PuntoEquilibrioDto>(await _http.GetAsync("api/costos-fijos/punto-equilibrio"));
 
     public async Task<ApiResultado<CostoFijoDto>> CrearCostoFijoAsync(CrearCostoFijoDto dto) =>
         await Leer<CostoFijoDto>(await _http.PostAsJsonAsync("api/costos-fijos", dto));

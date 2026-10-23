@@ -5,7 +5,7 @@
 <div class="cs-panel">
 @if (cargando && costo is null)
 {
-    <p class="text-muted mb-0">Calculando costo real...</p>
+    <p class="text-muted mb-0">Calculando costo directo y completo...</p>
 }
 else
 {
@@ -21,7 +21,7 @@ else
         <div class="cs-aviso cs-aviso-warn">
             <div>
                 <strong>No hay costos fijos configurados.</strong>
-                El costo fijo prorrateado es $ 0, por lo que el costo real puede estar subestimado.
+                El costo fijo prorrateado es $ 0, por lo que el costo completo puede estar subestimado.
                 <a href="costos-fijos">Configurar costos fijos</a>
             </div>
         </div>
@@ -45,32 +45,46 @@ else
         <div class="cs-aviso cs-aviso-info"><div>@a</div></div>
     }
 
+    <p class="text-muted mb-2">
+        <small>
+            El <strong>costo directo</strong> son los insumos (incluida la merma). El
+            <strong>costo completo</strong> suma la cuota estimada de costos fijos
+            (monto mensual ÷ divisor, por preparación base). Los fijos no son un
+            costo de producción: son un reparto para cubrir la operación del negocio.
+            El precio sugerido usa el costo directo; los fijos se cubren con el punto de equilibrio.
+            Marca abajo los fijos que quieras incluir en el costo completo.
+        </small>
+    </p>
+
     <div class="cs-kpis">
+        <div class="cs-kpi cs-kpi-main">
+            <small>Costo directo por porción</small>
+            <strong>@Formato.Moneda(CostoDirectoPorPorcion)</strong>
+            <em>insumos + merma · sin costos fijos</em>
+        </div>
         <div class="cs-kpi">
-            <small>Costo de insumos</small>
+            <small>Costo de insumos (directo)</small>
             <strong>@Formato.Moneda(costo.CostoInsumos)</strong>
             <em>incluye @Formato.Moneda(costo.CostoMermaAplicada) de merma</em>
         </div>
         <div class="cs-kpi">
             <small>Costo fijo prorrateado</small>
             <strong>@Formato.Moneda(costo.CostoFijoProrrateado)</strong>
+            <em>solo para el costo completo</em>
         </div>
         <div class="cs-kpi">
-            <small>Costo total</small>
-            <strong>@Formato.Moneda(costo.CostoTotal)</strong>
-        </div>
-        <div class="cs-kpi cs-kpi-main">
-            <small>Costo por porción</small>
+            <small>Costo completo por porción</small>
             <strong>@Formato.Moneda(costo.CostoPorPorcion)</strong>
-            <em>@costo.PorcionesBase porción(es) base</em>
+            <em>@costo.PorcionesBase porción(es) base · con los fijos marcados</em>
         </div>
     </div>
 
     @if (fijosCargados && fijos.Count > 0)
     {
         <details class="cs-detalle" open>
-            <summary>Costos fijos incluidos (@seleccionados.Count de @fijos.Count)</summary>
+            <summary>Costos fijos para el análisis (@seleccionados.Count de @fijos.Count)</summary>
             <div class="cs-fijos-acciones">
+                <small class="text-muted me-auto">Marca los que quieras sumar al costo completo.</small>
                 <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="SeleccionarTodosFijos">Todos</button>
                 <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="DeseleccionarTodosFijos">Ninguno</button>
                 @if (cargando) { <small class="text-muted">Recalculando...</small> }
@@ -148,9 +162,17 @@ else
     private List<LineaCostoDto> SinProveedor =>
         costo?.Lineas.Where(l => l.FuenteCosto == "costo_unitario_respaldo").ToList() ?? new();
 
+    // Costo de insumos por porción, sin la cuota de costos fijos.
+    private decimal CostoDirectoPorPorcion => costo is { PorcionesBase: > 0 }
+        ? decimal.Round(costo.CostoInsumos / costo.PorcionesBase, 2)
+        : 0;
+
     // Las dos primeras ya tienen su propio aviso; se omiten para no duplicar.
+    // Tampoco se muestra la advertencia esperada cuando no hay fijos marcados:
+    // el costo directo es el valor por defecto y el usuario decide si sumarlos.
     private IEnumerable<string> OtrasAdvertencias =>
         costo?.Advertencias.Where(a => !a.StartsWith("No hay costos fijos")
+                                    && !a.StartsWith("No seleccionaste ningún costo fijo")
                                     && !a.Contains("no tiene proveedor principal")) ?? Enumerable.Empty<string>();
 
     protected override async Task OnParametersSetAsync()
@@ -163,7 +185,9 @@ else
     public async Task Cargar()
     {
         cargando = true; error = null;
-        var tCosto = Api.ObtenerCostoAsync(RecetaId);
+        // Por defecto no se incluye ningún costo fijo: el costo principal es
+        // el directo. El usuario marca los fijos que quiera analizar.
+        var tCosto = Api.ObtenerCostoAsync(RecetaId, seleccionados);
         var tFijos = Api.ListarCostosFijosAsync();
         await Task.WhenAll(tCosto, tFijos);
         cargando = false;
@@ -173,9 +197,15 @@ else
         var resFijos = tFijos.Result;
         if (resFijos.Exito && resFijos.Datos is not null)
         {
+            var anteriores = fijosCargados ? new HashSet<int>(seleccionados) : null;
             fijos = resFijos.Datos.Where(f => f.Activo).ToList();
             seleccionados.Clear();
-            foreach (var f in fijos) seleccionados.Add(f.Id);
+            if (anteriores is not null)
+            {
+                // Conserva la selección del usuario; los fijos eliminados quedan fuera.
+                foreach (var f in fijos.Where(f => anteriores.Contains(f.Id))) seleccionados.Add(f.Id);
+            }
+            // Primera carga: la selección queda vacía a propósito (costo directo).
         }
         fijosCargados = true;
         await OnCostoCargado.InvokeAsync(costo!);

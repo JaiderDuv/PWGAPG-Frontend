@@ -1,7 +1,9 @@
 ﻿@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Services
 @using System.Net.Http.Json
 @implements IDisposable
 @inject HttpClient Http
+@inject CosteoApiService Api
 
 <div class="cs-panel">
     <h6 class="mb-2">Precio de venta sugerido</h6>
@@ -24,7 +26,11 @@
                 {
                     <div class="cs-kpis">
                         <div class="cs-kpi">
-                            <small>Costo por porción</small>
+                            <small>Costo directo / porción</small>
+                            <strong>@Formato.Moneda(resultado.CostoDirectoPorPorcion)</strong>
+                        </div>
+                        <div class="cs-kpi">
+                            <small>Costo con fijos seleccionados / porción</small>
                             <strong>@Formato.Moneda(resultado.CostoPorPorcion)</strong>
                         </div>
                         <div class="cs-kpi cs-kpi-main">
@@ -32,6 +38,24 @@
                             <strong>@Formato.Moneda(resultado.PrecioSugerido.Value)</strong>
                         </div>
                     </div>
+                    <p class="text-muted mb-0">
+                        <small>
+                            @if (seleccionados.Count == 0)
+                            {
+                                <text>
+                                    El precio sugerido usa el costo directo por porción. Los costos fijos
+                                    se cubren con el punto de equilibrio; no se cargan a esta receta.
+                                </text>
+                            }
+                            else
+                            {
+                                <text>
+                                    El precio sugerido incluye @seleccionados.Count costo(s) fijo(s)
+                                    seleccionado(s) y deja el margen indicado sobre el precio de venta.
+                                </text>
+                            }
+                        </small>
+                    </p>
                 }
             </div>
         </div>
@@ -44,6 +68,37 @@
                     <div>@advertencia</div>
                 </div>
             }
+        }
+
+        @if (fijosCargados && fijos.Count > 0)
+        {
+            <p class="text-muted mb-2">
+                <small>
+                    Por defecto el precio usa el costo directo. Marca los costos fijos que quieras incluir;
+                    el resto se cubre con el punto de equilibrio.
+                </small>
+            </p>
+            <details class="cs-detalle" open>
+                <summary>Costos fijos incluidos (@seleccionados.Count de @fijos.Count)</summary>
+                <div class="cs-fijos-acciones">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="SeleccionarTodosFijos">Todos</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="DeseleccionarTodosFijos">Ninguno</button>
+                    @if (cargando) { <small class="text-muted">Recalculando...</small> }
+                </div>
+                <ul class="cs-fijos">
+                    @foreach (var f in fijos)
+                    {
+                        <li>
+                            <label>
+                                <input type="checkbox" checked="@seleccionados.Contains(f.Id)"
+                                       @onchange="(e) => AlternarFijo(f.Id, (bool)e.Value!)" />
+                                <span>@f.Nombre</span>
+                            </label>
+                            <span class="cs-fijos-aporte">@Formato.Moneda(f.ValorDivisor > 0 ? f.MontoMensual / f.ValorDivisor : 0m)</span>
+                        </li>
+                    }
+                </ul>
+            </details>
         }
 
         @if (mensajeError is not null)
@@ -64,9 +119,30 @@
     private string? mensajeError;
     private CancellationTokenSource? debounceCts;
 
+    // Selección de costos fijos: por defecto NO se marca ninguno.
+    // El precio se calcula con el costo directo; el usuario activa
+    // explícitamente los fijos que quiera incluir.
+    private List<CostoFijoDto> fijos = new();
+    private readonly HashSet<int> seleccionados = new();
+    private bool fijosCargados;
+
     protected override async Task OnInitializedAsync()
     {
+        // Primero se conocen los fijos, para que el cálculo inicial use
+        // la selección por defecto (ninguno) y no "todos".
+        await CargarFijos();
         await CalcularAsync();
+    }
+
+    // Carga los costos fijos activos y deja la selección vacía.
+    private async Task CargarFijos()
+    {
+        var res = await Api.ListarCostosFijosAsync();
+        if (res.Exito && res.Datos is not null)
+            fijos = res.Datos.Where(f => f.Activo).ToList();
+
+        seleccionados.Clear();
+        fijosCargados = true;
     }
 
     private async Task OnMargenCambiado()
@@ -97,11 +173,24 @@
         {
             var resp = await Http.PostAsJsonAsync(
                 $"api/recetas/{RecetaId}/precio-sugerido",
-                new SugerirPrecioRequestDTO { MargenDeseado = margen });
+                new SugerirPrecioRequestDTO
+                {
+                    MargenDeseado = margen,
+                    // Después de la primera carga se envía siempre la selección del usuario.
+                    CostosFijosIds = fijosCargados ? seleccionados.ToList() : null
+                });
 
             if (resp.IsSuccessStatusCode)
             {
                 resultado = await resp.Content.ReadFromJsonAsync<PrecioSugeridoDTO>();
+                if (resultado is not null)
+                {
+                    // Usar solo el costo directo es una decisión válida,
+                    // no una advertencia que deba alarmar al usuario.
+                    resultado.Advertencias = resultado.Advertencias
+                        .Where(a => !a.StartsWith("No seleccionaste ningún costo fijo"))
+                        .ToList();
+                }
             }
             else
             {
@@ -117,6 +206,26 @@
             cargando = false;
             StateHasChanged();
         }
+    }
+
+    private async Task AlternarFijo(int id, bool marcado)
+    {
+        if (marcado) seleccionados.Add(id);
+        else seleccionados.Remove(id);
+        await CalcularAsync();
+    }
+
+    private async Task SeleccionarTodosFijos()
+    {
+        seleccionados.Clear();
+        foreach (var f in fijos) seleccionados.Add(f.Id);
+        await CalcularAsync();
+    }
+
+    private async Task DeseleccionarTodosFijos()
+    {
+        seleccionados.Clear();
+        await CalcularAsync();
     }
 
     public void Dispose()

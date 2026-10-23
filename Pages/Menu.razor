@@ -15,7 +15,7 @@
     <div class="rc-header">
         <div>
             <h2 class="rc-title">Menú</h2>
-            <p class="rc-subtitle">Tus productos: recetas con su cantidad, costo, precio y margen.</p>
+            <p class="rc-subtitle">Tus productos: recetas con su cantidad, costo directo, precio y margen.</p>
         </div>
         @if (!mostrarForm)
         {
@@ -63,8 +63,8 @@
                             <tr>
                                 <th>Producto</th>
                                 <th class="text-end">Precio venta</th>
-                                <th class="text-end">Costo</th>
-                                <th class="text-end">Margen real</th>
+                                <th class="text-end">Costo directo</th>
+                                <th class="text-end">Margen directo</th>
                                 <th>Estado</th>
                                 <th></th>
                             </tr>
@@ -78,8 +78,28 @@
                                         <br /><small class="text-muted">@p.NumRecetas receta(s)</small>
                                     </td>
                                     <td class="text-end">@(p.PrecioVenta.HasValue ? Formato.Moneda(p.PrecioVenta.Value) : "—")</td>
-                                    <td class="text-end">@Formato.Moneda(p.CostoTotal)</td>
-                                    <td class="text-end">@(p.MargenReal.HasValue ? p.MargenReal.Value.ToString("0.##") + " %" : "—")</td>
+                                    <td class="text-end">
+                                        @Formato.Moneda(p.CostoDirecto)
+                                        @if (p.CostoFijoProrrateado > 0)
+                                        {
+                                            <br />
+                                            <small class="text-muted" title="Referencia: costo completo con fijos @Formato.Moneda(p.CostoTotal). Los fijos no se descuentan del precio; se cubren con el punto de equilibrio.">
+                                                Fijos (ref.): @Formato.Moneda(p.CostoFijoProrrateado)
+                                            </small>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if (p.MargenDirecto.HasValue)
+                                        {
+                                            <span title="Margen con costo completo: @MargenCompleto(p)">
+                                                @p.MargenDirecto.Value.ToString("0.##") %
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span>—</span>
+                                        }
+                                    </td>
                                     <td>
                                         <button class="btn btn-sm @(p.Activo ? "btn-outline-success" : "btn-outline-secondary")"
                                                 @onclick="() => CambiarEstado(p)" title="Clic para activar/desactivar">
@@ -97,6 +117,12 @@
                     </table>
                 </div>
             </div>
+            <p class="text-muted mt-2 mb-0">
+                <small>
+                    El costo directo incluye ingredientes y empaques; es la base del margen y del precio sugerido.
+                    Los costos fijos se cubren con el punto de equilibrio y se muestran aparte como costo completo.
+                </small>
+            </p>
         }
     }
 </div>
@@ -151,6 +177,9 @@
     }
 
     private void VerDetalle(int id) => Navigation.NavigateTo($"menu/{id}");
+
+    private static string MargenCompleto(ProductoMenuDto p) =>
+        p.MargenReal.HasValue ? p.MargenReal.Value.ToString("0.##") + " %" : "—";
 
     private async Task CambiarEstado(ProductoMenuDto p)
     {

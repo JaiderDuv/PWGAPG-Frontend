@@ -28,9 +28,11 @@
                 <span class="pm-ayuda-icono" tabindex="0">
                     ?
                     <span class="pm-ayuda-tooltip">
-                        El margen es el porcentaje que te queda de ganancia sobre el costo de un producto: cuánto ganas realmente por cada peso invertido en producirlo.
+                        El margen directo es el porcentaje que queda del precio después de descontar
+                        ingredientes y empaques (costo directo). Los costos fijos no se cargan a cada
+                        producto: se cubren con el punto de equilibrio.
                         <br /><br />
-                        Los productos con margen por debajo de este valor quedan marcados "en riesgo".
+                        Los productos con margen directo por debajo de este valor quedan marcados "en riesgo".
                     </span>
                 </span>
 
@@ -75,12 +77,12 @@
             </div>
 
             <div class="pm-filtro-item">
-                <label class="pm-filtro-label">Costo mín.</label>
+                <label class="pm-filtro-label">Costo directo mín.</label>
                 <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="any"
                        @bind="costoMin" @bind:event="oninput" @bind:after="AlFiltrar" />
             </div>
             <div class="pm-filtro-item">
-                <label class="pm-filtro-label">Costo máx.</label>
+                <label class="pm-filtro-label">Costo directo máx.</label>
                 <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="any"
                        @bind="costoMax" @bind:event="oninput" @bind:after="AlFiltrar" />
             </div>
@@ -97,12 +99,12 @@
             </div>
 
             <div class="pm-filtro-item">
-                <label class="pm-filtro-label">Margen mín. %</label>
+                <label class="pm-filtro-label">Margen directo mín. %</label>
                 <input type="number" class="form-control pm-input-margen" min="-999" max="999" step="any"
                        @bind="margenMin" @bind:event="oninput" @bind:after="AlFiltrar" />
             </div>
             <div class="pm-filtro-item">
-                <label class="pm-filtro-label">Margen máx. %</label>
+                <label class="pm-filtro-label">Margen directo máx. %</label>
                 <input type="number" class="form-control pm-input-margen" min="-999" max="999" step="any"
                        @bind="margenMax" @bind:event="oninput" @bind:after="AlFiltrar" />
             </div>
@@ -110,8 +112,8 @@
             <div class="pm-filtro-item pm-filtro-orden">
                 <label class="pm-filtro-label">Ordenar por</label>
                 <select class="form-select" @bind="ordenarPor" @bind:after="AlFiltrar">
-                    <option value="margen">Margen real</option>
-                    <option value="costo">Costo</option>
+                    <option value="margen">Margen directo</option>
+                    <option value="costo">Costo directo</option>
                     <option value="precio">Precio</option>
                     <option value="nombre">Nombre</option>
                 </select>
@@ -153,9 +155,9 @@
                             <tr>
                                 <th></th>
                                 <th>Producto</th>
-                                <th class="text-end">Costo</th>
+                                <th class="text-end">Costo directo</th>
                                 <th class="text-end">Precio</th>
-                                <th class="text-end">Margen real</th>
+                                <th class="text-end">Margen directo</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -170,7 +172,15 @@
                                         }
                                     </td>
                                     <td @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">@p.Nombre</td>
-                                    <td class="text-end" @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">@Formato.Moneda(p.CostoTotal)</td>
+                                    <td class="text-end" @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">
+                                        <div>@Formato.Moneda(p.CostoDirecto)</div>
+                                        @if (p.CostoTotal > p.CostoDirecto)
+                                        {
+                                            <small class="text-muted d-block" title="Costo completo con fijos">
+                                                Completo: @Formato.Moneda(p.CostoTotal)
+                                            </small>
+                                        }
+                                    </td>
                                     <td class="text-end" @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">@(p.PrecioVenta.HasValue? Formato.Moneda(p.PrecioVenta.Value) : "—")</td>
                                     <td class="text-end" @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">
                                         @if (p.MargenNoCalculable)
@@ -180,8 +190,14 @@
                                         else
                                         {
                                             <strong class="@(p.EnRiesgo ? "pm-texto-riesgo" : "")">
-                                                @p.MargenReal!.Value.ToString("0.##") %
+                                                @p.MargenDirecto!.Value.ToString("0.##") %
                                             </strong>
+                                            @if (p.MargenReal.HasValue)
+                                            {
+                                                <small class="text-muted d-block">
+                                                    Con fijos: @p.MargenReal.Value.ToString("0.##") %
+                                                </small>
+                                            }
                                         }
                                     </td>
                                     <td>
@@ -210,10 +226,16 @@
             <p class="text-muted small mb-3">Define el margen de ganancia que quieres lograr; calculamos el precio de venta necesario.</p>
 
             <div class="pm-modal-datos mb-3">
-                <div><span class="text-muted small">Costo</span><strong>@Formato.Moneda(productoEditando.CostoTotal)</strong></div>
+                <div><span class="text-muted small">Costo directo</span><strong>@Formato.Moneda(productoEditando.CostoDirecto)</strong></div>
+                <div><span class="text-muted small">Costo completo</span><strong>@Formato.Moneda(productoEditando.CostoTotal)</strong></div>
                 <div><span class="text-muted small">Precio actual</span><strong>@(productoEditando.PrecioVenta.HasValue? Formato.Moneda(productoEditando.PrecioVenta.Value) : "—")</strong></div>
-                <div><span class="text-muted small">Margen actual</span><strong>@(productoEditando.MargenReal.HasValue? productoEditando.MargenReal.Value.ToString("0.##") + " %" : "—")</strong></div>
+                <div><span class="text-muted small">Margen directo</span><strong>@(productoEditando.MargenDirecto.HasValue? productoEditando.MargenDirecto.Value.ToString("0.##") + " %" : "—")</strong></div>
+                <div><span class="text-muted small">Margen con fijos</span><strong>@(productoEditando.MargenReal.HasValue? productoEditando.MargenReal.Value.ToString("0.##") + " %" : "—")</strong></div>
             </div>
+
+            <p class="text-muted small mb-2">
+                La sugerencia usa el costo directo; los costos fijos se cubren con el punto de equilibrio.
+            </p>
 
             <label class="rc-label">Margen deseado (%) *</label>
             <input type="number" class="form-control" min="0.01" max="99.99" step="0.5"
@@ -227,6 +249,7 @@
                 else if (precioSugerido.HasValue)
                 {
                     <span>Precio de venta necesario: <strong>@Formato.Moneda(precioSugerido.Value)</strong></span>
+                    <small class="text-muted d-block">Base: costo directo</small>
                 }
             </div>
 
@@ -334,7 +357,7 @@
             evaluacion.UmbralMargenMinimo = umbralEditado;
             foreach (var p in evaluacion.Productos)
             {
-                p.EnRiesgo = p.MargenReal.HasValue && p.MargenReal.Value < umbralEditado;
+                p.EnRiesgo = p.MargenDirecto.HasValue && p.MargenDirecto.Value < umbralEditado;
             }
             AplicarFiltros();
         }
@@ -366,14 +389,14 @@
             if (!string.IsNullOrWhiteSpace(termino) && !Normalizar(p.Nombre).Contains(termino))
                 return false;
 
-            if (costoMin.HasValue && p.CostoTotal < costoMin.Value) return false;
-            if (costoMax.HasValue && p.CostoTotal > costoMax.Value) return false;
+            if (costoMin.HasValue && p.CostoDirecto < costoMin.Value) return false;
+            if (costoMax.HasValue && p.CostoDirecto > costoMax.Value) return false;
 
             if (precioMin.HasValue && (!p.PrecioVenta.HasValue || p.PrecioVenta.Value < precioMin.Value)) return false;
             if (precioMax.HasValue && (!p.PrecioVenta.HasValue || p.PrecioVenta.Value > precioMax.Value)) return false;
 
-            if (margenMin.HasValue && (!p.MargenReal.HasValue || p.MargenReal.Value < margenMin.Value)) return false;
-            if (margenMax.HasValue && (!p.MargenReal.HasValue || p.MargenReal.Value > margenMax.Value)) return false;
+            if (margenMin.HasValue && (!p.MargenDirecto.HasValue || p.MargenDirecto.Value < margenMin.Value)) return false;
+            if (margenMax.HasValue && (!p.MargenDirecto.HasValue || p.MargenDirecto.Value > margenMax.Value)) return false;
 
             return true;
         });
@@ -381,8 +404,8 @@
         IOrderedEnumerable<ProductoEvaluacionDto> ordenados = ordenarPor switch
         {
             "costo" => direccionOrden == "desc"
-                ? filtrados.OrderByDescending(p => p.CostoTotal)
-                : filtrados.OrderBy(p => p.CostoTotal),
+                ? filtrados.OrderByDescending(p => p.CostoDirecto)
+                : filtrados.OrderBy(p => p.CostoDirecto),
             "precio" => direccionOrden == "desc"
                 ? filtrados.OrderByDescending(p => p.PrecioVenta ?? decimal.MinValue)
                 : filtrados.OrderBy(p => p.PrecioVenta ?? decimal.MaxValue),
@@ -390,8 +413,8 @@
                 ? filtrados.OrderByDescending(p => p.Nombre)
                 : filtrados.OrderBy(p => p.Nombre),
             _ => direccionOrden == "desc"
-                ? filtrados.OrderByDescending(p => p.MargenNoCalculable ? 1 : 0).ThenByDescending(p => p.MargenReal)
-                : filtrados.OrderBy(p => p.MargenNoCalculable ? 1 : 0).ThenBy(p => p.MargenReal),
+                ? filtrados.OrderByDescending(p => p.MargenNoCalculable ? 1 : 0).ThenByDescending(p => p.MargenDirecto)
+                : filtrados.OrderBy(p => p.MargenNoCalculable ? 1 : 0).ThenBy(p => p.MargenDirecto),
         };
 
         productosFiltrados = ordenados.ToList();
@@ -423,7 +446,7 @@
     private void AbrirModalEditar(ProductoEvaluacionDto p)
     {
         productoEditando = p;
-        margenNuevo = p.MargenReal ?? umbralEditado;
+        margenNuevo = p.MargenDirecto ?? umbralEditado;
         precioSugerido = p.PrecioVenta;
         errorEdicion = null;
         mensajeExito = null;
@@ -465,7 +488,8 @@
         calculandoSugerencia = true;
         StateHasChanged();
 
-        var res = await MenuApi.PrecioSugeridoAsync(productoEditando.ProductoId, margenNuevo);
+        // Lista vacía = precio con costo directo, sin cargar los fijos al producto.
+        var res = await MenuApi.PrecioSugeridoAsync(productoEditando.ProductoId, margenNuevo, new List<int>());
         calculandoSugerencia = false;
 
         if (!res.Exito || res.Datos is null)
@@ -510,11 +534,13 @@
         var item = evaluacion?.Productos.FirstOrDefault(p => p.ProductoId == productoEditando.ProductoId);
         if (item is not null)
         {
+            item.CostoDirecto = actualizado.CostoDirecto;
             item.CostoTotal = actualizado.CostoTotal;
             item.PrecioVenta = actualizado.PrecioVenta;
+            item.MargenDirecto = actualizado.MargenDirecto;
             item.MargenReal = actualizado.MargenReal;
-            item.MargenNoCalculable = !actualizado.MargenReal.HasValue;
-            item.EnRiesgo = actualizado.MargenReal.HasValue && actualizado.MargenReal.Value < umbralEditado;
+            item.MargenNoCalculable = !actualizado.MargenDirecto.HasValue;
+            item.EnRiesgo = actualizado.MargenDirecto.HasValue && actualizado.MargenDirecto.Value < umbralEditado;
         }
 
         AplicarFiltros();

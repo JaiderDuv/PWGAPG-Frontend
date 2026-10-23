@@ -10,7 +10,10 @@
     <div class="rc-header">
         <div>
             <h2 class="rc-title">Costos fijos del negocio</h2>
-            <p class="rc-subtitle">Arriendo, servicios, nómina... Cada monto mensual se divide entre su valor divisor para repartirlo en el costo real de cada receta.</p>
+            <p class="rc-subtitle">
+                Arriendo, servicios, nómina... Cada monto mensual se divide entre el total de preparaciones al mes.
+                Esa cuota se usa en el costo completo y en el punto de equilibrio; el precio sugerido usa el costo directo.
+            </p>
         </div>
         @if (!mostrarForm)
         {
@@ -29,36 +32,82 @@
             </div>
             <EditForm Model="modelo" OnValidSubmit="Guardar" class="rc-card-body" novalidate>
                 <DataAnnotationsValidator />
+
+                <div class="cs-aviso cs-aviso-info mb-3">
+                    <div>
+                        <strong>¿Cómo se usa este costo?</strong>
+                        El monto se divide entre el valor divisor para obtener una cuota por preparación.
+                        Esa cuota se suma al <strong>costo completo</strong> de recetas y productos, pero no al costo directo.
+                        El precio sugerido usa el costo directo; los fijos se cubren con el punto de equilibrio.
+                    </div>
+                </div>
+
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="rc-label">Nombre *</label>
+                        <label class="rc-label">
+                            Nombre *
+                            <span class="campo-ayuda" tabindex="0"
+                                  data-tip="Nombre con el que identificarás el costo fijo. Ej.: Arriendo del local, Nómina, Internet.">?</span>
+                        </label>
                         <InputText class="form-control" @bind-Value="modelo.Nombre" maxlength="150"
                                    placeholder="Ej: Arriendo del local" />
                         <ValidationMessage For="() => modelo.Nombre" class="rc-error" />
                     </div>
                     <div class="col-md-6">
-                        <label class="rc-label">Monto mensual *</label>
+                        <label class="rc-label">
+                            Categoría *
+                            <span class="campo-ayuda" tabindex="0"
+                                  data-tip="Agrupa el costo para analizarlo. Puedes elegir una sugerencia o escribir tu propia categoría. Ej.: Arriendo, Servicios, Nómina.">?</span>
+                        </label>
+                        <InputText class="form-control" @bind-Value="modelo.Categoria" maxlength="50"
+                                   list="categorias-costo-fijo" placeholder="Ej: Arriendo" />
+                        <datalist id="categorias-costo-fijo">
+                            @foreach (var cat in CategoriasBase) { <option value="@cat"></option> }
+                        </datalist>
+                        <ValidationMessage For="() => modelo.Categoria" class="rc-error" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="rc-label">
+                            Monto mensual *
+                            <span class="campo-ayuda" tabindex="0"
+                                  data-tip="Valor total que pagas al mes por este costo. Ej.: 1.000.000 de arriendo. No cambia el costo directo de los productos.">?</span>
+                        </label>
                         <InputNumber class="form-control" @bind-Value="modelo.MontoMensual" min="0.01" step="0.01" />
                         <ValidationMessage For="() => modelo.MontoMensual" class="rc-error" />
                     </div>
                     <div class="col-md-6">
-                        <label class="rc-label">Se reparte por *</label>
+                        <label class="rc-label">
+                            Se reparte por *
+                            <span class="campo-ayuda" tabindex="0"
+                                  data-tip="Criterio con el que interpretarás el valor divisor. 'Recetas activas': el divisor es la cantidad de recetas activas (1 preparación por receta). 'Preparaciones producidas': el divisor es el total real de preparaciones que produces al mes.">?</span>
+                        </label>
                         <InputSelect class="form-select" @bind-Value="modelo.UnidadProrrateo">
                             @foreach (var u in OpcionesUnidad) { <option value="@u.Key">@u.Value</option> }
                         </InputSelect>
                         <ValidationMessage For="() => modelo.UnidadProrrateo" class="rc-error" />
-                        <small class="text-muted">1 unidad de prorrateo = 1 preparación completa de la receta: el costo fijo se reparte una sola vez por preparación, no por cada ingrediente ni por cada porción.</small>
+                        <small class="text-muted">
+                            1 unidad = 1 preparación completa de la receta (su rendimiento base).
+                            El valor divisor debe corresponder a este criterio. Si un producto usa solo una parte, la cuota se reparte proporcionalmente.
+                        </small>
                     </div>
                     <div class="col-md-6">
-                        <label class="rc-label">Valor divisor *</label>
+                        <label class="rc-label">
+                            Valor divisor *
+                            <span class="campo-ayuda" tabindex="0"
+                                  data-tip="Total de unidades al mes según el criterio elegido. Cuota por preparación = monto mensual ÷ divisor. Ej.: si produces 1.000 preparaciones, escribe 1.000. Con 1, todo el costo se carga a una sola preparación.">?</span>
+                        </label>
                         <InputNumber class="form-control" @bind-Value="modelo.ValorDivisor" min="0.01" step="0.01" />
                         <ValidationMessage For="() => modelo.ValorDivisor" class="rc-error" />
-                        <small class="text-muted">Total de "@Etiqueta(modelo.UnidadProrrateo)" al mes (ej. 500).</small>
+                        <small class="text-muted">Cantidad total al mes (ej. 500). Cada unidad es una preparación completa de receta.</small>
                     </div>
                     <div class="col-12">
                         <div class="form-check">
                             <InputCheckbox class="form-check-input" id="cf-activo" @bind-Value="modelo.Activo" />
-                            <label class="form-check-label" for="cf-activo">Activo (se incluye en el costo real)</label>
+                            <label class="form-check-label" for="cf-activo">
+                                Activo (se incluye en el costo completo)
+                                <span class="campo-ayuda" tabindex="0"
+                                      data-tip="Si está activo, entra en el costo completo y en el análisis del punto de equilibrio. Desactívalo si ya no pagas ese costo, sin borrar el historial.">?</span>
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -66,7 +115,24 @@
                 @if (modelo.MontoMensual > 0 && modelo.ValorDivisor is { } divisor && divisor > 0)
                 {
                     <div class="cs-preview">
-                        Aporte por unidad de prorrateo: <strong>@Formato.Moneda(modelo.MontoMensual / divisor)</strong>
+                        <div>
+                            <strong>Cuota por preparación:</strong> @Formato.Moneda(modelo.MontoMensual / divisor)
+                            <span class="text-muted">(monto mensual ÷ divisor)</span>
+                        </div>
+                        <small class="text-muted d-block mt-1">
+                            Si produces @divisor.ToString("0.##") preparaciones al mes, cada una carga esta cuota en el costo completo.
+                            El costo directo del producto no cambia.
+                        </small>
+                    </div>
+                }
+
+                @if (modelo.ValorDivisor == 1)
+                {
+                    <div class="cs-aviso cs-aviso-warn mt-2">
+                        <div>
+                            <strong>Revisa el divisor:</strong> con 1, todo el monto mensual se asigna a una sola preparación.
+                            Si produces más preparaciones al mes, escribe ese total para repartir el costo.
+                        </div>
                     </div>
                 }
 
@@ -89,7 +155,7 @@
     else if (costos.Count == 0)
     {
             <div class="rc-empty">
-                <p>Aún no tienes costos fijos. Agrega el primero para obtener un costo real más preciso.</p>
+                <p>Aún no tienes costos fijos. Agrega el primero para obtener un costo completo más preciso.</p>
             </div>
     }
     else
@@ -100,10 +166,11 @@
                     <thead>
                         <tr>
                             <th>Nombre</th>
+                            <th>Categoría</th>
                             <th class="text-end">Monto mensual</th>
                             <th>Se reparte por</th>
-                            <th class="text-end">Valor divisor</th>
-                            <th class="text-end">Aporte</th>
+                            <th class="text-end" title="Total de unidades al mes con el que se reparte el monto.">Valor divisor</th>
+                            <th class="text-end" title="Monto mensual ÷ valor divisor. Es la cuota que se suma al costo completo de cada preparación; no es el total mensual del costo.">Cuota por preparación</th>
                             <th>Estado</th>
                             <th></th>
                         </tr>
@@ -113,9 +180,17 @@
                     {
                         <tr class="@(c.Activo ? "" : "cs-inactivo")">
                             <td>@c.Nombre</td>
+                            <td><span class="badge rounded-pill text-bg-light">@Categoria(c)</span></td>
                             <td class="text-end">@Formato.Moneda(c.MontoMensual)</td>
                             <td>@Etiqueta(c.UnidadProrrateo)</td>
-                            <td class="text-end">@c.ValorDivisor.ToString("0.##")</td>
+                            <td class="text-end" title="@(c.ValorDivisor <= 1 ? "Con divisor 1, todo el monto se asigna a una sola preparación. Si produces más al mes, edita el costo y escribe el total." : null)">
+                                @c.ValorDivisor.ToString("0.##")
+                                @if (c.ValorDivisor <= 1)
+                                {
+                                    <span class="campo-ayuda" tabindex="0"
+                                          data-tip="Con divisor 1, todo el monto se asigna a una sola preparación. Si produces más al mes, edita el costo y escribe el total.">?</span>
+                                }
+                            </td>
                             <td class="text-end">@Formato.Moneda(Aporte(c))</td>
                             <td>
                                 <button class="btn btn-sm @(c.Activo ? "btn-outline-success" : "btn-outline-secondary")"
@@ -133,6 +208,7 @@
                     <tfoot>
                         <tr>
                             <td><strong>Total activos</strong></td>
+                            <td></td>
                             <td class="text-end"><strong>@Formato.Moneda(TotalMensual)</strong></td>
                             <td></td>
                             <td></td>
@@ -142,12 +218,129 @@
                     </tfoot>
                 </table>
             </div>
+            <p class="text-muted mt-2 mb-0 px-3 pb-2">
+                <small>
+                    La cuota por preparación es el monto mensual ÷ valor divisor. El total mensual del costo
+                    es la columna "Monto mensual"; la cuota se usa para el costo completo, no para el precio directo.
+                </small>
+            </p>
+        </div>
+    }
+
+    @if (costos is not null && costos.Any(c => c.Activo))
+    {
+        <div class="rc-card mt-3">
+            <div class="rc-card-header">
+                <h5 class="mb-0">Resumen por categoría</h5>
+            </div>
+            <div class="rc-card-body">
+                <div class="cs-kpis">
+                    @foreach (var g in ResumenCategorias)
+                    {
+                        <div class="cs-kpi">
+                            <small>@g.Key</small>
+                            <strong>@Formato.Moneda(g.Sum(c => c.MontoMensual))</strong>
+                            <em>@g.Count() costo(s)</em>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (costos is not null)
+    {
+        <div class="rc-card mt-4">
+            <div class="rc-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                    <h5 class="mb-0">Punto de equilibrio mensual</h5>
+                    <small class="text-muted">
+                        Cuánto necesitas vender para cubrir tus costos fijos, según el
+                        margen de contribución de tus productos (precio − costo directo).
+                    </small>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="CargarPuntoEquilibrio" disabled="@cargandoEquilibrio">
+                    @(cargandoEquilibrio ? "Calculando..." : "Recalcular")
+                </button>
+            </div>
+            <div class="rc-card-body">
+                @if (errorEquilibrio is not null)
+                {
+                    <div class="alert alert-danger mb-0">@errorEquilibrio</div>
+                }
+                else if (equilibrio is null)
+                {
+                    <p class="text-muted mb-0">Calculando punto de equilibrio...</p>
+                }
+                else
+                {
+                    <div class="cs-kpis">
+                        <div class="cs-kpi">
+                            <small>Costos fijos mensuales</small>
+                            <strong>@Formato.Moneda(equilibrio.CostosFijosMensuales)</strong>
+                        </div>
+                        <div class="cs-kpi">
+                            <small>Margen de contribución promedio</small>
+                            <strong>@(equilibrio.MargenContribucionPromedioPorcentaje.HasValue ? equilibrio.MargenContribucionPromedioPorcentaje.Value.ToString("0.##") + " %" : "—")</strong>
+                        </div>
+                        <div class="cs-kpi cs-kpi-main">
+                            <small>Ventas de equilibrio / mes</small>
+                            <strong>@(equilibrio.VentasEquilibrioMensuales.HasValue ? Formato.Moneda(equilibrio.VentasEquilibrioMensuales.Value) : "—")</strong>
+                        </div>
+                    </div>
+
+                    @foreach (var a in equilibrio.Advertencias)
+                    {
+                        <div class="cs-aviso cs-aviso-info"><div>@a</div></div>
+                    }
+
+                    @if (equilibrio.Productos.Count > 0)
+                    {
+                        <div class="table-responsive mt-3">
+                            <table class="table table-sm cs-table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th class="text-end">Precio</th>
+                                        <th class="text-end">Costo directo</th>
+                                        <th class="text-end">Margen contribución</th>
+                                        <th class="text-end">Margen %</th>
+                                        <th class="text-end">Unidades/mes*</th>
+                                        <th class="text-end">Ventas/mes*</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @foreach (var p in equilibrio.Productos)
+                                {
+                                    <tr>
+                                        <td>@p.Producto</td>
+                                        <td class="text-end">@Formato.Moneda(p.PrecioVenta)</td>
+                                        <td class="text-end">@Formato.Moneda(p.CostoDirecto)</td>
+                                        <td class="text-end">@Formato.Moneda(p.MargenContribucion)</td>
+                                        <td class="text-end">@p.MargenContribucionPorcentaje.ToString("0.##") %</td>
+                                        <td class="text-end">@(p.UnidadesEquilibrio.HasValue ? p.UnidadesEquilibrio.Value.ToString("0") : "—")</td>
+                                        <td class="text-end">@(p.VentasEquilibrio.HasValue ? Formato.Moneda(p.VentasEquilibrio.Value) : "—")</td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-muted mt-2 mb-0">
+                            <small>
+                                * Unidades y ventas si vendieras únicamente ese producto.
+                                El total global usa el margen de contribución promedio y
+                                supone un mix uniforme de productos.
+                            </small>
+                        </p>
+                    }
+                }
+            </div>
         </div>
     }
 </div>
 
 <ConfirmDialog Visible="mostrarConfirm"
-               Mensaje="@($"¿Eliminar el costo fijo '{aEliminar?.Nombre}' para siempre? Cambiará el costo real de tus recetas.")"
+               Mensaje="@($"¿Eliminar el costo fijo '{aEliminar?.Nombre}' para siempre? Cambiará el costo completo de tus recetas.")"
                OnConfirmar="ConfirmarEliminar"
                OnCancelar="CancelarEliminar" />
 
@@ -157,8 +350,8 @@
     // receta, así que no puede prorratear por hora real de producción.
     private static readonly Dictionary<string, string> Unidades = new()
     {
-        ["recetas_activas"] = "Recetas activas",
-        ["unidades_producidas"] = "Unidades producidas"
+        ["recetas_activas"] = "Recetas activas (1 preparación por receta)",
+        ["unidades_producidas"] = "Preparaciones producidas al mes"
     };
 
     // Etiquetas de la tabla: incluyen valores heredados que aún pueden existir
@@ -166,8 +359,16 @@
     private static readonly Dictionary<string, string> Etiquetas = new()
     {
         ["recetas_activas"] = "Recetas activas",
-        ["unidades_producidas"] = "Unidades producidas",
+        ["unidades_producidas"] = "Preparaciones producidas",
         ["horas_produccion"] = "Horas de producción (valor heredado)"
+    };
+
+    // Categorías sugeridas en el formulario. El campo es libre: el usuario
+    // puede escribir otra y se conserva tal cual.
+    private static readonly string[] CategoriasBase =
+    {
+        "Arriendo", "Nómina", "Servicios", "Equipos", "Marketing",
+        "Administración", "Impuestos", "Mantenimiento", "Otros"
     };
 
     private static string Etiqueta(string valor) =>
@@ -194,9 +395,23 @@
     private bool mostrarForm, mostrarConfirm, guardando;
     private string? error, errorForm, mensajeOk;
 
+    // Punto de equilibrio: ventas mínimas para cubrir los costos fijos.
+    private PuntoEquilibrioDto? equilibrio;
+    private bool cargandoEquilibrio;
+    private string? errorEquilibrio;
+
     private static decimal Aporte(CostoFijoDto c) => c.ValorDivisor > 0 ? c.MontoMensual / c.ValorDivisor : 0;
     private decimal TotalMensual => costos?.Where(c => c.Activo).Sum(c => c.MontoMensual) ?? 0;
     private decimal TotalAporte => costos?.Where(c => c.Activo).Sum(Aporte) ?? 0;
+
+    private static string Categoria(CostoFijoDto c) =>
+        string.IsNullOrWhiteSpace(c.Categoria) ? "Otros" : c.Categoria;
+
+    private IEnumerable<IGrouping<string, CostoFijoDto>> ResumenCategorias =>
+        (costos ?? new List<CostoFijoDto>())
+            .Where(c => c.Activo)
+            .GroupBy(Categoria, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(g => g.Sum(c => c.MontoMensual));
 
     protected override async Task OnInitializedAsync() => await Cargar();
 
@@ -205,6 +420,17 @@
         var res = await Api.ListarCostosFijosAsync();
         if (res.Exito) { costos = res.Datos; error = null; }
         else { costos = new(); error = res.Mensaje; }
+        await CargarPuntoEquilibrio();
+    }
+
+    // El punto de equilibrio se recalcula cada vez que cambian los costos fijos.
+    private async Task CargarPuntoEquilibrio()
+    {
+        cargandoEquilibrio = true;
+        var res = await Api.ObtenerPuntoEquilibrioAsync();
+        cargandoEquilibrio = false;
+        if (res.Exito) { equilibrio = res.Datos; errorEquilibrio = null; }
+        else { equilibrio = null; errorEquilibrio = res.Mensaje; }
     }
 
     private void Nuevo() { editando = null; modelo = new(); AbrirForm(); }
@@ -214,7 +440,7 @@
         editando = c;
         modelo = new FormModelo
         {
-            Nombre = c.Nombre, MontoMensual = c.MontoMensual,
+            Nombre = c.Nombre, Categoria = Categoria(c), MontoMensual = c.MontoMensual,
             UnidadProrrateo = c.UnidadProrrateo, ValorDivisor = c.ValorDivisor, Activo = c.Activo
         };
         AbrirForm();
@@ -231,13 +457,13 @@
         var res = editando is null
             ? await Api.CrearCostoFijoAsync(new CrearCostoFijoDto
               {
-                  Nombre = nombre, MontoMensual = modelo.MontoMensual,
+                  Nombre = nombre, Categoria = modelo.Categoria.Trim(), MontoMensual = modelo.MontoMensual,
                   UnidadProrrateo = modelo.UnidadProrrateo, ValorDivisor = modelo.ValorDivisor,
                   Activo = modelo.Activo
               })
             : await Api.ActualizarCostoFijoAsync(editando.Id, new ActualizarCostoFijoDto
               {
-                  Nombre = nombre, MontoMensual = modelo.MontoMensual,
+                  Nombre = nombre, Categoria = modelo.Categoria.Trim(), MontoMensual = modelo.MontoMensual,
                   UnidadProrrateo = modelo.UnidadProrrateo, ValorDivisor = modelo.ValorDivisor,
                   Activo = modelo.Activo
               });
@@ -277,6 +503,10 @@
         [RegularExpression(@"^(?=.*\p{L})[\p{L}\p{N} .,'\-()&]+$",
             ErrorMessage = "Solo letras, números, espacios y . , ' - ( ) & (debe incluir letras).")]
         public string Nombre { get; set; } = "";
+
+        [Required(ErrorMessage = "La categoría es obligatoria.")]
+        [StringLength(50, MinimumLength = 2, ErrorMessage = "La categoría debe tener entre 2 y 50 caracteres.")]
+        public string Categoria { get; set; } = "Otros";
 
         [Range(0.01, 9999999999, ErrorMessage = "El monto debe ser mayor a 0.")]
         public decimal MontoMensual { get; set; }

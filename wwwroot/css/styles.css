@@ -1009,7 +1009,8 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
         z-index: 999;
     }
 
-    .campo-ayuda:hover::after {
+    .campo-ayuda:hover::after,
+    .campo-ayuda:focus::after {
         opacity: 1;
         visibility: visible;
     }

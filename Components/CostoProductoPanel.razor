@@ -14,9 +14,10 @@ else if (costo is not null)
 {
     @if (costo.SinCostosFijos)
     {
-        <div class="alert alert-warning">
+        <div class="alert alert-info">
             <strong>No hay costos fijos configurados.</strong>
-            El costo puede estar subestimado. <a href="costos-fijos">Configurar costos fijos</a>
+            El precio sugerido usa el costo directo; configura los fijos para calcular el costo completo
+            y el punto de equilibrio. <a href="costos-fijos">Configurar costos fijos</a>
         </div>
     }
 
@@ -28,12 +29,43 @@ else if (costo is not null)
     <div class="cs-grid">
         <div><small>Costo recetas</small><strong>@Formato.Moneda(costo.CostoRecetas)</strong></div>
         <div><small>Empaques directos</small><strong>@Formato.Moneda(costo.CostoInsumosDirectos)</strong></div>
-        <div><small>Costo total</small><strong>@Formato.Moneda(costo.CostoTotal)</strong></div>
+        <div><small>Costo directo</small><strong>@Formato.Moneda(costo.CostoDirecto)</strong></div>
+        <div><small>Costo fijo prorrateado</small><strong>@Formato.Moneda(costo.CostoFijoProrrateado)</strong></div>
+        <div><small>Costo completo (con fijos)</small><strong>@Formato.Moneda(costo.CostoTotal)</strong></div>
         <div>
-            <small>Margen real</small>
+            <small>Food cost</small>
+            <strong>@(FoodCost.HasValue ? FoodCost.Value.ToString("0.##") + " %" : "—")</strong>
+        </div>
+        <div>
+            <small>Margen directo</small>
+            <strong>@(costo.MargenDirecto.HasValue ? costo.MargenDirecto.Value.ToString("0.##") + " %" : "—")</strong>
+        </div>
+        <div>
+            <small>Margen con fijos</small>
             <strong>@(costo.MargenReal.HasValue ? costo.MargenReal.Value.ToString("0.##") + " %" : "—")</strong>
         </div>
     </div>
+
+    @if (FoodCost.HasValue)
+    {
+        <p class="text-muted mt-2 mb-0">
+            <small>
+                Food cost = (recetas + empaques) ÷ precio de venta. Referencia
+                gastronómica habitual: 30–35 %. El costo completo suma además la
+                cuota de costos fijos.
+            </small>
+        </p>
+    }
+
+    @if (!costo.SinCostosFijos && costo.PreparacionesEquivalentes > 0 && costo.CostoFijoProrrateado > 0)
+    {
+        <p class="text-muted mt-1 mb-0">
+            <small>
+                Cuota fija calculada sobre @costo.PreparacionesEquivalentes.ToString("0.####")
+                preparación(es) equivalente(s): Σ (porciones usadas ÷ rendimiento base de cada receta).
+            </small>
+        </p>
+    }
 
     <details class="mt-2">
         <summary>Ver composición (@costo.Recetas.Count receta(s))</summary>
@@ -59,11 +91,25 @@ else if (costo is not null)
             </button>
         </div>
     </div>
+
+    <div class="form-check mt-2">
+        <input type="checkbox" class="form-check-input" id="cp-incluir-fijos"
+               checked="@incluirFijosPrecio" @onchange="CambiarIncluirFijos" />
+        <label class="form-check-label" for="cp-incluir-fijos">Incluir costos fijos en el precio sugerido</label>
+        <small class="text-muted d-block">
+            Por defecto se usa el costo directo; los fijos se cubren con el punto de equilibrio.
+        </small>
+    </div>
+
     @if (sugerido is not null)
     {
         <div class="cs-preview mt-2">
             Precio sugerido: <strong>@(sugerido.PrecioSugerido.HasValue ? Formato.Moneda(sugerido.PrecioSugerido.Value) : "—")</strong>
-            <span class="text-muted">(costo @Formato.Moneda(sugerido.CostoTotal), margen @sugerido.MargenDeseado%)</span>
+            <span class="text-muted">
+                (base @Formato.Moneda(sugerido.CostoTotal),
+                @(sugerido.IncluyeCostosFijos ? "incluye fijos" : "costo directo"),
+                margen @sugerido.MargenDeseado%)
+            </span>
         </div>
     }
     @if (errorSugerido is not null) { <div class="rc-error mt-1">@errorSugerido</div> }
@@ -80,8 +126,19 @@ else if (costo is not null)
     private CostoProductoDto? costo;
     private PrecioSugeridoProductoDto? sugerido;
     private bool cargando = true, sugiriendo;
+    private bool incluirFijosPrecio;
     private string? error, errorSugerido;
     private decimal margen = 30;
+
+    // Food cost = costo directo (recetas + empaques) ÷ precio de venta.
+    private decimal? FoodCost
+    {
+        get
+        {
+            if (costo?.PrecioVenta is not { } precio || precio <= 0) return null;
+            return decimal.Round((costo.CostoRecetas + costo.CostoInsumosDirectos) / precio * 100m, 2);
+        }
+    }
     private bool mostrarAvisoMargen, margenConfirmado;
     private string mensajeAvisoMargen = "";
 
@@ -117,10 +174,20 @@ else if (costo is not null)
         }
         margenConfirmado = false;
         sugiriendo = true;
-        var res = await Api.PrecioSugeridoAsync(ProductoId, margen);
+        // Lista vacía = precio con costo directo (recomendado por defecto).
+        // null = incluir todos los costos fijos activos.
+        var costosFijosIds = incluirFijosPrecio ? null : new List<int>();
+        var res = await Api.PrecioSugeridoAsync(ProductoId, margen, costosFijosIds);
         sugiriendo = false;
         if (!res.Exito) { errorSugerido = res.Mensaje; return; }
         sugerido = res.Datos;
+    }
+
+    private void CambiarIncluirFijos(ChangeEventArgs e)
+    {
+        incluirFijosPrecio = e.Value is bool b && b;
+        sugerido = null;
+        errorSugerido = null;
     }
 
     private async Task ConfirmarMargen()
