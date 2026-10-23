@@ -1,0 +1,148 @@
+﻿@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Services
+@inject AuthService AuthService
+@inject MenuApiService MenuApi
+@inject InsumoService InsumoApi
+@inject NavigationManager Navigation
+
+<div class="panel-empresa">
+    <div class="panel-empresa-header">
+        <div class="panel-empresa-avatar">
+            @(string.IsNullOrWhiteSpace(AuthService.NombreEmpresa) ? "E" : AuthService.NombreEmpresa.Substring(0, 1).ToUpper())
+        </div>
+        <div class="panel-empresa-titulos">
+            <h1 class="panel-empresa-nombre">@AuthService.NombreEmpresa</h1>
+            <div class="panel-empresa-badges">
+                <span class="panel-empresa-badge">Emprendimiento Verificado</span>
+                @* TODO: reemplazar por la categoría real del negocio cuando se conecte el endpoint correspondiente *@
+                @if (!string.IsNullOrWhiteSpace(CategoriaNegocio))
+                {
+                    <span class="panel-empresa-badge panel-empresa-badge-categoria">@CategoriaNegocio</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-empresa-cuerpo">
+        @* TODO: reemplazar por la imagen real del negocio cuando se conecte el endpoint correspondiente *@
+        <div class="panel-empresa-imagen-placeholder">
+            [ Imagen del negocio ]
+        </div>
+
+        <div class="panel-empresa-info">
+            <h3>Información General</h3>
+            <p>@AuthService.DescripcionEmpresa</p>
+        </div>
+    </div>
+
+    <div class="panel-resumen-grid">
+        <div class="panel-resumen-card">
+            <div class="panel-resumen-card-header">
+                <h4>Productos de menú</h4>
+                <button type="button" class="btn-texto-ver-mas" @onclick='() => Navigation.NavigateTo("menu")'>
+                    Ver más →
+                </button>
+            </div>
+
+            @if (cargandoMenu)
+            {
+                <p class="text-muted small-texto">Cargando...</p>
+            }
+            else if (errorMenu is not null)
+            {
+                <p class="text-muted small-texto">@errorMenu</p>
+            }
+            else
+            {
+                <div class="panel-resumen-cifras">
+                    <div>
+                        <span class="panel-resumen-numero">@totalActivos</span>
+                        <span class="panel-resumen-etiqueta">Activos</span>
+                    </div>
+                    <div>
+                        <span class="panel-resumen-numero panel-resumen-numero-apagado">@totalInactivos</span>
+                        <span class="panel-resumen-etiqueta">Inactivos</span>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="panel-resumen-card">
+            <div class="panel-resumen-card-header">
+                <h4>Último cambio de precio</h4>
+            </div>
+
+            @if (cargandoPrecio)
+            {
+                <p class="text-muted small-texto">Cargando...</p>
+            }
+            else if (ultimoCambioPrecio is null)
+            {
+                <p class="text-muted small-texto">Aún no hay cambios de precio registrados.</p>
+            }
+            else
+            {
+                <p class="panel-resumen-precio-texto">
+                    <strong>@ultimoCambioPrecio.NombreInsumo</strong>
+                    @if (ultimoCambioPrecio.Diferencia.HasValue)
+                    {
+                        <span class="@(ultimoCambioPrecio.EsSubida == true ? "pm-texto-riesgo" : "")">
+                            @(ultimoCambioPrecio.EsSubida == true ? "▲" : "▼")
+                            @Formato.Moneda(Math.Abs(ultimoCambioPrecio.Diferencia.Value))
+                        </span>
+                    }
+                    <br />
+                    <span class="text-muted small-texto">
+                        Ahora: @Formato.Moneda(ultimoCambioPrecio.Precio) · @ultimoCambioPrecio.Fecha.ToLocalTime().ToString("dd/MM/yyyy")
+                    </span>
+                </p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? CategoriaNegocio;
+
+    private bool cargandoMenu = true;
+    private string? errorMenu;
+    private int totalActivos;
+    private int totalInactivos;
+
+    private bool cargandoPrecio = true;
+    private HistorialPrecioGeneralDto? ultimoCambioPrecio;
+
+    protected override async Task OnInitializedAsync()
+    {
+        CategoriaNegocio = null;
+        await Task.WhenAll(CargarResumenMenu(), CargarUltimoCambioPrecio());
+    }
+
+    private async Task CargarResumenMenu()
+    {
+        cargandoMenu = true;
+        var res = await MenuApi.ListarAsync(busqueda: null, incluirInactivos: true);
+        cargandoMenu = false;
+
+        if (!res.Exito || res.Datos is null)
+        {
+            errorMenu = "No se pudo cargar el resumen del menú.";
+            return;
+        }
+
+        totalActivos = res.Datos.Count(p => p.Activo);
+        totalInactivos = res.Datos.Count(p => !p.Activo);
+    }
+
+    private async Task CargarUltimoCambioPrecio()
+    {
+        cargandoPrecio = true;
+        var res = await InsumoApi.ObtenerHistorialGeneralAsync(null, null);
+        cargandoPrecio = false;
+
+        if (res.Success && res.Data?.Precios is { Count: > 0 })
+        {
+            ultimoCambioPrecio = res.Data.Precios[0];
+        }
+    }
+}
