@@ -8,6 +8,8 @@ public class RecetaEnProductoDto
     [Range(1, int.MaxValue, ErrorMessage = "Selecciona una receta.")]
     public int RecetaId { get; set; }
 
+    // Porciones de esta receta que entran en el producto:
+    // costo receta = (costo de insumos ÷ porciones base) × porciones.
     [Range(0.001, 10000, ErrorMessage = "La cantidad debe estar entre 0.001 y 10000.")]
     public decimal Cantidad { get; set; } = 1;
 }
@@ -72,6 +74,10 @@ public class CrearProductoMenuDto
     public decimal? PrecioVenta { get; set; }
     public bool Activo { get; set; } = true;
     public List<RecetaEnProductoDto> Recetas { get; set; } = new();
+
+    // Empaques (insumos directos) que se guardan con el producto y entran
+    // en su costo real. Lista vacía si no hay.
+    public List<InsumoDirectoDto> InsumosDirectos { get; set; } = new();
 }
 
 public class ActualizarProductoMenuDto
@@ -80,6 +86,8 @@ public class ActualizarProductoMenuDto
     public decimal? PrecioVenta { get; set; }
     public bool Activo { get; set; } = true;
     public List<RecetaEnProductoDto> Recetas { get; set; } = new();
+
+    public List<InsumoDirectoDto> InsumosDirectos { get; set; } = new();
 }
 
 public class PatchProductoMenuDto
@@ -89,6 +97,9 @@ public class PatchProductoMenuDto
     public bool? QuitarPrecioVenta { get; set; }
     public bool? Activo { get; set; }
     public List<RecetaEnProductoDto>? Recetas { get; set; }
+
+    // null = no cambia; lista (aunque vacía) = reemplaza los empaques.
+    public List<InsumoDirectoDto>? InsumosDirectos { get; set; }
 }
 
 public class CostoProductoDto
