@@ -62,7 +62,7 @@
                                 </select>
                             </td>
                             <td>
-                                <input type="number" class="form-control" min="0.001" max="10000" step="0.001"
+                                <input type="number" class="form-control" min="0" max="10000" step="1"
                                        @bind="f.Cantidad" @bind:event="oninput" @bind:after="AlCambiarComposicion" />
                             </td>
                             <td>
@@ -105,7 +105,7 @@
                                 </select>
                             </td>
                             <td>
-                                <input type="number" class="form-control" min="0.001" step="0.001"
+                                <input type="number" class="form-control" min="0" step="1"
                                        @bind="f.Cantidad" @bind:event="oninput" @bind:after="AlCambiarComposicion" />
                             </td>
                             <td>
@@ -150,7 +150,7 @@
         <div class="row g-3 mt-2">
             <div class="col-md-4">
                 <label class="rc-label">Margen de ganancia % <small class="text-muted">(sobre el precio de venta)</small></label>
-                <input type="number" class="form-control" min="1" max="99" step="0.5" @bind="margenSugerido" />
+                <input type="number" class="form-control" min="1" max="99" step="1" @bind="margenSugerido" />
             </div>
             <div class="col-md-8 d-flex align-items-end gap-2">
                 <button type="button" class="btn btn-outline-secondary" @onclick="SugerirPrecio" disabled="@sugiriendo">
@@ -182,7 +182,7 @@
             <div class="col-md-6">
                 <label class="rc-label">Precio de venta</label>
                 <InputNumber class="form-control" @bind-Value="modelo.PrecioVenta"
-                             min="0.01" max="999999.99" step="0.01" placeholder="Ej: 25000"
+                             min="0" max="999999.99" step="1" placeholder="Ej: 25000"
                              ParsingErrorMessage="El precio debe ser un número válido." />
                 <ValidationMessage For="() => modelo.PrecioVenta" class="rc-error" />
                 <small class="text-muted">Máximo 6 dígitos (999.999,99). Se reescribe con “Usar”.</small>

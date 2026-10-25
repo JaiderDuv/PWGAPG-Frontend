@@ -11,14 +11,24 @@
         <div>
             <h2 class="rc-title">Costos fijos del negocio</h2>
             <p class="rc-subtitle">
-                Arriendo, servicios, nómina... Cada monto mensual se divide entre el total de preparaciones al mes.
-                Esa cuota se usa en el costo completo y en el punto de equilibrio; el precio sugerido usa el costo directo.
+                Arriendo, servicios, nómina... Son gastos que pagas todos los meses, aunque no vendas.
+                Aquí los repartimos entre tus preparaciones para saber cuánto le corresponde a cada una.
             </p>
         </div>
         @if (!mostrarForm)
         {
             <button class="btn btn-primary" @onclick="Nuevo">+ Nuevo costo fijo</button>
         }
+    </div>
+
+    <div class="cs-aviso cs-aviso-info mb-3">
+        <div>
+            <strong>¿Qué es el “valor divisor”?</strong>
+            Es simplemente <strong>cuántas preparaciones completas haces en un mes</strong>.
+            Si tu arriendo cuesta $1.000.000 al mes y preparas 1.000 recetas, divides $1.000.000 entre 1.000:
+            cada preparación carga $1.000 de arriendo. En ese ejemplo, el valor divisor es 1.000.
+            Escribe el número real de preparaciones que produces al mes.
+        </div>
     </div>
 
     @if (mensajeOk is not null) { <div class="alert alert-success">@mensajeOk</div> }
@@ -36,9 +46,9 @@
                 <div class="cs-aviso cs-aviso-info mb-3">
                     <div>
                         <strong>¿Cómo se usa este costo?</strong>
-                        El monto se divide entre el valor divisor para obtener una cuota por preparación.
-                        Esa cuota se suma al <strong>costo completo</strong> de recetas y productos, pero no al costo directo.
-                        El precio sugerido usa el costo directo; los fijos se cubren con el punto de equilibrio.
+                        El monto mensual se divide entre las preparaciones que haces al mes (el valor divisor).
+                        Así obtenemos una cuota por preparación, que se suma al <strong>costo completo</strong> de recetas y productos.
+                        Esa cuota no cambia el costo directo ni el precio sugerido: los costos fijos se cubren con el punto de equilibrio.
                     </div>
                 </div>
 
@@ -72,33 +82,33 @@
                             <span class="campo-ayuda" tabindex="0"
                                   data-tip="Valor total que pagas al mes por este costo. Ej.: 1.000.000 de arriendo. No cambia el costo directo de los productos.">?</span>
                         </label>
-                        <InputNumber class="form-control" @bind-Value="modelo.MontoMensual" min="0.01" step="0.01" />
+                        <InputNumber class="form-control" @bind-Value="modelo.MontoMensual" min="0" step="1" />
                         <ValidationMessage For="() => modelo.MontoMensual" class="rc-error" />
                     </div>
                     <div class="col-md-6">
                         <label class="rc-label">
                             Se reparte por *
                             <span class="campo-ayuda" tabindex="0"
-                                  data-tip="Criterio con el que interpretarás el valor divisor. 'Recetas activas': el divisor es la cantidad de recetas activas (1 preparación por receta). 'Preparaciones producidas': el divisor es el total real de preparaciones que produces al mes.">?</span>
+                                  data-tip="Elige cómo contar tus preparaciones: por recetas activas (cada receta cuenta como 1) o por la cantidad real que produces al mes.">?</span>
                         </label>
                         <InputSelect class="form-select" @bind-Value="modelo.UnidadProrrateo">
                             @foreach (var u in OpcionesUnidad) { <option value="@u.Key">@u.Value</option> }
                         </InputSelect>
                         <ValidationMessage For="() => modelo.UnidadProrrateo" class="rc-error" />
                         <small class="text-muted">
-                            1 unidad = 1 preparación completa de la receta (su rendimiento base).
-                            El valor divisor debe corresponder a este criterio. Si un producto usa solo una parte, la cuota se reparte proporcionalmente.
+                            Cada preparación completa cuenta como 1.
+                            Si un producto usa solo una parte de una receta, esa cuota se reparte de forma proporcional.
                         </small>
                     </div>
                     <div class="col-md-6">
                         <label class="rc-label">
-                            Valor divisor *
+                            Preparaciones al mes (valor divisor) *
                             <span class="campo-ayuda" tabindex="0"
-                                  data-tip="Total de unidades al mes según el criterio elegido. Cuota por preparación = monto mensual ÷ divisor. Ej.: si produces 1.000 preparaciones, escribe 1.000. El mínimo es 1; con 1, todo el costo se carga a una sola preparación.">?</span>
+                                  data-tip="Escribe cuántas preparaciones completas haces en un mes. Ej.: si haces 1.000, escribe 1.000. Ese número divide el monto mensual para saber cuánto carga cada preparación. El mínimo es 1.">?</span>
                         </label>
                         <InputNumber class="form-control" @bind-Value="modelo.ValorDivisor" min="1" step="1" />
                         <ValidationMessage For="() => modelo.ValorDivisor" class="rc-error" />
-                        <small class="text-muted">Cantidad total al mes (ej. 500). Cada unidad es una preparación completa de receta.</small>
+                        <small class="text-muted">Si haces 500 preparaciones al mes, escribe 500.</small>
                     </div>
                     <div class="col-12">
                         <div class="form-check">
@@ -170,7 +180,7 @@
                             <th>Categoría</th>
                             <th class="text-end">Monto mensual</th>
                             <th>Se reparte por</th>
-                            <th class="text-end" title="Total de unidades al mes con el que se reparte el monto.">Valor divisor</th>
+                            <th class="text-end" title="Cantidad de preparaciones completas que haces al mes.">Preparaciones al mes</th>
                             <th class="text-end" title="Monto mensual ÷ valor divisor. Es la cuota que se suma al costo completo de cada preparación; no es el total mensual del costo.">Cuota por preparación</th>
                             <th>Estado</th>
                             <th></th>
@@ -221,8 +231,9 @@
             </div>
             <p class="text-muted mt-2 mb-0 px-3 pb-2">
                 <small>
-                    La cuota por preparación es el monto mensual ÷ valor divisor. El total mensual del costo
-                    es la columna "Monto mensual"; la cuota se usa para el costo completo, no para el precio directo.
+                    La cuota por preparación es el monto mensual dividido entre las preparaciones al mes.
+                    El total mensual del costo es la columna "Monto mensual"; la cuota se usa para el costo completo,
+                    no para el precio directo.
                 </small>
             </p>
         </div>

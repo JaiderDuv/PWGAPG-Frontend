@@ -40,7 +40,7 @@
                     </span>
                 </span>
 
-                <input type="number" class="form-control pm-input-umbral" min="0" max="100" step="0.5"
+                <input type="number" class="form-control pm-input-umbral" min="0" max="100" step="1"
                        @bind="umbralEditado" @bind:event="oninput" @bind:after="AlCambiarUmbral" />
 
                 @if (guardandoUmbral)
@@ -82,34 +82,34 @@
 
             <div class="pm-filtro-item">
                 <label class="pm-filtro-label">Costo directo mín.</label>
-                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="any"
+                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="1"
                        @bind="costoMin" @bind:event="oninput" @bind:after="AlFiltrar" />
             </div>
             <div class="pm-filtro-item">
                 <label class="pm-filtro-label">Costo directo máx.</label>
-                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="any"
+                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="1"
                        @bind="costoMax" @bind:event="oninput" @bind:after="AlFiltrar" />
             </div>
 
             <div class="pm-filtro-item">
                 <label class="pm-filtro-label">Precio mín.</label>
-                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="any"
+                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="1"
                        @bind="precioMin" @bind:event="oninput" @bind:after="AlFiltrar" />
             </div>
             <div class="pm-filtro-item">
                 <label class="pm-filtro-label">Precio máx.</label>
-                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="any"
+                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="1"
                        @bind="precioMax" @bind:event="oninput" @bind:after="AlFiltrar" />
             </div>
 
             <div class="pm-filtro-item">
                 <label class="pm-filtro-label">Margen directo mín. %</label>
-                <input type="number" class="form-control pm-input-margen" min="-999" max="999" step="any"
+                <input type="number" class="form-control pm-input-margen" min="-999" max="999" step="1"
                        @bind="margenMin" @bind:event="oninput" @bind:after="AlFiltrar" />
             </div>
             <div class="pm-filtro-item">
                 <label class="pm-filtro-label">Margen directo máx. %</label>
-                <input type="number" class="form-control pm-input-margen" min="-999" max="999" step="any"
+                <input type="number" class="form-control pm-input-margen" min="-999" max="999" step="1"
                        @bind="margenMax" @bind:event="oninput" @bind:after="AlFiltrar" />
             </div>
 
@@ -229,7 +229,7 @@
             </p>
 
             <label class="rc-label">Margen deseado (%) *</label>
-            <input type="number" class="form-control" min="0.01" max="99.99" step="0.5"
+            <input type="number" class="form-control" min="0" max="99.99" step="1"
                    @bind="margenNuevo" @bind:event="oninput" @bind:after="AlCambiarMargenNuevo" />
 
             <div class="pm-modal-sugerido mt-2">

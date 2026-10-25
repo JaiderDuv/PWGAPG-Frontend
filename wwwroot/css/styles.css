@@ -874,6 +874,67 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
     min-width: 90px;
 }
 
+.proveedor-edicion-rapida {
+    min-width: 210px;
+}
+
+.proveedores-asociados-rapida {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+    .proveedores-asociados-rapida > small {
+        width: 100%;
+        color: var(--text-muted, #718096);
+        font-size: 0.72rem;
+    }
+
+.proveedor-asociado-rapida {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    padding: 5px 8px;
+    border: 1px solid #E5E7EB;
+    border-radius: 7px;
+    background: #fff;
+    color: var(--text-main, #2D3748);
+    font-size: 0.78rem;
+    line-height: 1.15;
+    text-align: left;
+    cursor: pointer;
+}
+
+    .proveedor-asociado-rapida:hover {
+        border-color: #D97706;
+        background: #FFFBEB;
+    }
+
+    .proveedor-asociado-rapida small {
+        color: #718096;
+        font-size: 0.68rem;
+    }
+
+.proveedor-asociado-actual {
+    border-color: #D97706;
+    background: #FEF3C7;
+}
+
+.proveedor-sin-asociados {
+    display: block;
+    margin-top: 5px;
+    color: #718096;
+    font-size: 0.72rem;
+    line-height: 1.35;
+}
+
+.insumo-rapido-modal {
+    width: 560px;
+    max-width: 94vw;
+}
+
 .campo-ayuda {
     display: inline-flex;
     align-items: center;

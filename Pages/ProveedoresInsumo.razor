@@ -173,7 +173,7 @@
                             Cantidad *<span class="campo-ayuda"
                                             data-tip="Indica la cantidad numérica o el tamaño del producto (por ejemplo: 500).">?</span>
                         </label>
-                        <input type="number" step="any" min="0.001"
+                        <input type="number" step="1" min="0"
                                class="form-control @(erroresEditar.ContainsKey("Cantidad") ? "is-invalid" : "")"
                                value="@formularioEditar.CantidadTexto"
                                @oninput="e => OnEditarInput(nameof(formularioEditar.CantidadTexto), e.Value?.ToString())" />
@@ -210,7 +210,7 @@
                         Precio *<span class="campo-ayuda"
                                       data-tip="Es el costo total que tiene esa cantidad específica del producto (por ejemplo: el precio completo de la bolsa de 500 gramos).">?</span>
                     </label>
-                    <input type="number" step="any" min="0.01"
+                    <input type="number" step="1" min="0"
                            class="form-control @(erroresEditar.ContainsKey("Costo") ? "is-invalid" : "")"
                            value="@formularioEditar.CostoTexto"
                            @oninput="e => OnEditarInput(nameof(formularioEditar.CostoTexto), e.Value?.ToString())" />
@@ -350,7 +350,7 @@
                             Cantidad *<span class="campo-ayuda"
                                             data-tip="Indica la cantidad numérica o el tamaño del producto (por ejemplo: 500).">?</span>
                         </label>
-                        <input type="number" step="any" min="0.001" placeholder="Ej.: 500"
+                        <input type="number" step="1" min="0" placeholder="Ej.: 500"
                                class="form-control @(erroresAgregar.ContainsKey("Cantidad") ? "is-invalid" : "")"
                                value="@formularioAgregar.CantidadTexto"
                                @oninput="e => OnAgregarInput(nameof(formularioAgregar.CantidadTexto), e.Value?.ToString())" />
@@ -387,7 +387,7 @@
                         Precio *<span class="campo-ayuda"
                                       data-tip="Es el costo total que tiene esa cantidad específica del producto (por ejemplo: el precio completo de la bolsa de 500 gramos).">?</span>
                     </label>
-                    <input type="number" step="any" min="0.01"
+                    <input type="number" step="1" min="0"
                            class="form-control @(erroresAgregar.ContainsKey("Costo") ? "is-invalid" : "")"
                            value="@formularioAgregar.CostoTexto"
                            @oninput="e => OnAgregarInput(nameof(formularioAgregar.CostoTexto), e.Value?.ToString())" />

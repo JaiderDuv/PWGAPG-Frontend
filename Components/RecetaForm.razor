@@ -3,6 +3,7 @@
 @using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Services
 @inject RecetaApiService Api
+@inject InsumoService InsumoService
 
 <div class="rc-card rc-form">
     <div class="rc-card-header">
@@ -75,8 +76,9 @@
                 <thead>
                     <tr>
                         <th>Insumo</th>
-                        <th style="width:150px">Cantidad</th>
-                        <th style="width:120px">Unidad</th>
+                        <th style="width:130px">Cantidad</th>
+                        <th style="width:110px" title="Porcentaje que se pierde al preparar este ingrediente">Merma %</th>
+                        <th style="width:110px">Unidad</th>
                         <th style="width:130px" class="text-end">Costo</th>
                         <th style="width:50px"></th>
                     </tr>
@@ -113,6 +115,11 @@
                                             {
                                                 <div class="rc-combo-vacio">Sin coincidencias para "@fila.Busqueda"</div>
                                             }
+                                            <button type="button" class="rc-combo-item rc-combo-crear"
+                                                    @onclick="() => AbrirNuevoInsumo(fila)">
+                                                <span class="rc-combo-nombre">+ Crear insumo nuevo</span>
+                                                <small class="rc-combo-meta">Se guarda en tu inventario</small>
+                                            </button>
                                         </div>
                                     }
                                 </div>
@@ -127,8 +134,12 @@
                         </td>
                        <td>
                          <InputNumber class="@ClaseInput(tieneError)" @bind-Value="fila.Cantidad"
-                         min="0.001" max="100000" step="0.001" />
+                         min="0" max="100000" step="1" />
                        </td>
+                        <td>
+                            <InputNumber class="form-control" @bind-Value="fila.PorcentajeMerma"
+                                        min="0" max="100" step="1" title="Se pierde al limpiar, pelar o cocinar. 0 = sin merma." />
+                        </td>
                         <td>
                             <select class="form-select" @bind="fila.UnidadMedida">
                                 @foreach (var u in UnidadesCompatibles(fila)) { <option value="@u">@u</option> }
@@ -142,15 +153,20 @@
                     </tr>
                     @if (tieneError)
                     {
-                        <tr class="rc-row-error"><td colspan="5"><div class="rc-error">@erroresFila[fila]</div></td></tr>
+                        <tr class="rc-row-error"><td colspan="6"><div class="rc-error">@erroresFila[fila]</div></td></tr>
                     }
                 }
                 </tbody>
             </table>
         </div>
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AgregarFila"
-                    disabled="@(modelo.Filas.Count >= 50)">+ Agregar ingrediente</button>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AgregarFila"
+                        disabled="@(modelo.Filas.Count >= 50)">+ Agregar ingrediente</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AbrirNuevoInsumoDesdeFooter">
+                    + Crear insumo
+                </button>
+            </div>
             <div class="rc-costos">
                 <span>Costo total: <strong>@Formato.Moneda(CostoTotal)</strong></span>
                 <span>Por porción: <strong>@Formato.Moneda(CostoPorcion)</strong></span>
@@ -169,11 +185,115 @@
     </EditForm>
 </div>
 
+@if (mostrarNuevoInsumo)
+{
+    <div class="confirm-overlay">
+        <div class="socio-modal insumo-rapido-modal">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+                <div>
+                    <h3 class="onboarding-subtitulo mb-1">Nuevo insumo</h3>
+                    <p class="text-muted mb-0" style="font-size:.85rem;">
+                        Se guardará en tu inventario y quedará seleccionado en esta receta.
+                    </p>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CerrarNuevoInsumo"
+                        disabled="@guardandoNuevoInsumo" title="Cerrar">✕</button>
+            </div>
+
+            <EditForm Model="nuevoInsumo" OnValidSubmit="CrearInsumoRapido" novalidate class="mt-3">
+                <DataAnnotationsValidator />
+
+                <div class="form-group-sm">
+                    <label class="auth-label">Nombre *</label>
+                    <InputText class="form-control" @bind-Value="nuevoInsumo.Nombre" maxlength="150"
+                               placeholder="Ej.: Harina de trigo" />
+                    <ValidationMessage For="() => nuevoInsumo.Nombre" class="text-danger msg-error" />
+                </div>
+
+                <div class="onb-grid">
+                    <div class="form-group-sm">
+                        <label class="auth-label">Unidad de medida *</label>
+                        <InputSelect class="form-select" @bind-Value="nuevoInsumo.UnidadMedida">
+                            <option value="g">g</option>
+                            <option value="kg">kg</option>
+                            <option value="ml">ml</option>
+                            <option value="l">l</option>
+                            <option value="oz">oz</option>
+                            <option value="lb">lb</option>
+                            <option value="unidad">unidad</option>
+                            <option value="taza">taza</option>
+                        </InputSelect>
+                        <ValidationMessage For="() => nuevoInsumo.UnidadMedida" class="text-danger msg-error" />
+                    </div>
+                    <div class="form-group-sm">
+                        <label class="auth-label">Categoría *</label>
+                        <InputSelect class="form-select" @bind-Value="nuevoInsumo.Categoria">
+                            <option value="materia_prima">Materia prima</option>
+                            <option value="empaque">Empaque</option>
+                            <option value="otro">Otro</option>
+                        </InputSelect>
+                        <ValidationMessage For="() => nuevoInsumo.Categoria" class="text-danger msg-error" />
+                    </div>
+                </div>
+
+                <div class="onb-grid">
+                    <div class="form-group-sm">
+                        <label class="auth-label">Cantidad del paquete *</label>
+                        <InputNumber class="form-control" @bind-Value="nuevoInsumo.Cantidad"
+                                     min="0" max="999999.99" step="1" />
+                        <small class="text-muted">Ej.: 1000 si compras 1 kg y la unidad es g.</small>
+                        <ValidationMessage For="() => nuevoInsumo.Cantidad" class="text-danger msg-error" />
+                    </div>
+                    <div class="form-group-sm">
+                        <label class="auth-label">Costo del paquete *</label>
+                        <InputNumber class="form-control" @bind-Value="nuevoInsumo.CostoUnitario"
+                                     min="0" max="999999.99" step="1" />
+                        <small class="text-muted">Lo que pagas por esa cantidad.</small>
+                        <ValidationMessage For="() => nuevoInsumo.CostoUnitario" class="text-danger msg-error" />
+                    </div>
+                </div>
+
+                <div class="form-group-sm">
+                    <label class="auth-label">Proveedor *</label>
+                    <InputText class="form-control" @bind-Value="nuevoInsumo.Proveedor" maxlength="150"
+                               list="proveedores-receta" placeholder="Escribe o elige un proveedor" />
+                    <datalist id="proveedores-receta">
+                        @foreach (var p in proveedoresSugeridos)
+                        {
+                            <option value="@p.Nombre"></option>
+                        }
+                    </datalist>
+                    <small class="text-muted">Si no existe, se crea automáticamente.</small>
+                    <ValidationMessage For="() => nuevoInsumo.Proveedor" class="text-danger msg-error" />
+                </div>
+
+                <div class="alert alert-light border py-2 px-3" style="font-size:.82rem;">
+                    La merma se define por ingrediente aquí en la receta, no en el insumo.
+                </div>
+
+                @if (errorNuevoInsumo is not null)
+                {
+                    <div class="alert alert-danger py-2">@errorNuevoInsumo</div>
+                }
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CerrarNuevoInsumo"
+                            disabled="@guardandoNuevoInsumo">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" disabled="@guardandoNuevoInsumo">
+                        @(guardandoNuevoInsumo ? "Guardando..." : "Guardar insumo")
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter] public RecetaDto? Editando { get; set; }
     [Parameter] public RecetaDto? Precarga { get; set; }   // para la IA más adelante
     [Parameter] public List<InsumoOpcionDto> Insumos { get; set; } = new();
     [Parameter] public EventCallback<string?> OnGuardado { get; set; }
+    [Parameter] public EventCallback<InsumoOpcionDto> OnInsumoCreado { get; set; }
     [Parameter] public EventCallback OnCancelar { get; set; }
 
     private const long MaxImagenBytes = 2 * 1024 * 1024;
@@ -187,6 +307,16 @@
     private string? errorGeneral, errorApi, errorImagen;
     private bool guardando;
 
+    // Lista local para poder agregar un insumo sin salir del formulario.
+    private List<InsumoOpcionDto> insumosDisponibles = new();
+
+    // Alta rápida de insumo desde el combo de ingredientes.
+    private bool mostrarNuevoInsumo, guardandoNuevoInsumo;
+    private string? errorNuevoInsumo;
+    private Fila? filaNuevoInsumo;
+    private List<ProveedorDTO> proveedoresSugeridos = new();
+    private NuevoInsumoModel nuevoInsumo = new();
+
     // Imagen
     private byte[]? imagenBytes;
     private string? imagenNombre, imagenTipo, previewSrc, imagenActual;
@@ -197,6 +327,7 @@
 
     protected override void OnInitialized()
     {
+        insumosDisponibles = Insumos.ToList();
         var origen = Editando ?? Precarga;
         imagenActual = Editando?.ImagenUrl;
         if (origen is null) { modelo.Filas.Add(new Fila()); return; }
@@ -206,9 +337,24 @@
         modelo.Instrucciones = origen.Instrucciones;
         modelo.Filas = origen.Insumos.Select(i => new Fila
         {
-            InsumoId = i.InsumoId, Cantidad = i.Cantidad, UnidadMedida = i.UnidadMedida
+            InsumoId = i.InsumoId,
+            Cantidad = i.Cantidad,
+            PorcentajeMerma = i.PorcentajeMerma,
+            UnidadMedida = i.UnidadMedida
         }).ToList();
         if (modelo.Filas.Count == 0) modelo.Filas.Add(new Fila());
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Si el padre recarga o agrega insumos, los incorporamos sin perder el alta rápida.
+        foreach (var insumo in Insumos)
+        {
+            if (insumosDisponibles.All(i => i.Id != insumo.Id))
+            {
+                insumosDisponibles.Add(insumo);
+            }
+        }
     }
 
     // ---------- Imagen ----------
@@ -250,8 +396,8 @@
     {
         var b = (fila.Busqueda ?? "").Trim();
         return b.Length == 0
-            ? Insumos.OrderBy(i => i.Nombre, StringComparer.OrdinalIgnoreCase)
-            : Insumos.Where(i => i.Nombre.Contains(b, StringComparison.OrdinalIgnoreCase))
+            ? insumosDisponibles.OrderBy(i => i.Nombre, StringComparer.OrdinalIgnoreCase)
+            : insumosDisponibles.Where(i => i.Nombre.Contains(b, StringComparison.OrdinalIgnoreCase))
                      .OrderBy(i => i.Nombre, StringComparer.OrdinalIgnoreCase);
     }
 
@@ -281,31 +427,149 @@
     }
 
     private string NombreInsumo(int id) =>
-        Insumos.FirstOrDefault(i => i.Id == id)?.Nombre ?? $"Insumo #{id}";
+        insumosDisponibles.FirstOrDefault(i => i.Id == id)?.Nombre ?? $"Insumo #{id}";
 
     private string UnidadDeInsumo(int id) =>
-        Insumos.FirstOrDefault(i => i.Id == id)?.UnidadMedida ?? "";
+        insumosDisponibles.FirstOrDefault(i => i.Id == id)?.UnidadMedida ?? "";
 
     private IEnumerable<string> UnidadesCompatibles(Fila fila)
     {
-        var insumo = Insumos.FirstOrDefault(i => i.Id == fila.InsumoId);
+        var insumo = insumosDisponibles.FirstOrDefault(i => i.Id == fila.InsumoId);
         return insumo is null ? ConversorUnidades.UnidadesDeLaMismaFamilia("g")
                               : ConversorUnidades.UnidadesDeLaMismaFamilia(insumo.UnidadMedida);
     }
 
     private decimal CostoDeFila(Fila f)
     {
-        var i = Insumos.FirstOrDefault(x => x.Id == f.InsumoId);
+        var i = insumosDisponibles.FirstOrDefault(x => x.Id == f.InsumoId);
         if (i is null || f.Cantidad <= 0) return 0;
         // CostoUnitario es el total del paquete (Cantidad): se divide para el precio por unidad.
         var costoPorUnidad = i.Cantidad.HasValue && i.Cantidad.Value > 0
             ? i.CostoUnitario / i.Cantidad.Value
             : i.CostoUnitario;
-        return ConversorUnidades.CostoLinea(f.Cantidad, f.UnidadMedida, i.UnidadMedida, costoPorUnidad, i.PorcentajeMerma);
+        return ConversorUnidades.CostoLinea(f.Cantidad, f.UnidadMedida, i.UnidadMedida, costoPorUnidad, f.PorcentajeMerma);
     }
 
     private decimal CostoTotal => modelo.Filas.Sum(CostoDeFila);
     private decimal CostoPorcion => modelo.PorcionesBase > 0 ? CostoTotal / modelo.PorcionesBase : 0;
+
+    // ---------- Alta rápida de insumo ----------
+    private async Task AbrirNuevoInsumo(Fila fila)
+    {
+        filaNuevoInsumo = fila;
+        fila.MostrarLista = false;
+        nuevoInsumo = new NuevoInsumoModel
+        {
+            Nombre = fila.Busqueda.Trim(),
+            UnidadMedida = string.IsNullOrWhiteSpace(fila.UnidadMedida) ? "g" : fila.UnidadMedida,
+            Categoria = "materia_prima",
+            Cantidad = 1
+        };
+        errorNuevoInsumo = null;
+        mostrarNuevoInsumo = true;
+
+        await CargarProveedoresSugeridosAsync();
+    }
+
+    private async Task AbrirNuevoInsumoDesdeFooter()
+    {
+        var fila = modelo.Filas.FirstOrDefault(f => f.InsumoId == 0);
+        if (fila is null)
+        {
+            if (modelo.Filas.Count >= 50)
+            {
+                errorGeneral = "Una receta puede tener máximo 50 ingredientes.";
+                return;
+            }
+
+            fila = new Fila();
+            modelo.Filas.Add(fila);
+        }
+
+        await AbrirNuevoInsumo(fila);
+    }
+
+    private void CerrarNuevoInsumo()
+    {
+        if (guardandoNuevoInsumo) return;
+        mostrarNuevoInsumo = false;
+        errorNuevoInsumo = null;
+        filaNuevoInsumo = null;
+    }
+
+    private async Task CargarProveedoresSugeridosAsync()
+    {
+        if (proveedoresSugeridos.Count > 0) return;
+
+        try
+        {
+            var resultado = await InsumoService.ListarProveedoresNegocioAsync();
+            if (resultado.Success && resultado.Data is not null)
+            {
+                proveedoresSugeridos = resultado.Data;
+            }
+        }
+        catch (HttpRequestException)
+        {
+            // Si falla la carga, el campo sigue aceptando un proveedor nuevo.
+        }
+    }
+
+    private async Task CrearInsumoRapido()
+    {
+        if (guardandoNuevoInsumo) return;
+
+        errorNuevoInsumo = null;
+        guardandoNuevoInsumo = true;
+        try
+        {
+            var request = new CrearInsumoRequest
+            {
+                Nombre = nuevoInsumo.Nombre.Trim(),
+                UnidadMedida = nuevoInsumo.UnidadMedida,
+                Categoria = nuevoInsumo.Categoria,
+                CostoUnitario = nuevoInsumo.CostoUnitario!.Value,
+                Cantidad = nuevoInsumo.Cantidad!.Value,
+                Proveedor = nuevoInsumo.Proveedor.Trim(),
+                Activo = true
+            };
+
+            var resultado = await InsumoService.CrearAsync(request);
+            if (!resultado.Success || resultado.Data is null)
+            {
+                errorNuevoInsumo = resultado.Message ?? "No se pudo crear el insumo.";
+                return;
+            }
+
+            var creado = resultado.Data;
+            if (insumosDisponibles.All(i => i.Id != creado.Id))
+            {
+                insumosDisponibles.Add(creado);
+            }
+
+            await OnInsumoCreado.InvokeAsync(creado);
+
+            if (filaNuevoInsumo is not null && modelo.Filas.Contains(filaNuevoInsumo))
+            {
+                SeleccionarInsumo(filaNuevoInsumo, creado);
+                if (filaNuevoInsumo.Cantidad <= 0)
+                {
+                    filaNuevoInsumo.Cantidad = 1;
+                }
+            }
+
+            mostrarNuevoInsumo = false;
+            filaNuevoInsumo = null;
+        }
+        catch (HttpRequestException)
+        {
+            errorNuevoInsumo = "No fue posible conectar con el servidor.";
+        }
+        finally
+        {
+            guardandoNuevoInsumo = false;
+        }
+    }
 
     // ---------- Validación y guardado ----------
     private bool ValidarFilas()
@@ -322,6 +586,8 @@
             else if (f.Cantidad <= 0) erroresFila[f] = "La cantidad debe ser mayor a 0.";
             else if (f.Cantidad > 100000) erroresFila[f] = "La cantidad no puede superar 100.000.";
             else if (decimal.Round(f.Cantidad, 3) != f.Cantidad) erroresFila[f] = "La cantidad admite máximo 3 decimales.";
+            else if (f.PorcentajeMerma < 0 || f.PorcentajeMerma > 100) erroresFila[f] = "La merma debe estar entre 0 y 100 %.";
+            else if (decimal.Round(f.PorcentajeMerma, 2) != f.PorcentajeMerma) erroresFila[f] = "La merma admite máximo 2 decimales.";
         }
         if (erroresFila.Count > 0) errorGeneral = "Revisa los ingredientes marcados en rojo.";
         return erroresFila.Count == 0;
@@ -341,7 +607,10 @@
             Instrucciones = modelo.Instrucciones,
             Insumos = modelo.Filas.Select(f => new RecetaInsumoDto
             {
-                InsumoId = f.InsumoId, Cantidad = f.Cantidad, UnidadMedida = f.UnidadMedida
+                InsumoId = f.InsumoId,
+                Cantidad = f.Cantidad,
+                PorcentajeMerma = f.PorcentajeMerma,
+                UnidadMedida = f.UnidadMedida
             }).ToList()
         };
 
@@ -388,9 +657,35 @@
     {
         public int InsumoId { get; set; }
         public decimal Cantidad { get; set; }
+        public decimal PorcentajeMerma { get; set; }
         public string UnidadMedida { get; set; } = "g";
         // Estado del combo buscable de insumos (no se envía al backend).
         public string Busqueda { get; set; } = "";
         public bool MostrarLista { get; set; }
+    }
+
+    private sealed class NuevoInsumoModel
+    {
+        [Required(ErrorMessage = "El nombre del insumo es obligatorio.")]
+        [StringLength(150, ErrorMessage = "El nombre no puede superar los 150 caracteres.")]
+        public string Nombre { get; set; } = "";
+
+        [Required(ErrorMessage = "La unidad de medida es obligatoria.")]
+        public string UnidadMedida { get; set; } = "g";
+
+        [Required(ErrorMessage = "La categoría es obligatoria.")]
+        public string Categoria { get; set; } = "materia_prima";
+
+        [Required(ErrorMessage = "La cantidad es obligatoria.")]
+        [Range(0.001, 999999.99, ErrorMessage = "La cantidad debe estar entre 0,001 y 999.999,99.")]
+        public decimal? Cantidad { get; set; }
+
+        [Required(ErrorMessage = "El costo es obligatorio.")]
+        [Range(0.01, 999999.99, ErrorMessage = "El costo debe estar entre 0,01 y 999.999,99.")]
+        public decimal? CostoUnitario { get; set; }
+
+        [Required(ErrorMessage = "El proveedor es obligatorio.")]
+        [StringLength(150, ErrorMessage = "El proveedor no puede superar los 150 caracteres.")]
+        public string Proveedor { get; set; } = "";
     }
 }

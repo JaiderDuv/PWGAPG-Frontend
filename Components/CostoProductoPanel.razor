@@ -93,7 +93,7 @@ else if (costo is not null)
     <div class="row g-2 mt-2">
         <div class="col-md-4">
             <label class="rc-label">Margen %</label>
-            <input type="number" class="form-control" min="1" max="99" step="0.5" @bind="margen" />
+            <input type="number" class="form-control" min="1" max="99" step="1" @bind="margen" />
         </div>
         <div class="col-md-8 d-flex align-items-end">
             <button class="btn btn-sm btn-outline-secondary" @onclick="Sugerir" disabled="@sugiriendo">
