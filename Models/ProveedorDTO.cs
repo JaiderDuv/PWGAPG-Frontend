@@ -2,25 +2,6 @@
 
 namespace PWGAPG_Frontend.Models
 {
-
-    public sealed class MaximoDecimalesAttribute : ValidationAttribute
-    {
-        private readonly int _decimales;
-
-        public MaximoDecimalesAttribute(int decimales)
-        {
-            _decimales = decimales;
-            ErrorMessage = $"Se permiten máximo {decimales} decimales.";
-        }
-
-        public override bool IsValid(object? value)
-        {
-            if (value is not decimal d) return true;
-            var factor = (decimal)Math.Pow(10, _decimales);
-            return Math.Round(d * factor) / factor == d;
-        }
-    }
-
     public sealed class CantidadSegunUnidadAttribute : ValidationAttribute
     {
         private static readonly HashSet<string> UnidadesPequenas =
@@ -58,8 +39,6 @@ namespace PWGAPG_Frontend.Models
         }
     }
 
-
-
     public class ProveedorFormDTO
     {
         [Required(ErrorMessage = "El nombre del proveedor es obligatorio.")]
@@ -73,7 +52,6 @@ namespace PWGAPG_Frontend.Models
         [RegularExpression(@"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$", ErrorMessage = "Ingrese un correo electrónico válido.")]
         public string? Correo { get; set; }
     }
-
 
     public class ProveedorNuevoDTO
     {
@@ -93,7 +71,6 @@ namespace PWGAPG_Frontend.Models
         public decimal Cantidad { get; set; } = 1;
         public string CantidadTexto { get; set; } = string.Empty;
 
-
         [Required(ErrorMessage = "La unidad es obligatoria.")]
         public string UnidadMedida { get; set; } = "g";
 
@@ -102,35 +79,5 @@ namespace PWGAPG_Frontend.Models
         [MaximoDecimales(2)]
         public decimal Costo { get; set; }
         public string CostoTexto { get; set; } = string.Empty;
-    }
-
-    public class ChequeoEliminarProveedorDTO
-    {
-        public int ProveedorId { get; set; }
-        public string Nombre { get; set; } = string.Empty;
-        public bool TieneInsumos { get; set; }
-        public List<string> NombresInsumos { get; set; } = new();
-    }
-
-    public class ProveedorDTO
-    {
-        public int Id { get; set; }
-        public string Nombre { get; set; } = string.Empty;
-        public string? Telefono { get; set; }
-        public string? Correo { get; set; }
-    }
-
-    public class InsumoProveedorDTO
-    {
-        public int ProveedorId { get; set; }
-        public string Nombre { get; set; } = string.Empty;
-        public string? Telefono { get; set; }
-        public string? Correo { get; set; }
-        public decimal Costo { get; set; }
-        public decimal Cantidad { get; set; }
-        public string UnidadMedida { get; set; } = string.Empty;
-        public decimal? PrecioUnitario { get; set; }
-        public bool EsPrincipal { get; set; }
-        public bool EsMasBarato { get; set; }
     }
 }

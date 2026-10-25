@@ -1,5 +1,7 @@
 ﻿using Microsoft.JSInterop;
 using PWGAPG_Frontend.Models;
+using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -54,13 +56,7 @@ namespace PWGAPG_Frontend.Services
 
                 if (resultado is { Exito: true })
                 {
-                    IsAuthenticated = true;
-                    NombreEmpresa = resultado.NombreEmprendimiento ?? string.Empty;
-                    OnboardingCompletado = resultado.OnboardingCompletado;
-                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", resultado.Token ?? resultado.AccessToken);
-                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "nombreEmpresa", NombreEmpresa);
-                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "onboardingCompletado", OnboardingCompletado.ToString());
-                    NotifyStateChanged();
+                    await GuardarSesionAsync(resultado);
                 }
 
                 return resultado;
@@ -78,58 +74,62 @@ namespace PWGAPG_Frontend.Services
         public async Task InicializarAsync()
         {
             var token = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            if (!string.IsNullOrWhiteSpace(token))
+            if (string.IsNullOrWhiteSpace(token))
             {
-                IsAuthenticated = true;
-                NombreEmpresa = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "nombreEmpresa") ?? string.Empty;
+                return;
+            }
 
-                var onboardingGuardado = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "onboardingCompletado");
-                OnboardingCompletado = onboardingGuardado == "True";
+            IsAuthenticated = true;
+            NombreEmpresa = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "nombreEmpresa") ?? string.Empty;
 
+            var onboardingGuardado = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "onboardingCompletado");
+            OnboardingCompletado = onboardingGuardado == "True";
+
+            try
+            {
                 // Refresca el flag real desde BD (sobrescribe el de localStorage).
-                var tokenLocal = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                if (!string.IsNullOrWhiteSpace(tokenLocal))
+                // Si el access token expiró, el helper renueva la sesión y reintenta.
+                using var resp = await EnviarConTokenAsync(HttpMethod.Get, "api/user");
+                if (resp.StatusCode == HttpStatusCode.Unauthorized)
                 {
-                    try
-                    {
-                        using var request = new HttpRequestMessage(HttpMethod.Get, "api/user");
-                        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenLocal);
-                        var resp = await _httpClient.SendAsync(request);
-                        if (resp.IsSuccessStatusCode)
-                        {
-                            using var doc = await System.Text.Json.JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync());
-                            if (doc.RootElement.TryGetProperty("onboardingCompletado", out var prop) && prop.ValueKind == System.Text.Json.JsonValueKind.True)
-                            {
-                                OnboardingCompletado = true;
-                            }
-                            else
-                            {
-                                OnboardingCompletado = false;
-                            }
-                            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "onboardingCompletado", OnboardingCompletado.ToString());
-                        }
-
-                        // Refresca la foto de perfil desde BD.
-                        using var requestFoto = new HttpRequestMessage(HttpMethod.Get, "api/onboarding/datos-personales");
-                        requestFoto.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenLocal);
-                        var respFoto = await _httpClient.SendAsync(requestFoto);
-                        if (respFoto.IsSuccessStatusCode)
-                        {
-                            using var docFoto = await System.Text.Json.JsonDocument.ParseAsync(await respFoto.Content.ReadAsStreamAsync());
-                            if (docFoto.RootElement.TryGetProperty("fotoPerfilUrl", out var fotoProp) && fotoProp.ValueKind == System.Text.Json.JsonValueKind.String && !string.IsNullOrWhiteSpace(fotoProp.GetString()))
-                            {
-                                UrlFotoPerfil = fotoProp.GetString()!;
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        // Si falla la red, se queda con el valor por defecto.
-                    }
+                    return;
                 }
 
-                NotifyStateChanged();
+                if (resp.IsSuccessStatusCode)
+                {
+                    using var doc = await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync());
+                    OnboardingCompletado = doc.RootElement.TryGetProperty("onboardingCompletado", out var prop) &&
+                                           prop.ValueKind == JsonValueKind.True;
+                    await _jsRuntime.InvokeVoidAsync(
+                        "localStorage.setItem", "onboardingCompletado", OnboardingCompletado.ToString());
+                }
+
+                // Refresca la foto de perfil desde BD.
+                using var respFoto = await EnviarConTokenAsync(HttpMethod.Get, "api/onboarding/datos-personales");
+                if (respFoto.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    return;
+                }
+
+                if (respFoto.IsSuccessStatusCode)
+                {
+                    using var docFoto = await JsonDocument.ParseAsync(await respFoto.Content.ReadAsStreamAsync());
+                    var foto = docFoto.RootElement.TryGetProperty("fotoPerfilUrl", out var fotoProp) &&
+                               fotoProp.ValueKind == JsonValueKind.String
+                        ? fotoProp.GetString()
+                        : null;
+
+                    UrlFotoPerfil = string.IsNullOrWhiteSpace(foto)
+                        ? "images/default-avatar.png"
+                        : foto;
+                }
             }
+            catch (HttpRequestException)
+            {
+                // Sin conexión: se conserva la sesión local y sus datos.
+            }
+
+            NotifyStateChanged();
         }
 
         public void ActualizarFotoPerfil(string? url)
@@ -177,11 +177,11 @@ namespace PWGAPG_Frontend.Services
         {
             try
             {
-                var tokenLocal = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                using var request = new HttpRequestMessage(HttpMethod.Post, "api/onboarding/completar");
-                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenLocal);
-                var resp = await _httpClient.SendAsync(request);
-                if (!resp.IsSuccessStatusCode) return false;
+                using var resp = await EnviarConTokenAsync(HttpMethod.Post, "api/onboarding/completar");
+                if (!resp.IsSuccessStatusCode)
+                {
+                    return false;
+                }
 
                 OnboardingCompletado = true;
                 await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "onboardingCompletado", "True");
@@ -266,40 +266,65 @@ namespace PWGAPG_Frontend.Services
             return await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "refreshToken");
         }
 
-        private async Task<bool?> ValidarSesionAsync(string? accessToken)
+        private async Task<HttpResponseMessage> EnviarConTokenAsync(
+            HttpMethod method,
+            string url)
         {
-            if (string.IsNullOrWhiteSpace(accessToken))
+            var request = new HttpRequestMessage(method, url);
+            await AgregarBearerAsync(request);
+            var response = await _httpClient.SendAsync(request);
+
+            if (response.StatusCode != HttpStatusCode.Unauthorized)
             {
-                return false;
+                return response;
             }
 
-            try
+            if (!await RenovarSesionAsync())
             {
-                using var request = new HttpRequestMessage(HttpMethod.Get, "api/auth/me");
-                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
-                    "Bearer", accessToken);
-                using var response = await _httpClient.SendAsync(request);
-                return response.IsSuccessStatusCode;
+                return response;
             }
-            catch (HttpRequestException)
+
+            response.Dispose();
+            var retry = new HttpRequestMessage(method, url);
+            await AgregarBearerAsync(retry);
+            return await _httpClient.SendAsync(retry);
+        }
+
+        private async Task AgregarBearerAsync(HttpRequestMessage request)
+        {
+            var token = await ObtenerAccessTokenAsync();
+            if (!string.IsNullOrWhiteSpace(token))
             {
-                return null;
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             }
         }
 
         private async Task GuardarSesionAsync(LoginResponseDto resultado)
         {
             var accessToken = resultado.AccessToken ?? resultado.Token;
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                return;
+            }
+
             IsAuthenticated = true;
             NombreEmpresa = resultado.NombreEmprendimiento ?? string.Empty;
+            OnboardingCompletado = resultado.OnboardingCompletado;
+
             await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", accessToken);
+            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "nombreEmpresa", NombreEmpresa);
+            await _jsRuntime.InvokeVoidAsync(
+                "localStorage.setItem", "onboardingCompletado", OnboardingCompletado.ToString());
 
             if (!string.IsNullOrWhiteSpace(resultado.RefreshToken))
             {
                 await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "refreshToken", resultado.RefreshToken);
             }
+            else
+            {
+                await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "refreshToken");
+            }
 
-            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "nombreEmpresa", NombreEmpresa);
             NotifyStateChanged();
         }
 
