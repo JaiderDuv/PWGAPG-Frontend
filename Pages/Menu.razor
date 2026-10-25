@@ -78,20 +78,11 @@
                                         <br /><small class="text-muted">@p.NumRecetas receta(s)</small>
                                     </td>
                                     <td class="text-end">@(p.PrecioVenta.HasValue ? Formato.Moneda(p.PrecioVenta.Value) : "—")</td>
-                                    <td class="text-end">
-                                        @Formato.Moneda(p.CostoDirecto)
-                                        @if (p.CostoFijoProrrateado > 0)
-                                        {
-                                            <br />
-                                            <small class="text-muted" title="Referencia: costo completo con fijos @Formato.Moneda(p.CostoTotal). Los fijos no se descuentan del precio; se cubren con el punto de equilibrio.">
-                                                Fijos (ref.): @Formato.Moneda(p.CostoFijoProrrateado)
-                                            </small>
-                                        }
-                                    </td>
+                                    <td class="text-end">@Formato.Moneda(p.CostoDirecto)</td>
                                     <td class="text-end">
                                         @if (p.MargenDirecto.HasValue)
                                         {
-                                            <span title="Margen con costo completo: @MargenCompleto(p)">
+                                            <span title="Margen sobre el costo directo, sin costos fijos">
                                                 @p.MargenDirecto.Value.ToString("0.##") %
                                             </span>
                                         }
@@ -120,7 +111,7 @@
             <p class="text-muted mt-2 mb-0">
                 <small>
                     El costo directo incluye ingredientes y empaques; es la base del margen y del precio sugerido.
-                    Los costos fijos se cubren con el punto de equilibrio y se muestran aparte como costo completo.
+                    Los costos fijos se cubren con el punto de equilibrio y se analizan aparte, sin cargarlos a cada producto.
                 </small>
             </p>
         }
@@ -177,9 +168,6 @@
     }
 
     private void VerDetalle(int id) => Navigation.NavigateTo($"menu/{id}");
-
-    private static string MargenCompleto(ProductoMenuDto p) =>
-        p.MargenReal.HasValue ? p.MargenReal.Value.ToString("0.##") + " %" : "—";
 
     private async Task CambiarEstado(ProductoMenuDto p)
     {
