@@ -8,7 +8,7 @@
         }
         else
         {
-            <div class="img-upload-placeholder @FormaClass">+</div>
+            <span class="img-upload-placeholder @FormaClass">+</span>
         }
     </label>
     <InputFile id="@InputId" OnChange="CargarImagen" class="img-upload-input" accept="image/*" @key="inputKey" />
@@ -55,7 +55,7 @@
             return;
         }
 
-        using var stream = archivo.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024); // 2 MB máx
+        using var stream = archivo.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
         using var ms = new MemoryStream();
         await stream.CopyToAsync(ms);
         var base64 = Convert.ToBase64String(ms.ToArray());

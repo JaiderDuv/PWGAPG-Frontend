@@ -16,6 +16,7 @@ namespace PWGAPG_Frontend.Services
         public bool OnboardingCompletado { get; private set; } = false;
         public string DescripcionEmpresa { get; private set; } = string.Empty;
         public string UrlFotoPerfil { get; private set; } = "images/default-avatar.png";
+        public string NombreDuenio { get; private set; } = string.Empty;
 
         public event Action? OnChange;
 
@@ -57,6 +58,7 @@ namespace PWGAPG_Frontend.Services
                     IsAuthenticated = true;
                     NombreEmpresa = resultado.NombreEmprendimiento ?? string.Empty;
                     OnboardingCompletado = resultado.OnboardingCompletado;
+                    await RefrescarDatosPersonalesAsync(resultado.Token ?? resultado.AccessToken);
                     await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", resultado.Token ?? resultado.AccessToken);
                     await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "nombreEmpresa", NombreEmpresa);
                     await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "onboardingCompletado", OnboardingCompletado.ToString());
@@ -86,47 +88,8 @@ namespace PWGAPG_Frontend.Services
                 var onboardingGuardado = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "onboardingCompletado");
                 OnboardingCompletado = onboardingGuardado == "True";
 
-                // Refresca el flag real desde BD (sobrescribe el de localStorage).
-                var tokenLocal = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-                if (!string.IsNullOrWhiteSpace(tokenLocal))
-                {
-                    try
-                    {
-                        using var request = new HttpRequestMessage(HttpMethod.Get, "api/user");
-                        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenLocal);
-                        var resp = await _httpClient.SendAsync(request);
-                        if (resp.IsSuccessStatusCode)
-                        {
-                            using var doc = await System.Text.Json.JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync());
-                            if (doc.RootElement.TryGetProperty("onboardingCompletado", out var prop) && prop.ValueKind == System.Text.Json.JsonValueKind.True)
-                            {
-                                OnboardingCompletado = true;
-                            }
-                            else
-                            {
-                                OnboardingCompletado = false;
-                            }
-                            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "onboardingCompletado", OnboardingCompletado.ToString());
-                        }
-
-                        // Refresca la foto de perfil desde BD.
-                        using var requestFoto = new HttpRequestMessage(HttpMethod.Get, "api/onboarding/datos-personales");
-                        requestFoto.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenLocal);
-                        var respFoto = await _httpClient.SendAsync(requestFoto);
-                        if (respFoto.IsSuccessStatusCode)
-                        {
-                            using var docFoto = await System.Text.Json.JsonDocument.ParseAsync(await respFoto.Content.ReadAsStreamAsync());
-                            if (docFoto.RootElement.TryGetProperty("fotoPerfilUrl", out var fotoProp) && fotoProp.ValueKind == System.Text.Json.JsonValueKind.String && !string.IsNullOrWhiteSpace(fotoProp.GetString()))
-                            {
-                                UrlFotoPerfil = fotoProp.GetString()!;
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        // Si falla la red, se queda con el valor por defecto.
-                    }
-                }
+                await ActualizarOnboardingCompletadoAsync(token);
+                await RefrescarDatosPersonalesAsync(token);
 
                 NotifyStateChanged();
             }
@@ -136,6 +99,68 @@ namespace PWGAPG_Frontend.Services
         {
             UrlFotoPerfil = string.IsNullOrWhiteSpace(url) ? "images/default-avatar.png" : url;
             NotifyStateChanged();
+        }
+
+        private async Task RefrescarDatosPersonalesAsync(string? token)
+        {
+            if (string.IsNullOrWhiteSpace(token)) return;
+
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, "api/onboarding/datos-personales");
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var resp = await _httpClient.SendAsync(request);
+                if (resp.IsSuccessStatusCode)
+                {
+                    using var doc = await System.Text.Json.JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync());
+
+                    var nombres = doc.RootElement.TryGetProperty("nombres", out var n) && n.ValueKind == System.Text.Json.JsonValueKind.String
+                        ? n.GetString() : null;
+                    var apellidos = doc.RootElement.TryGetProperty("apellidos", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.String
+                        ? a.GetString() : null;
+                    NombreDuenio = $"{nombres} {apellidos}".Trim();
+
+                    if (doc.RootElement.TryGetProperty("fotoPerfilUrl", out var fotoProp) && fotoProp.ValueKind == System.Text.Json.JsonValueKind.String && !string.IsNullOrWhiteSpace(fotoProp.GetString()))
+                    {
+                        UrlFotoPerfil = fotoProp.GetString()!;
+                    }
+                }
+            }
+            catch
+            {
+                // Si falla la red, se queda con los valores previos.
+            }
+        }
+
+        private async Task ActualizarOnboardingCompletadoAsync(string? token)
+        {
+            if (string.IsNullOrWhiteSpace(token)) return;
+
+            for (var intento = 1; intento <= 2; intento++)
+            {
+                try
+                {
+                    using var request = new HttpRequestMessage(HttpMethod.Get, "api/user");
+                    request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                    var resp = await _httpClient.SendAsync(request);
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        using var doc = await System.Text.Json.JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync());
+                        OnboardingCompletado = doc.RootElement.TryGetProperty("onboardingCompletado", out var prop) && prop.ValueKind == System.Text.Json.JsonValueKind.True;
+                        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "onboardingCompletado", OnboardingCompletado.ToString());
+                        return;
+                    }
+                }
+                catch
+                {
+                    // Se reintenta abajo.
+                }
+
+                if (intento < 2)
+                {
+                    await Task.Delay(1500);
+                }
+            }
         }
 
         public async Task<(bool exito, string mensaje)> ReenviarVerificacionAsync(string correo)
@@ -314,6 +339,7 @@ namespace PWGAPG_Frontend.Services
             NombreEmpresa = string.Empty;
             DescripcionEmpresa = string.Empty;
             UrlFotoPerfil = "images/default-avatar.png";
+            NombreDuenio = string.Empty;
             OnboardingCompletado = false;
 
             NotifyStateChanged();
