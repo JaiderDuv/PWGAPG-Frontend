@@ -38,10 +38,15 @@ jobs:
       - name: Checkout contratos del backend
         env:
           BACKEND_REF: ${{ github.head_ref || github.ref_name }}
-        run: >-
-          git clone --depth 1 --branch "$BACKEND_REF"
-          https://github.com/JaiderDuv/ChefMetrics-BackEnd.git
-          ChefMetrics-BackEnd
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/JaiderDuv/ChefMetrics-BackEnd.git "$BACKEND_REF" > /dev/null 2>&1; then
+            echo "Clonando backend en la rama $BACKEND_REF."
+          else
+            echo "La rama $BACKEND_REF no existe en el backend; se usará develop."
+            BACKEND_REF=develop
+          fi
+
+          git clone --depth 1 --branch "$BACKEND_REF" https://github.com/JaiderDuv/ChefMetrics-BackEnd.git ChefMetrics-BackEnd
 
       - name: Configurar .NET 9
         uses: actions/setup-dotnet@v4
