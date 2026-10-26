@@ -1,0 +1,475 @@
+@page "/simulador"
+@attribute [Authorize]
+@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Services
+@inject MenuApiService MenuApi
+@inject CosteoApiService CosteoApi
+@inject SimuladorVentasApiService SimuladorApi
+
+<div class="rc-page container py-4 sim-page">
+    <div class="rc-header">
+        <div>
+            <div class="sim-eyebrow">SIMULACIÓN MENSUAL · SIN GUARDAR</div>
+            <h2 class="rc-title">Simulador de ventas</h2>
+            <p class="rc-subtitle">
+                Ingresa cuánto vendes en el mes. Calculamos tus ventas, el costo directo,
+                el margen de contribución y si alcanzas a cubrir los costos fijos.
+            </p>
+        </div>
+        <div class="sim-header-actions">
+            <button class="btn btn-outline-secondary" @onclick="Limpiar" disabled="@(!HayCantidades)">
+                Limpiar
+            </button>
+            <button class="btn btn-primary" @onclick="Calcular" disabled="@(calculando || !HayCantidades)">
+                @(calculando ? "Calculando..." : "Calcular")
+            </button>
+        </div>
+    </div>
+
+    <div class="sim-intro">
+        <div>
+            <strong>¿Qué hace este simulador?</strong>
+            <p>
+                Tomas los precios y costos directos actuales de tu menú. Tú solo indicas las cantidades.
+                El margen se pondera por lo que realmente vendes, así que ya no se supone que todos los
+                productos pesan igual.
+            </p>
+        </div>
+        <div class="sim-intro-tip">
+            <span class="sim-intro-label">Costos fijos activos</span>
+            <strong>@(CostosFijosMostrar.HasValue ? Formato.Moneda(CostosFijosMostrar.Value) : "—")</strong>
+            <small>Se comparan contra el margen total del mes.</small>
+        </div>
+    </div>
+
+    @if (error is not null)
+    {
+        <div class="alert alert-danger">@error</div>
+    }
+
+    @if (cargando)
+    {
+        <p class="text-muted">Cargando productos del menú...</p>
+    }
+    else if (filas is null || filas.Count == 0)
+    {
+        <div class="rc-empty">
+            <p>Aún no tienes productos activos en el menú.</p>
+            <a class="btn btn-primary" href="menu">Ir al menú</a>
+        </div>
+    }
+    else
+    {
+        <div class="rc-toolbar sim-toolbar">
+            <input class="form-control" placeholder="Buscar producto por nombre..."
+                   @bind="busqueda" @bind:event="oninput" />
+            <span class="sim-toolbar-meta">
+                @FilasVisibles.Count() producto(s) · @TotalUnidades unidad(es)
+            </span>
+        </div>
+
+        <div class="rc-card sim-card">
+            <div class="table-responsive">
+                <table class="table cs-table sim-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th class="text-end">Precio</th>
+                            <th class="text-end">Costo directo</th>
+                            <th class="text-end">Margen unit.</th>
+                            <th class="text-end">Margen %</th>
+                            <th class="text-end">Cantidad</th>
+                            <th class="text-end">Venta</th>
+                            <th class="text-end">Costo total</th>
+                            <th class="text-end">Margen total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!FilasVisibles.Any())
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center text-muted py-4">
+                                    No hay productos que coincidan con la búsqueda.
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var fila in FilasVisibles)
+                        {
+                            <tr class="@(fila.Cantidad > 0 ? "sim-fila-activa" : "") @(fila.Disponible ? "" : "sim-fila-no-disponible")">
+                                <td>
+                                    <strong>@fila.Producto.Nombre</strong>
+                                    @if (!fila.Disponible)
+                                    {
+                                        <span class="sim-badge">Sin precio o costo</span>
+                                    }
+                                    <br /><small class="text-muted">@fila.Producto.NumRecetas receta(s)</small>
+                                </td>
+                                <td class="text-end">
+                                    @(fila.Producto.PrecioVenta is decimal precio ? Formato.Moneda(precio) : "—")
+                                </td>
+                                <td class="text-end">@Formato.Moneda(fila.Producto.CostoDirecto)</td>
+                                <td class="text-end">@(fila.Disponible ? Formato.Moneda(fila.MargenUnitario) : "—")</td>
+                                <td class="text-end">
+                                    @(fila.Disponible ? fila.MargenPorcentaje.ToString("0.##") + " %" : "—")
+                                </td>
+                                <td class="text-end sim-cantidad-celda">
+                                    @if (fila.Disponible)
+                                    {
+                                        <input type="number" class="form-control form-control-sm sim-cantidad"
+                                               min="0" max="1000000" step="1"
+                                               value="@fila.Cantidad"
+                                               aria-label="Cantidad vendida de @fila.Producto.Nombre"
+                                               @onchange="async e => await CambiarCantidad(fila, e)" />
+                                    }
+                                    else
+                                    {
+                                        <span class="sim-no-disponible">No disponible</span>
+                                    }
+                                </td>
+                                <td class="text-end">@Formato.Moneda(fila.Ventas)</td>
+                                <td class="text-end">@Formato.Moneda(fila.CostoTotal)</td>
+                                <td class="text-end">@Formato.Moneda(fila.MargenTotal)</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="5"><strong>Total</strong></td>
+                            <td class="text-end"><strong>@TotalUnidades</strong></td>
+                            <td class="text-end"><strong>@Formato.Moneda(VentasTabla)</strong></td>
+                            <td class="text-end"><strong>@Formato.Moneda(CostoTabla)</strong></td>
+                            <td class="text-end"><strong>@Formato.Moneda(MargenTabla)</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        @if (errorCalculo is not null)
+        {
+            <div class="alert alert-danger">@errorCalculo</div>
+        }
+        else if (resultado is null)
+        {
+            <div class="sim-placeholder">
+                Ingresa al menos una cantidad y pulsa <strong>Calcular</strong> para ver el resultado del mes.
+            </div>
+        }
+        else
+        {
+            <div class="sim-kpis">
+                <div class="sim-kpi">
+                    <small>Ventas del mes</small>
+                    <strong>@Formato.Moneda(resultado.VentasTotales)</strong>
+                    <em>@TotalUnidades unidades</em>
+                </div>
+                <div class="sim-kpi">
+                    <small>Costo directo</small>
+                    <strong>@Formato.Moneda(resultado.CostoDirectoTotal)</strong>
+                    <em>Insumos y empaques</em>
+                </div>
+                <div class="sim-kpi">
+                    <small>Margen de contribución</small>
+                    <strong>@Formato.Moneda(resultado.MargenContribucion)</strong>
+                    <em>
+                        @(resultado.MargenContribucionPorcentaje.HasValue
+                            ? resultado.MargenContribucionPorcentaje.Value.ToString("0.##") + " % de las ventas"
+                            : "—")
+                    </em>
+                </div>
+                <div class="sim-kpi">
+                    <small>Costos fijos</small>
+                    <strong>@Formato.Moneda(resultado.CostosFijosMensuales)</strong>
+                    <em>Los que pagas aunque no vendas</em>
+                </div>
+                <div class="sim-kpi @(resultado.Utilidad >= 0 ? "sim-kpi-ok" : "sim-kpi-loss")">
+                    <small>@(resultado.Utilidad >= 0 ? "Utilidad" : "Pérdida")</small>
+                    <strong>@Formato.Moneda(Math.Abs(resultado.Utilidad))</strong>
+                    <em>@(resultado.Utilidad >= 0 ? "Después de costos fijos" : "Faltante para cubrir fijos")</em>
+                </div>
+                <div class="sim-kpi sim-kpi-main">
+                    <small>Punto de equilibrio</small>
+                    <strong>
+                        @(resultado.PuntoEquilibrioMensual.HasValue
+                            ? Formato.Moneda(resultado.PuntoEquilibrioMensual.Value)
+                            : "—")
+                    </strong>
+                    <em>Facturación necesaria con este mix</em>
+                </div>
+            </div>
+
+            @if (resultado.CoberturaCostosFijosPorcentaje is decimal cobertura)
+            {
+                <div class="sim-progress-wrap">
+                    <div class="sim-progress-label">
+                        <span>Cobertura de costos fijos</span>
+                        <strong>@cobertura.ToString("0.##") %</strong>
+                    </div>
+                    <div class="sim-progress">
+                        <div class="sim-progress-bar @CoberturaClase" style="width:@AnchoCobertura%"></div>
+                    </div>
+                </div>
+            }
+
+            @if (resultado.CostosFijosMensuales <= 0m)
+            {
+                <div class="sim-callout @(resultado.Utilidad >= 0m ? "sim-callout-ok" : "sim-callout-warn")">
+                    <strong>No hay costos fijos activos.</strong>
+                    <p>
+                        La utilidad de esta simulación es el margen de contribución:
+                        @Formato.Moneda(resultado.Utilidad). No hay un punto de equilibrio que cubrir.
+                    </p>
+                </div>
+            }
+            else if (resultado.PuntoEquilibrioMensual is null)
+            {
+                <div class="sim-callout sim-callout-warn">
+                    <strong>Con este mix no hay punto de equilibrio.</strong>
+                    <p>
+                        El margen de contribución es cero o negativo. Revisa precios y costos directos
+                        antes de usar esta simulación como meta.
+                    </p>
+                </div>
+            }
+            else if (resultado.Utilidad >= 0)
+            {
+                <div class="sim-callout sim-callout-ok">
+                    <strong>Con estas ventas cubres los costos fijos.</strong>
+                    <p>
+                        Te quedan @Formato.Moneda(resultado.Utilidad) de utilidad antes de impuestos.
+                        Si vendes por encima de este nivel, cada peso adicional de margen se convierte
+                        en utilidad.
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div class="sim-callout sim-callout-warn">
+                    <strong>Con estas ventas aún no cubres los costos fijos.</strong>
+                    <p>
+                        Te faltan @Formato.Moneda(-resultado.Utilidad) de margen. Al mismo mix,
+                        necesitas facturar @Formato.Moneda(resultado.FaltanteParaEquilibrio ?? 0m) más
+                        para llegar al equilibrio.
+                    </p>
+                </div>
+            }
+
+            @if (DeltaEquilibrio is decimal delta)
+            {
+                <div class="sim-delta @(EsFaltante ? "sim-delta-falta" : "sim-delta-ok")">
+                    <span>@(EsFaltante ? "Te falta facturar" : "Estás por encima del equilibrio")</span>
+                    <strong>@Formato.Moneda(delta)</strong>
+                </div>
+            }
+
+            @if (resultado.Advertencias.Count > 0)
+            {
+                <div class="sim-warnings">
+                    @foreach (var aviso in resultado.Advertencias)
+                    {
+                        <div class="cs-aviso cs-aviso-info"><div>@aviso</div></div>
+                    }
+                </div>
+            }
+
+            <div class="rc-card sim-explain">
+                <div class="rc-card-header">
+                    <h5 class="mb-0">Cómo se calcula</h5>
+                </div>
+                <div class="rc-card-body">
+                    <p class="mb-2">
+                        <strong>Ventas</strong> = suma de cantidad × precio.
+                        <strong>Costo directo</strong> = suma de cantidad × costo directo.
+                        <strong>Margen</strong> = ventas − costo directo.
+                    </p>
+                    <p class="mb-2">
+                        El <strong>punto de equilibrio</strong> es costos fijos ÷ margen porcentual.
+                        Como aquí el margen sale de las cantidades que ingresaste, queda ponderado por
+                        tu mezcla real de productos.
+                    </p>
+                    <p class="mb-0 text-muted">
+                        Esta simulación usa el costo directo del menú, no el costo total con la cuota de
+                        fijos. Los costos fijos se comparan una sola vez contra el margen total.
+                    </p>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private List<FilaSimulacion>? filas;
+    private string busqueda = "";
+    private bool cargando, calculando;
+    private string? error, errorCalculo;
+    private SimulacionVentasDto? resultado;
+    private decimal? costosFijosIniciales;
+    private int versionCalculo;
+
+    private IEnumerable<FilaSimulacion> FilasVisibles =>
+        (filas ?? new List<FilaSimulacion>())
+            .Where(f => string.IsNullOrWhiteSpace(busqueda)
+                || f.Producto.Nombre.Contains(busqueda.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    private bool HayCantidades => filas?.Any(f => f.Cantidad > 0) == true;
+
+    private int TotalUnidades => filas?.Sum(f => f.Cantidad) ?? 0;
+
+    private decimal VentasTabla => resultado?.VentasTotales ?? filas?.Sum(f => f.Ventas) ?? 0m;
+    private decimal CostoTabla => resultado?.CostoDirectoTotal ?? filas?.Sum(f => f.CostoTotal) ?? 0m;
+    private decimal MargenTabla => resultado?.MargenContribucion ?? filas?.Sum(f => f.MargenTotal) ?? 0m;
+
+    private decimal? CostosFijosMostrar =>
+        resultado?.CostosFijosMensuales ?? costosFijosIniciales;
+
+    private decimal? DeltaEquilibrio =>
+        resultado?.FaltanteParaEquilibrio ?? resultado?.ExcedenteSobreEquilibrio;
+
+    private bool EsFaltante => resultado?.FaltanteParaEquilibrio.HasValue == true;
+
+    private string AnchoCobertura =>
+        resultado?.CoberturaCostosFijosPorcentaje is decimal cobertura
+            ? Math.Min(100m, Math.Max(0m, cobertura))
+                .ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
+            : "0";
+
+    private string CoberturaClase =>
+        resultado?.CoberturaCostosFijosPorcentaje is decimal cobertura
+            ? cobertura >= 100m ? "sim-progress-ok"
+            : cobertura >= 80m ? "sim-progress-warn"
+            : "sim-progress-low"
+            : "sim-progress-low";
+
+    protected override async Task OnInitializedAsync() => await Cargar();
+
+    private async Task Cargar()
+    {
+        cargando = true;
+        try
+        {
+            var productos = await MenuApi.ListarAsync(null, incluirInactivos: false);
+            if (!productos.Exito)
+            {
+                filas = new();
+                error = productos.Mensaje;
+                return;
+            }
+
+            filas = (productos.Datos ?? new List<ProductoMenuDto>())
+                .OrderBy(p => p.Nombre)
+                .Select(p => new FilaSimulacion { Producto = p })
+                .ToList();
+
+            error = null;
+        }
+        catch
+        {
+            filas = new();
+            error = "No se pudieron cargar los productos del menú. Intenta de nuevo.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+
+        try
+        {
+            var configuracion = await CosteoApi.ObtenerConfiguracionCostosFijosAsync();
+            if (configuracion.Exito && configuracion.Datos is not null)
+                costosFijosIniciales = configuracion.Datos.Costos
+                    .Where(c => c.Activo)
+                    .Sum(c => c.MontoMensual);
+        }
+        catch
+        {
+            // El cálculo del backend también trae los costos fijos; la pantalla
+            // puede funcionar aunque falle esta carga inicial.
+        }
+    }
+
+    private async Task CambiarCantidad(FilaSimulacion fila, ChangeEventArgs e)
+    {
+        fila.Cantidad = int.TryParse(e.Value?.ToString(), out var cantidad)
+            ? Math.Clamp(cantidad, 0, 1_000_000)
+            : 0;
+
+        await Calcular();
+    }
+
+    private async Task Calcular()
+    {
+        var items = (filas ?? new List<FilaSimulacion>())
+            .Where(f => f.Cantidad > 0 && f.Disponible)
+            .Select(f => new SimulacionVentaItemDto
+            {
+                ProductoId = f.Producto.Id,
+                Cantidad = f.Cantidad
+            })
+            .ToList();
+
+        if (items.Count == 0)
+        {
+            versionCalculo++;
+            resultado = null;
+            errorCalculo = null;
+            calculando = false;
+            return;
+        }
+
+        var version = ++versionCalculo;
+        calculando = true;
+
+        try
+        {
+            var respuesta = await SimuladorApi.CalcularAsync(items);
+            if (version != versionCalculo) return;
+
+            calculando = false;
+            if (respuesta.Exito)
+            {
+                resultado = respuesta.Datos;
+                errorCalculo = null;
+            }
+            else
+            {
+                resultado = null;
+                errorCalculo = respuesta.Mensaje;
+            }
+        }
+        catch
+        {
+            if (version != versionCalculo) return;
+            calculando = false;
+            resultado = null;
+            errorCalculo = "No se pudo calcular la simulación. Intenta de nuevo.";
+        }
+    }
+
+    private void Limpiar()
+    {
+        versionCalculo++;
+        foreach (var fila in filas ?? new List<FilaSimulacion>())
+            fila.Cantidad = 0;
+
+        resultado = null;
+        errorCalculo = null;
+        calculando = false;
+    }
+
+    private sealed class FilaSimulacion
+    {
+        public ProductoMenuDto Producto { get; init; } = new();
+        public int Cantidad { get; set; }
+
+        public bool Disponible =>
+            Producto.PrecioVenta is decimal precio && precio > 0 && Producto.CostoDirecto > 0;
+
+        public decimal Precio => Producto.PrecioVenta ?? 0m;
+        public decimal CostoDirecto => Producto.CostoDirecto;
+        public decimal MargenUnitario => Precio - CostoDirecto;
+        public decimal MargenPorcentaje => Precio > 0 ? MargenUnitario / Precio * 100m : 0m;
+        public decimal Ventas => Precio * Cantidad;
+        public decimal CostoTotal => CostoDirecto * Cantidad;
+        public decimal MargenTotal => Ventas - CostoTotal;
+    }
+}
