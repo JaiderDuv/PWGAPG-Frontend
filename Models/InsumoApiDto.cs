@@ -89,6 +89,9 @@ public class HistorialPrecioGeneralDto
     public decimal? Diferencia { get; set; }
     public bool? EsSubida { get; set; }
     public bool InsumoEliminado { get; set; }
+    public decimal? DiferenciaPaquete { get; set; }
+    public decimal? VariacionPaquete { get; set; }
+    public bool? EsSubidaPaquete { get; set; }
 }
 
 public class HistorialGeneralDto
