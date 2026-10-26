@@ -158,3 +158,41 @@
     padding: .5rem .85rem;
     display: inline-block;
 }
+
+.cs-preview-amplio {
+    display: block;
+    width: 100%;
+}
+
+.cs-preview-explain {
+    margin: .35rem 0 .2rem;
+    color: #5f4a3a;
+    font-size: .88rem;
+    line-height: 1.6;
+}
+
+.cs-equilibrio-explicacion {
+    margin-top: .9rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid #f0d9b5;
+    border-radius: 14px;
+    background: #fffdf9;
+    color: #5f4a3a;
+    font-size: .88rem;
+    line-height: 1.6;
+}
+
+    .cs-equilibrio-explicacion > strong {
+        display: block;
+        margin-bottom: .35rem;
+        color: #7c2d12;
+        font-size: .95rem;
+    }
+
+    .cs-equilibrio-explicacion p {
+        margin: 0 0 .5rem;
+    }
+
+    .cs-equilibrio-explicacion p:last-child {
+        margin-bottom: 0;
+    }

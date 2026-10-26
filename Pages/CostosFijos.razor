@@ -12,7 +12,8 @@
             <h2 class="rc-title">Costos fijos del negocio</h2>
             <p class="rc-subtitle">
                 Arriendo, servicios, nómina... Son gastos que pagas todos los meses, aunque no vendas.
-                Aquí los repartimos entre las preparaciones base que haces al mes para saber cuánto le corresponde a cada una.
+                Aquí los repartimos entre las preparaciones base que haces al mes para saber cuánto de esos gastos
+                carga cada preparación y cuánto necesitas vender para cubrirlos.
             </p>
         </div>
         @if (!mostrarForm)
@@ -77,13 +78,18 @@
             }
             else
             {
-                <div class="cs-preview mt-3">
+                <div class="cs-preview cs-preview-amplio mt-3">
                     <div>
                         <strong>Cuota por preparación:</strong> @Formato.Moneda(CuotaGlobal)
-                        <span class="text-muted">(@Formato.Moneda(TotalMensual) de costos fijos activos ÷ @preparacionesBaseMes preparaciones base)</span>
+                        <span class="text-muted">de gastos fijos por cada lote base</span>
                     </div>
+                    <p class="cs-preview-explain">
+                        Es la parte de tus gastos fijos mensuales que le corresponde a cada preparación base.
+                        Con @preparacionesBaseMes preparaciones base al mes, cada una carga
+                        @Formato.Moneda(CuotaGlobal) de los @Formato.Moneda(TotalMensual) que pagas en costos fijos activos.
+                    </p>
                     <small class="text-muted d-block mt-1">
-                        Este mismo valor se usa para todos los costos fijos.
+                        No es un cobro extra: es la porción de un gasto que ya tienes, repartida entre tu producción del mes.
                     </small>
                 </div>
 
@@ -114,10 +120,13 @@
 
                 <div class="cs-aviso cs-aviso-info mb-3">
                     <div>
-                        <strong>¿Cómo se usa este costo?</strong>
-                        El monto mensual se divide entre las preparaciones base al mes que definiste arriba.
-                        Así obtenemos una cuota por preparación, que se suma al <strong>costo completo</strong> de recetas y productos.
-                        Esa cuota no cambia el costo directo ni el precio sugerido: los costos fijos se cubren con el punto de equilibrio.
+                        <strong>¿Qué representa esta cuota?</strong>
+                        Es la parte de este gasto fijo que le toca a cada preparación base que produces en el mes.
+                        Por ejemplo, si pagas $1.000.000 de arriendo y haces 60 preparaciones base,
+                        cada preparación carga $16.667 de ese arriendo.
+                        No es un pago adicional: es una forma de incluir en el <strong>costo completo</strong>
+                        un gasto que ya tienes. No cambia el costo directo ni el precio sugerido; los costos fijos
+                        se cubren con el punto de equilibrio.
                     </div>
                 </div>
 
@@ -168,14 +177,18 @@
 
                 @if (modelo.MontoMensual > 0 && preparacionesBaseMes is > 0)
                 {
-                    <div class="cs-preview">
+                    <div class="cs-preview cs-preview-amplio">
                         <div>
                             <strong>Cuota por preparación:</strong> @Formato.Moneda(modelo.MontoMensual / preparacionesBaseMes.Value)
-                            <span class="text-muted">(monto mensual ÷ preparaciones base al mes)</span>
+                            <span class="text-muted">de este gasto por cada lote base</span>
                         </div>
+                        <p class="cs-preview-explain">
+                            De los @Formato.Moneda(modelo.MontoMensual) que pagas al mes por este costo,
+                            esta es la parte que le corresponde a cada una de tus @preparacionesBaseMes preparaciones base.
+                        </p>
                         <small class="text-muted d-block mt-1">
-                            Si produces @preparacionesBaseMes preparaciones base al mes, cada una carga esta cuota en el costo completo.
-                            El costo directo del producto no cambia.
+                            Se refleja en el costo completo de las recetas y productos. No es un cobro extra
+                            ni cambia el costo directo.
                         </small>
                     </div>
                 }
@@ -220,7 +233,7 @@
                             <th>Nombre</th>
                             <th>Categoría</th>
                             <th class="text-end">Monto mensual</th>
-                            <th class="text-end" title="Monto mensual ÷ preparaciones base al mes. Es la cuota que se suma al costo completo de cada preparación; no es el total mensual del costo.">Cuota por preparación</th>
+                            <th class="text-end" title="Parte del gasto fijo mensual que le corresponde a cada preparación base. No es un pago adicional ni el total mensual del costo.">Cuota por preparación</th>
                             <th>Estado</th>
                             <th></th>
                         </tr>
@@ -268,9 +281,9 @@
             </div>
             <p class="text-muted mt-2 mb-0 px-3 pb-2">
                 <small>
-                    La cuota por preparación es el monto mensual dividido entre las preparaciones base al mes.
-                    El total mensual del costo es la columna "Monto mensual"; la cuota se usa para el costo completo,
-                    no para el precio directo.
+                    La cuota por preparación reparte cada gasto fijo entre los lotes base que produces al mes.
+                    No es un cobro extra: es la parte de ese gasto que se refleja en el costo completo de cada preparación.
+                    El total que pagas sigue siendo la columna "Monto mensual".
                 </small>
             </p>
         </div>
@@ -304,8 +317,9 @@
                 <div>
                     <h5 class="mb-0">Punto de equilibrio mensual</h5>
                     <small class="text-muted">
-                        Cuánto necesitas vender para cubrir tus costos fijos, según el
-                        margen de contribución de tus productos (precio − costo directo).
+                        Cuánto dinero necesitas facturar al mes para que, después de pagar insumos y empaques,
+                        te alcance para cubrir arriendo, nómina y demás costos fijos. No es una meta de ventas
+                        ni una ganancia: es el mínimo para no perder dinero.
                     </small>
                 </div>
                 <button class="btn btn-sm btn-outline-secondary" @onclick="CargarPuntoEquilibrio" disabled="@cargandoEquilibrio">
@@ -327,16 +341,48 @@
                         <div class="cs-kpi">
                             <small>Costos fijos mensuales</small>
                             <strong>@Formato.Moneda(equilibrio.CostosFijosMensuales)</strong>
+                            <em>Lo que pagas aunque no vendas</em>
                         </div>
                         <div class="cs-kpi">
                             <small>Margen de contribución promedio</small>
                             <strong>@(equilibrio.MargenContribucionPromedioPorcentaje.HasValue ? equilibrio.MargenContribucionPromedioPorcentaje.Value.ToString("0.##") + " %" : "—")</strong>
+                            <em>Lo que queda de cada venta después del costo directo</em>
                         </div>
+                        @if (CostoDirectoIncluido is decimal costoDirectoIncluido)
+                        {
+                            <div class="cs-kpi">
+                                <small>Costo directo incluido</small>
+                                <strong>@Formato.Moneda(costoDirectoIncluido)</strong>
+                                <em>Insumos y empaques dentro de esas ventas</em>
+                            </div>
+                        }
                         <div class="cs-kpi cs-kpi-main">
-                            <small>Ventas de equilibrio / mes</small>
+                            <small>Facturación mínima / mes</small>
                             <strong>@(equilibrio.VentasEquilibrioMensuales.HasValue ? Formato.Moneda(equilibrio.VentasEquilibrioMensuales.Value) : "—")</strong>
+                            <em>Es lo que vendes, no lo que ganas</em>
                         </div>
                     </div>
+
+                    @if (equilibrio.VentasEquilibrioMensuales is decimal ventasEquilibrio
+                         && equilibrio.MargenContribucionPromedioPorcentaje is decimal margenPromedio
+                         && equilibrio.CostosFijosMensuales > 0)
+                    {
+                        <div class="cs-equilibrio-explicacion">
+                            <strong>¿Por qué la facturación de equilibrio es mayor que los costos fijos?</strong>
+                            <p>
+                                Porque la facturación no es lo que te queda. De cada $100 que vendes, aproximadamente
+                                $ @((100m - margenPromedio).ToString("0.##")) se van en insumos y empaques, y solo
+                                $ @margenPromedio.ToString("0.##") quedan para cubrir los costos fijos.
+                                Con @Formato.Moneda(equilibrio.CostosFijosMensuales) de costos fijos, necesitas facturar
+                                @Formato.Moneda(ventasEquilibrio) para que esa contribución alcance.
+                                Al llegar a ese punto, tu utilidad es $0.
+                            </p>
+                            <p class="mb-0">
+                                Si tus costos fijos son bajos pero tu margen también es bajo, igual necesitas vender mucho.
+                                Mejorar el margen —subiendo el precio o bajando el costo directo— reduce la facturación necesaria.
+                            </p>
+                        </div>
+                    }
 
                     @foreach (var a in equilibrio.Advertencias)
                     {
@@ -345,6 +391,15 @@
 
                     @if (equilibrio.Productos.Count > 0)
                     {
+                        <div class="cs-aviso cs-aviso-info mt-3">
+                            <div>
+                                <strong>Cómo leer esta tabla:</strong>
+                                "Unidades necesarias/mes" es cuántos productos tendrías que vender.
+                                "Facturación necesaria/mes" es el dinero que tendrías que cobrar por esas ventas.
+                                Cada fila muestra el escenario de vender solo ese producto; el total global combina todos los productos.
+                            </div>
+                        </div>
+
                         <div class="table-responsive mt-3">
                             <table class="table table-sm cs-table align-middle mb-0">
                                 <thead>
@@ -354,8 +409,8 @@
                                         <th class="text-end">Costo directo</th>
                                         <th class="text-end">Margen contribución</th>
                                         <th class="text-end">Margen %</th>
-                                        <th class="text-end">Unidades/mes*</th>
-                                        <th class="text-end">Ventas/mes*</th>
+                                        <th class="text-end">Unidades necesarias/mes*</th>
+                                        <th class="text-end" title="Dinero que tendrías que facturar en el mes si vendieras solo este producto. No es ganancia: incluye el costo directo.">Facturación necesaria/mes*</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -376,9 +431,10 @@
                         </div>
                         <p class="text-muted mt-2 mb-0">
                             <small>
-                                * Unidades y ventas si vendieras únicamente ese producto.
-                                El total global usa el margen de contribución promedio y
-                                supone un mix uniforme de productos.
+                                * Unidades y facturación si vendieras únicamente ese producto.
+                                La facturación necesaria es dinero que entra, no utilidad: incluye el costo directo
+                                y el margen que cubre los costos fijos. El total global usa el margen de contribución
+                                promedio y supone que todos los productos se venden en la misma proporción.
                             </small>
                         </p>
                     }
@@ -411,10 +467,15 @@
 
     private int? preparacionesBaseMes;
 
-    // Punto de equilibrio: ventas mínimas para cubrir los costos fijos.
+    // Punto de equilibrio: facturación mínima para cubrir los costos fijos.
     private PuntoEquilibrioDto? equilibrio;
     private bool cargandoEquilibrio;
     private string? errorEquilibrio;
+
+    private decimal? CostoDirectoIncluido =>
+        equilibrio is { VentasEquilibrioMensuales: decimal ventas }
+            ? ventas - equilibrio.CostosFijosMensuales
+            : null;
 
     private decimal? Aporte(CostoFijoDto c) =>
         preparacionesBaseMes is > 0 ? c.MontoMensual / preparacionesBaseMes.Value : null;
