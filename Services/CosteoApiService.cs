@@ -44,6 +44,15 @@ public class CosteoApiService
     public async Task<ApiResultado<List<CostoFijoDto>>> ListarCostosFijosAsync() =>
         await Leer<List<CostoFijoDto>>(await _http.GetAsync("api/costos-fijos?incluirInactivos=true"));
 
+    // Costos fijos + el divisor global del negocio en una sola llamada.
+    public async Task<ApiResultado<ConfiguracionCostosFijosDto>> ObtenerConfiguracionCostosFijosAsync() =>
+        await Leer<ConfiguracionCostosFijosDto>(await _http.GetAsync("api/costos-fijos/configuracion"));
+
+    public async Task<ApiResultado<ConfiguracionCostosFijosDto>> ActualizarPreparacionesBaseMesAsync(int? preparacionesBaseMes) =>
+        await Leer<ConfiguracionCostosFijosDto>(await _http.PutAsJsonAsync(
+            "api/costos-fijos/preparaciones-base-mes",
+            new ActualizarPreparacionesBaseMesDto { PreparacionesBaseMes = preparacionesBaseMes }));
+
     // Punto de equilibrio mensual: ventas mínimas para cubrir los costos fijos.
     public async Task<ApiResultado<PuntoEquilibrioDto>> ObtenerPuntoEquilibrioAsync() =>
         await Leer<PuntoEquilibrioDto>(await _http.GetAsync("api/costos-fijos/punto-equilibrio"));

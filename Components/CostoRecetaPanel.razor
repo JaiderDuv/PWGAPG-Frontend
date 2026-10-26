@@ -57,7 +57,7 @@ else
         <small>
             El <strong>costo directo</strong> son los insumos (incluida la merma). El
             <strong>costo completo</strong> suma la cuota estimada de costos fijos
-            (monto mensual ÷ divisor, por preparación base). Los fijos no son un
+            (monto mensual ÷ preparaciones base al mes, por preparación base). Los fijos no son un
             costo de producción: son un reparto para cubrir la operación del negocio.
             El precio sugerido usa el costo directo; los fijos se cubren con el punto de equilibrio.
             Marca abajo los fijos que quieras incluir en el costo completo.
@@ -106,7 +106,7 @@ else
                                    @onchange="(e) => AlternarFijo(f.Id, (bool)e.Value!)" />
                             <span>@f.Nombre</span>
                         </label>
-                        <span class="cs-fijos-aporte">@Formato.Moneda(f.ValorDivisor > 0 ? f.MontoMensual / f.ValorDivisor : 0m)</span>
+                        <span class="cs-fijos-aporte">@(preparacionesBaseMes is > 0 ? Formato.Moneda(f.MontoMensual / preparacionesBaseMes.Value) : "—")</span>
                     </li>
                 }
             </ul>
@@ -166,6 +166,7 @@ else
     private List<CostoFijoDto> fijos = new();
     private readonly HashSet<int> seleccionados = new();
     private bool fijosCargados;
+    private int? preparacionesBaseMes;
 
     private List<LineaCostoDto> SinProveedor =>
         costo?.Lineas.Where(l => l.FuenteCosto == "costo_unitario_respaldo").ToList() ?? new();
@@ -196,17 +197,18 @@ else
         // Por defecto no se incluye ningún costo fijo: el costo principal es
         // el directo. El usuario marca los fijos que quiera analizar.
         var tCosto = Api.ObtenerCostoAsync(RecetaId, seleccionados);
-        var tFijos = Api.ListarCostosFijosAsync();
-        await Task.WhenAll(tCosto, tFijos);
+        var tConfig = Api.ObtenerConfiguracionCostosFijosAsync();
+        await Task.WhenAll(tCosto, tConfig);
         cargando = false;
         var res = tCosto.Result;
         if (!res.Exito) { error = res.Mensaje; costo = null; return; }
         costo = res.Datos;
-        var resFijos = tFijos.Result;
-        if (resFijos.Exito && resFijos.Datos is not null)
+        var resConfig = tConfig.Result;
+        if (resConfig.Exito && resConfig.Datos is not null)
         {
             var anteriores = fijosCargados ? new HashSet<int>(seleccionados) : null;
-            fijos = resFijos.Datos.Where(f => f.Activo).ToList();
+            preparacionesBaseMes = resConfig.Datos.PreparacionesBaseMes;
+            fijos = resConfig.Datos.Costos.Where(f => f.Activo).ToList();
             seleccionados.Clear();
             if (anteriores is not null)
             {

@@ -94,7 +94,7 @@
                                        @onchange="(e) => AlternarFijo(f.Id, (bool)e.Value!)" />
                                 <span>@f.Nombre</span>
                             </label>
-                            <span class="cs-fijos-aporte">@Formato.Moneda(f.ValorDivisor > 0 ? f.MontoMensual / f.ValorDivisor : 0m)</span>
+                            <span class="cs-fijos-aporte">@(preparacionesBaseMes is > 0 ? Formato.Moneda(f.MontoMensual / preparacionesBaseMes.Value) : "—")</span>
                         </li>
                     }
                 </ul>
@@ -125,6 +125,7 @@
     private List<CostoFijoDto> fijos = new();
     private readonly HashSet<int> seleccionados = new();
     private bool fijosCargados;
+    private int? preparacionesBaseMes;
 
     protected override async Task OnInitializedAsync()
     {
@@ -137,9 +138,12 @@
     // Carga los costos fijos activos y deja la selección vacía.
     private async Task CargarFijos()
     {
-        var res = await Api.ListarCostosFijosAsync();
+        var res = await Api.ObtenerConfiguracionCostosFijosAsync();
         if (res.Exito && res.Datos is not null)
-            fijos = res.Datos.Where(f => f.Activo).ToList();
+        {
+            preparacionesBaseMes = res.Datos.PreparacionesBaseMes;
+            fijos = res.Datos.Costos.Where(f => f.Activo).ToList();
+        }
 
         seleccionados.Clear();
         fijosCargados = true;
