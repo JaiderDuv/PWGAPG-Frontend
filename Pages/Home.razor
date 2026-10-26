@@ -1,5 +1,6 @@
 ﻿@page "/"
 @page "/home"
+@page "/dashboard-empresa"
 @using PWGAPG_Frontend.Components
 @inject PWGAPG_Frontend.Services.AuthService AuthService
 @inject NavigationManager Navigation
@@ -12,68 +13,58 @@ else
 {
     <section class="hero-banner">
         <span class="hero-badge">
-            RED DE EMPRENDIMIENTO 2026
+            GESTIÓN GASTRONÓMICA 2026
         </span>
         <h1 class="hero-titulo">
-            Conecta, Crece e Impulsa tu Negocio
+            Controla los costos de tu cocina y haz crecer tu negocio
         </h1>
         <p class="hero-descripcion">
-            La plataforma diseñada para visibilizar a pequeños y medianos emprendedores. Registra tu marca y da a conocer tus productos.
+            Centraliza insumos, proveedores, recetas y menús en un solo lugar. Calcula costos reales y márgenes de rentabilidad para tomar mejores decisiones.
         </p>
         <div class="hero-acciones">
             <button class="btn-banner-primary" @onclick='() => Navigation.NavigateTo("registro")'>
                 Registrar mi Emprendimiento
             </button>
-            <button class="btn-banner-secondary" @onclick='() => Navigation.NavigateTo("emprendimientos")'>
-                Explorar Negocios
+            <button class="btn-banner-secondary" @onclick='() => Navigation.NavigateTo("login")'>
+                Iniciar Sesión
             </button>
         </div>
     </section>
 
-    <section class="seccion-busqueda">
-        <div class="contenedor-busqueda">
-            <input type="text" placeholder="¿Qué producto o servicio buscas?" class="input-busqueda">
-            <button class="btn-solid btn-buscar">Buscar</button>
-        </div>
-    </section>
-
     <section>
-        <h2 class="titulo-seccion">Emprendimientos Destacados</h2>
+        <h2 class="titulo-seccion">Todo lo que necesitas para tu negocio</h2>
 
         <div class="grid-emprendimientos">
             <article class="card-emprendimiento">
                 <div class="imagen-placeholder">
-                    [ Imagen del Negocio ]
+                    [ Insumos y proveedores ]
                 </div>
                 <div class="card-cuerpo">
-                    <span class="categoria-tag">Gastronomía</span>
-                    <h3 class="card-titulo">Cafetería Artesanal</h3>
-                    <p class="card-descripcion">Café de origen y pan recién horneado cada mañana.</p>
-                    <button class="btn-outline btn-ver-perfil" @onclick='() => Navigation.NavigateTo("emprendimientos")'>Ver Perfil</button>
+                    <span class="categoria-tag">Compras</span>
+                    <h3 class="card-titulo">Insumos y proveedores</h3>
+                    <p class="card-descripcion">Registra precios, empaques y proveedores para conocer cuánto cuesta realmente cada ingrediente.</p>
                 </div>
             </article>
 
             <article class="card-emprendimiento">
                 <div class="imagen-placeholder">
-                    [ Imagen del Negocio ]
+                    [ Recetas y menús ]
                 </div>
                 <div class="card-cuerpo">
-                    <span class="categoria-tag">Repostería</span>
-                    <h3 class="card-titulo">Panadería</h3>
-                    <p class="card-descripcion">Panadería y repostería fresca inmediata.</p>
-                    <button class="btn-outline btn-ver-perfil" @onclick='() => Navigation.NavigateTo("emprendimientos")'>Ver Perfil</button>
+                    <span class="categoria-tag">Producción</span>
+                    <h3 class="card-titulo">Recetas y menús</h3>
+                    <p class="card-descripcion">Organiza tus recetas, calcula porciones y mantén actualizado el costo de cada producto de tu menú.</p>
                 </div>
             </article>
 
             <article class="card-emprendimiento">
                 <div class="imagen-placeholder">
-                    [ Imagen del Negocio ]
+                    [ Rentabilidad ]
                 </div>
                 <div class="card-cuerpo">
-                    <span class="categoria-tag">Productos frescos</span>
-                    <h3 class="card-titulo">Pasteleria Saludable</h3>
-                    <p class="card-descripcion">Combinar lo delicioso de los postres con productos naturales perfectos para la salud.</p>
-                    <button class="btn-outline btn-ver-perfil" @onclick='() => Navigation.NavigateTo("emprendimientos")'>Ver Perfil</button>
+                    <span class="categoria-tag">Análisis</span>
+                    <h3 class="card-titulo">Rentabilidad</h3>
+                    <p class="card-descripcion">Compara costos, precios de venta y márgenes para detectar oportunidades y proteger tu utilidad.</p>
                 </div>
             </article>
         </div>

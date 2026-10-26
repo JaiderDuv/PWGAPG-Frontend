@@ -1,4 +1,4 @@
-﻿@page "/menu/evaluacion"
+@page "/menu/evaluacion"
 @attribute [Authorize]
 @using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Services
@@ -15,7 +15,10 @@
     <div class="rc-header">
         <div>
             <h2 class="rc-title">Rentabilidad del menú</h2>
-            <p class="rc-subtitle">Los productos con menor margen aparecen primero, para que sepas cuáles ajustar ya.</p>
+            <p class="rc-subtitle">
+                Los productos con menor margen directo aparecen primero. Los costos fijos se revisan
+                aparte con el punto de equilibrio para no cargarlos a cada producto.
+            </p>
         </div>
     </div>
 
@@ -28,15 +31,16 @@
                 <span class="pm-ayuda-icono" tabindex="0">
                     ?
                     <span class="pm-ayuda-tooltip">
-                        El margen directo es el porcentaje que queda del precio después de descontar
-                        ingredientes y empaques (costo directo). Los costos fijos no se cargan a cada
-                        producto: se cubren con el punto de equilibrio.
+                        El margen directo descuenta ingredientes y empaques y es el indicador de esta
+                        evaluación. Los costos fijos no se cargan a cada producto: se cubren con el
+                        punto de equilibrio.
                         <br /><br />
-                        Los productos con margen directo por debajo de este valor quedan marcados "en riesgo".
+                        Un producto queda "en riesgo" si su margen directo está por debajo de este
+                        valor. El umbral permitido va de 0 a 100 %.
                     </span>
                 </span>
 
-                <input type="number" class="form-control pm-input-umbral" min="0" step="0.5"
+                <input type="number" class="form-control pm-input-umbral" min="0" max="100" step="1"
                        @bind="umbralEditado" @bind:event="oninput" @bind:after="AlCambiarUmbral" />
 
                 @if (guardandoUmbral)
@@ -78,34 +82,34 @@
 
             <div class="pm-filtro-item">
                 <label class="pm-filtro-label">Costo directo mín.</label>
-                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="any"
+                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="1"
                        @bind="costoMin" @bind:event="oninput" @bind:after="AlFiltrar" />
             </div>
             <div class="pm-filtro-item">
                 <label class="pm-filtro-label">Costo directo máx.</label>
-                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="any"
+                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="1"
                        @bind="costoMax" @bind:event="oninput" @bind:after="AlFiltrar" />
             </div>
 
             <div class="pm-filtro-item">
                 <label class="pm-filtro-label">Precio mín.</label>
-                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="any"
+                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="1"
                        @bind="precioMin" @bind:event="oninput" @bind:after="AlFiltrar" />
             </div>
             <div class="pm-filtro-item">
                 <label class="pm-filtro-label">Precio máx.</label>
-                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="any"
+                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="1"
                        @bind="precioMax" @bind:event="oninput" @bind:after="AlFiltrar" />
             </div>
 
             <div class="pm-filtro-item">
                 <label class="pm-filtro-label">Margen directo mín. %</label>
-                <input type="number" class="form-control pm-input-margen" min="-999" max="999" step="any"
+                <input type="number" class="form-control pm-input-margen" min="-999" max="999" step="1"
                        @bind="margenMin" @bind:event="oninput" @bind:after="AlFiltrar" />
             </div>
             <div class="pm-filtro-item">
                 <label class="pm-filtro-label">Margen directo máx. %</label>
-                <input type="number" class="form-control pm-input-margen" min="-999" max="999" step="any"
+                <input type="number" class="form-control pm-input-margen" min="-999" max="999" step="1"
                        @bind="margenMax" @bind:event="oninput" @bind:after="AlFiltrar" />
             </div>
 
@@ -168,18 +172,12 @@
                                     <td @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">
                                         @if (p.EnRiesgo)
                                         {
-                                            <span class="pm-alerta" title="Por debajo del umbral">⚠️</span>
+                                            <span class="pm-alerta" title="Margen directo por debajo del umbral">⚠️</span>
                                         }
                                     </td>
                                     <td @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">@p.Nombre</td>
                                     <td class="text-end" @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">
-                                        <div>@Formato.Moneda(p.CostoDirecto)</div>
-                                        @if (p.CostoTotal > p.CostoDirecto)
-                                        {
-                                            <small class="text-muted d-block" title="Costo completo con fijos">
-                                                Completo: @Formato.Moneda(p.CostoTotal)
-                                            </small>
-                                        }
+                                        @Formato.Moneda(p.CostoDirecto)
                                     </td>
                                     <td class="text-end" @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">@(p.PrecioVenta.HasValue? Formato.Moneda(p.PrecioVenta.Value) : "—")</td>
                                     <td class="text-end" @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">
@@ -189,15 +187,10 @@
                                         }
                                         else
                                         {
-                                            <strong class="@(p.EnRiesgo ? "pm-texto-riesgo" : "")">
+                                            <strong class="@(p.EnRiesgo ? "pm-texto-riesgo" : "")"
+                                                    title="Margen sobre el costo directo, sin costos fijos">
                                                 @p.MargenDirecto!.Value.ToString("0.##") %
                                             </strong>
-                                            @if (p.MargenReal.HasValue)
-                                            {
-                                                <small class="text-muted d-block">
-                                                    Con fijos: @p.MargenReal.Value.ToString("0.##") %
-                                                </small>
-                                            }
                                         }
                                     </td>
                                     <td>
@@ -227,10 +220,8 @@
 
             <div class="pm-modal-datos mb-3">
                 <div><span class="text-muted small">Costo directo</span><strong>@Formato.Moneda(productoEditando.CostoDirecto)</strong></div>
-                <div><span class="text-muted small">Costo completo</span><strong>@Formato.Moneda(productoEditando.CostoTotal)</strong></div>
                 <div><span class="text-muted small">Precio actual</span><strong>@(productoEditando.PrecioVenta.HasValue? Formato.Moneda(productoEditando.PrecioVenta.Value) : "—")</strong></div>
                 <div><span class="text-muted small">Margen directo</span><strong>@(productoEditando.MargenDirecto.HasValue? productoEditando.MargenDirecto.Value.ToString("0.##") + " %" : "—")</strong></div>
-                <div><span class="text-muted small">Margen con fijos</span><strong>@(productoEditando.MargenReal.HasValue? productoEditando.MargenReal.Value.ToString("0.##") + " %" : "—")</strong></div>
             </div>
 
             <p class="text-muted small mb-2">
@@ -238,7 +229,7 @@
             </p>
 
             <label class="rc-label">Margen deseado (%) *</label>
-            <input type="number" class="form-control" min="0.01" max="99.99" step="0.5"
+            <input type="number" class="form-control" min="0" max="99.99" step="1"
                    @bind="margenNuevo" @bind:event="oninput" @bind:after="AlCambiarMargenNuevo" />
 
             <div class="pm-modal-sugerido mt-2">
@@ -321,20 +312,14 @@
     private async Task AlCambiarUmbral()
     {
         errorUmbral = null;
+        debounceCts?.Cancel();
 
-        if (umbralEditado < 0)
+        if (umbralEditado < 0 || umbralEditado > 100)
         {
-            errorUmbral = "El umbral no puede ser negativo.";
+            errorUmbral = "El umbral debe estar entre 0 y 100 %.";
             return;
         }
 
-        if (umbralEditado > 100)
-        {
-            errorUmbral = "Un umbral tan alto puede perjudicar tus ventas: exigirías precios mucho más altos de lo normal para que un producto no se marque en riesgo.";
-            // No se bloquea el guardado: es solo una advertencia.
-        }
-
-        debounceCts?.Cancel();
         debounceCts = new CancellationTokenSource();
         var token = debounceCts.Token;
         try { await Task.Delay(500, token); }
@@ -357,7 +342,7 @@
             evaluacion.UmbralMargenMinimo = umbralEditado;
             foreach (var p in evaluacion.Productos)
             {
-                p.EnRiesgo = p.MargenDirecto.HasValue && p.MargenDirecto.Value < umbralEditado;
+                p.EnRiesgo = EstaEnRiesgo(p.MargenDirecto, umbralEditado);
             }
             AplicarFiltros();
         }
@@ -540,11 +525,16 @@
             item.MargenDirecto = actualizado.MargenDirecto;
             item.MargenReal = actualizado.MargenReal;
             item.MargenNoCalculable = !actualizado.MargenDirecto.HasValue;
-            item.EnRiesgo = actualizado.MargenDirecto.HasValue && actualizado.MargenDirecto.Value < umbralEditado;
+            item.EnRiesgo = EstaEnRiesgo(actualizado.MargenDirecto, umbralEditado);
         }
 
         AplicarFiltros();
         mensajeExito = $"El precio de \"{productoEditando.Nombre}\" se actualizó a {Formato.Moneda(actualizado.PrecioVenta ?? 0)}. Ya se refleja en la página de Menú.";
         CerrarModalEditar();
     }
+
+    // La evaluación usa el margen directo. Los costos fijos se cubren con el
+    // punto de equilibrio y no se cargan producto por producto.
+    private static bool EstaEnRiesgo(decimal? margenDirecto, decimal umbral) =>
+        margenDirecto.HasValue && margenDirecto.Value < umbral;
 }
