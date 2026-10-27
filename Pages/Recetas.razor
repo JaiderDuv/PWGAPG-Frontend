@@ -1,124 +1,201 @@
 ﻿@page "/recetas"
-@attribute [Authorize]
 @using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Services
 @using PWGAPG_Frontend.Components
+@using System.Net
+@using System.Text
 @inject RecetaApiService Api
+@inject IJSRuntime JS
 
-<div class="rc-page container py-4">
+<div class="rc-page">
     <div class="rc-header">
         <div>
-            <h2 class="rc-title">Mis recetas</h2>
+            <span class="rc-kicker">RECETARIO</span>
+            <h1 class="rc-title">Mis recetas</h1>
             <p class="rc-subtitle">Estandariza tus recetas y conoce lo que cuesta cada porción.</p>
         </div>
         @if (!mostrarForm)
         {
-            <button class="btn btn-primary" @onclick="Nueva">+ Nueva receta</button>
+            <button class="btn btn-primary rc-btn-nueva" @onclick="Nueva">+ Nueva receta</button>
         }
     </div>
 
-    @if (mensajeOk is not null) { <div class="alert alert-success">@mensajeOk</div> }
-    @if (error is not null) { <div class="alert alert-danger">@error</div> }
+    @if (mensajeOk is not null)
+    {
+        <div class="rc-alert rc-alert-ok" role="status">@mensajeOk</div>
+    }
+    @if (error is not null)
+    {
+        <div class="rc-alert rc-alert-error" role="alert">@error</div>
+    }
 
     @if (mostrarForm)
     {
         <RecetaForm @key="formKey" Editando="editando" Insumos="insumos"
                     OnGuardado="AlGuardar" OnInsumoCreado="AlCrearInsumo" OnCancelar="CerrarForm" />
     }
+    else if (recetas is null)
+    {
+        <p class="text-muted">Cargando...</p>
+    }
+    else if (recetas.Count == 0)
+    {
+        <div class="rc-empty">
+            <span>🍽️</span>
+            <p>Aún no tienes recetas. Crea la primera.</p>
+            <button class="btn btn-primary btn-sm" @onclick="Nueva">+ Nueva receta</button>
+        </div>
+    }
     else
     {
-        <div class="rc-toolbar">
-            <input class="form-control" placeholder="Buscar receta por nombre..." maxlength="100"
-                   @bind="busqueda" @bind:event="oninput" @onkeyup="BuscarConEnter" />
-            <button class="btn btn-outline-secondary" @onclick="Cargar">Buscar</button>
-            @if (recetas is not null) { <span class="rc-count">@recetas.Count receta(s)</span> }
+        var sugerencias = Sugerencias();
+        var lista = Filtradas.ToList();
+        var filas = Filas(lista);
+
+        <section class="rc-filters">
+            <div class="rc-filters-row">
+                <div class="rc-filter rc-filter-grow">
+                    <label for="rc-buscar">Buscar</label>
+                    <div class="rc-search-box">
+                        <input id="rc-buscar" class="form-control" placeholder="Receta, ingrediente o categoría..." maxlength="100"
+                               autocomplete="off" value="@busqueda"
+                               @oninput="AlEscribir" @onfocus="() => abierto = true" @onkeydown="AlTecla" />
+                        @if (busqueda.Length > 0)
+                        {
+                            <button type="button" class="rc-search-clear" aria-label="Borrar búsqueda" @onclick="LimpiarBusqueda">✕</button>
+                        }
+                        @if (abierto && sugerencias.Count > 0)
+                        {
+                            <div class="rc-overlay" @onclick="() => abierto = false"></div>
+                            <ul class="rc-suggest">
+                                @for (var si = 0; si < sugerencias.Count; si++)
+                                {
+                                    var s = sugerencias[si];
+                                    var idx = si;
+                                    <li class="@(idx == seleccion ? "active" : "")">
+                                        <button type="button" @onclick="() => Elegir(s)" @onmouseover="() => seleccion = idx">
+                                            <span>@IconoTipo(s.Tipo)</span>
+                                            <span class="rc-sg-text">@Resaltar(s.Texto)</span>
+                                            <small>@EtiquetaTipo(s.Tipo)</small>
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </div>
+                <div class="rc-filter">
+                    <label for="rc-insumo">Contiene el insumo</label>
+                    <select id="rc-insumo" class="form-select" @bind="insumoSel">
+                        <option value="0">Todos</option>
+                        @foreach (var i in InsumosUsados)
+                        {
+                            <option value="@i.Id">@i.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="rc-filter">
+                    <label for="rc-orden">Ordenar por</label>
+                    <select id="rc-orden" class="form-select" @bind="orden">
+                        <option value="nombre">Nombre (A-Z)</option>
+                        <option value="reciente">Más recientes</option>
+                        <option value="costo_asc">Costo por porción (menor)</option>
+                        <option value="costo_desc">Costo por porción (mayor)</option>
+                        <option value="ingredientes">Más ingredientes</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="rc-chips">
+                <button type="button" class="rc-chip @(categoriaSel == "" ? "active" : "")" @onclick='() => categoriaSel = ""'>
+                    Todas<small>@recetas.Count</small>
+                </button>
+                @foreach (var c in CategoriasReceta.Lista)
+                {
+                    var n = recetas.Count(r => r.Categoria == c.Valor);
+                    if (n == 0 && categoriaSel != c.Valor) { continue; }
+                    <button type="button" class="rc-chip @(categoriaSel == c.Valor ? "active" : "")" @onclick="() => categoriaSel = c.Valor">
+                        @c.Etiqueta<small>@n</small>
+                    </button>
+                }
+                @if (recetas.Any(r => string.IsNullOrEmpty(r.Categoria)))
+                {
+                    <button type="button" class="rc-chip @(categoriaSel == SinCategoria ? "active" : "")" @onclick="() => categoriaSel = SinCategoria">
+                        Sin categoría<small>@recetas.Count(r => string.IsNullOrEmpty(r.Categoria))</small>
+                    </button>
+                }
+            </div>
+        </section>
+
+        <div class="rc-result-bar">
+            <span>Mostrando <strong>@lista.Count</strong> de @recetas.Count receta(s) · Orden: @EtiquetasOrden[orden]</span>
+            <div class="rc-result-actions">
+                <div class="rc-view-toggle" role="group" aria-label="Vista de recetas">
+                    <button type="button" class="@(vista == "carrusel" ? "active" : "")"
+                            @onclick='() => vista = "carrusel"'>Carrusel</button>
+                    <button type="button" class="@(vista == "cuadricula" ? "active" : "")"
+                            @onclick='() => vista = "cuadricula"'>Cuadrícula</button>
+                </div>
+                @if (HayFiltros)
+                {
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="LimpiarFiltros">Limpiar filtros</button>
+                }
+            </div>
         </div>
 
-        @if (recetas is null)
-        {
-            <p class="text-muted">Cargando...</p>
-        }
-        else if (recetas.Count == 0)
+        @if (lista.Count == 0)
         {
             <div class="rc-empty">
-                <p>Aún no tienes recetas. Crea la primera.</p>
+                <span>🔍</span>
+                <p>Ninguna receta coincide con tus filtros.</p>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="LimpiarFiltros">Limpiar filtros</button>
+            </div>
+        }
+        else if (vista == "cuadricula")
+        {
+            <div class="rc-grid">
+                @foreach (var r in lista)
+                {
+                    <RecetaCard @key="r.Id" Receta="r" Imagen="@Api.UrlImagen(r.ImagenUrl)"
+                                OnAbrir="() => Abrir(r)" OnEditar="() => Editar(r)" OnEliminar="() => PedirEliminar(r)" />
+                }
             </div>
         }
         else
         {
-            <div class="rc-grid">
-            @foreach (var r in recetas)
+            @for (var fi = 0; fi < filas.Count; fi++)
             {
-                    <div class="rc-recipe @(costosAbiertos.Contains(r.Id) || preciosAbiertos.Contains(r.Id) || escaladosAbiertos.Contains(r.Id) ? "rc-recipe-wide" : "")">
-                    <div class="rc-recipe-img">
-                        @if (Api.UrlImagen(r.ImagenUrl) is { } url) { <img src="@url" alt="@r.Nombre" loading="lazy" /> }
-                        else { <span class="rc-sin-imagen">Sin imagen</span> }
-                        <small class="rc-id">#@r.Id</small>
+                var fila = filas[fi];
+                var rid = $"rc-row-{fi}";
+                <section class="rc-row">
+                    <div class="rc-row-head">
+                        <h5>@fila.Titulo</h5>
+                        <span class="rc-row-count">@fila.Items.Count</span>
                     </div>
-                    <div class="rc-recipe-body">
-                        <h5>@r.Nombre</h5>
-                        <div class="rc-meta">
-                            <span>@r.PorcionesBase porción(es)</span>
-                            <span>@r.Insumos.Count ingrediente(s)</span>
-                        </div>
-                        <div class="rc-price">
-                            <div><small>Costo de insumos</small><strong>@Formato.Moneda(r.CostoTotal)</strong></div>
-                            <div><small>Por porción (insumos)</small><strong>@Formato.Moneda(r.CostoPorPorcion)</strong></div>
-                        </div>
-                        <details>
-                            <summary>Ver ingredientes</summary>
-                            <ul class="rc-ingredients">
-                                @foreach (var i in r.Insumos)
-                                {
-                                    <li><span>@i.InsumoNombre</span><span>@i.Cantidad.ToString("0.###") @i.UnidadMedida</span></li>
-                                }
-                            </ul>
-                            @if (!string.IsNullOrWhiteSpace(r.Instrucciones)) { <p class="rc-instr">@r.Instrucciones</p> }
-                        </details>
-
-                            <div class="rc-analysis">
-                                <span class="rc-analysis-label">Análisis</span>
-                                <div class="rc-analysis-btns">
-                                    <button class="btn btn-sm @(costosAbiertos.Contains(r.Id) ? "btn-primary" : "btn-outline-secondary")" @onclick="() => AlternarCosto(r.Id)">
-                                        @(costosAbiertos.Contains(r.Id) ? "Ocultar costo y fijos" : "Ver costo y fijos")
-                                    </button>
-                                    <button class="btn btn-sm @(preciosAbiertos.Contains(r.Id) ? "btn-primary" : "btn-outline-secondary")" @onclick="() => AlternarPrecio(r.Id)">
-                                        @(preciosAbiertos.Contains(r.Id) ? "Ocultar precio sugerido" : "Ver precio sugerido")
-                                    </button>
-                                    <button class="btn btn-sm @(escaladosAbiertos.Contains(r.Id) ? "btn-primary" : "btn-outline-secondary")" @onclick="() => AlternarEscalado(r.Id)">
-                                        @(escaladosAbiertos.Contains(r.Id) ? "Ocultar escalado" : "Escalar por porciones")
-                                    </button>
-                                </div>
-                            </div>
-
-                            @if (costosAbiertos.Contains(r.Id) || preciosAbiertos.Contains(r.Id) || escaladosAbiertos.Contains(r.Id))
+                    <div class="rc-row-wrap">
+                        <button type="button" class="rc-arrow rc-arrow-left" aria-label="Anterior" @onclick="() => MoverFila(rid, -1)">‹</button>
+                        <div id="@rid" class="rc-row-track">
+                            @foreach (var r in fila.Items)
                             {
-                                <div class="rc-panel-zone">
-                                    @if (costosAbiertos.Contains(r.Id))
-                                    {
-                                        <CostoRecetaPanel RecetaId="r.Id" />
-                                    }
-                                    @if (preciosAbiertos.Contains(r.Id))
-                                    {
-                                        <SugerenciaPrecioVenta RecetaId="r.Id" />
-                                    }
-                                    @if (escaladosAbiertos.Contains(r.Id))
-                                    {
-                                        <EscaladoPorcionesPanel RecetaId="r.Id" PorcionesBase="r.PorcionesBase" />
-                                    }
-                                </div>
+                                <RecetaCard @key="r.Id" Receta="r" Imagen="@Api.UrlImagen(r.ImagenUrl)"
+                                            OnAbrir="() => Abrir(r)" OnEditar="() => Editar(r)" OnEliminar="() => PedirEliminar(r)" />
                             }
+                        </div>
+                        <button type="button" class="rc-arrow rc-arrow-right" aria-label="Siguiente" @onclick="() => MoverFila(rid, 1)">›</button>
                     </div>
-                    <div class="rc-recipe-actions">
-                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => Editar(r)">Editar</button>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="() => PedirEliminar(r)">Eliminar</button>
-                    </div>
-                </div>
+                </section>
             }
-            </div>
         }
     }
 </div>
+
+@if (detalle is not null)
+{
+    <RecetaDetalle @key="detalle.Id" Receta="detalle" Imagen="@Api.UrlImagen(detalle.ImagenUrl)"
+                   OnCerrar="CerrarDetalle"
+                   OnEditar="() => Editar(detalle!)"
+                   OnEliminar="() => PedirEliminar(detalle!)" />
+}
 
 <ConfirmDialog Visible="mostrarConfirm"
                Mensaje="@($"¿Eliminar la receta '{aEliminar?.Nombre}' para siempre? Esta acción no se puede deshacer.")"
@@ -126,46 +203,226 @@
                OnCancelar="CancelarEliminar" />
 
 @code {
+    private const string SinCategoria = "__sin_categoria";
+
+    private sealed record Sugerencia(string Tipo, string Texto, int Id, string Valor);
+    private sealed record FilaCarrusel(string Titulo, List<RecetaDto> Items);
+
     private List<RecetaDto>? recetas;
     private List<InsumoOpcionDto> insumos = new();
-    private RecetaDto? editando, aEliminar;
+    private RecetaDto? editando, aEliminar, detalle;
     private bool mostrarForm, mostrarConfirm;
-    private string? busqueda, error, mensajeOk;
+    private string? error, mensajeOk;
     private Guid formKey = Guid.NewGuid();
-    private readonly HashSet<int> costosAbiertos = new();
-    private readonly HashSet<int> preciosAbiertos = new();
-    private readonly HashSet<int> escaladosAbiertos = new();
 
+    // Filtros
+    private string busqueda = "";
+    private string categoriaSel = "";
+    private int insumoSel;
+    private string orden = "nombre";
+    private static readonly Dictionary<string, string> EtiquetasOrden = new()
+    {
+        ["nombre"] = "Nombre (A-Z)",
+        ["reciente"] = "Más recientes",
+        ["costo_asc"] = "Costo por porción (menor)",
+        ["costo_desc"] = "Costo por porción (mayor)",
+        ["ingredientes"] = "Más ingredientes"
+    };
+    private string vista = "carrusel";
+
+    // Sugerencias del buscador
+    private bool abierto;
+    private int seleccion = -1;
+
+    private bool HayFiltros =>
+        !string.IsNullOrWhiteSpace(busqueda) || categoriaSel != "" || insumoSel != 0;
+
+    private static string Norm(string s)
+    {
+        var sb = new StringBuilder(s.Length);
+        foreach (var ch in s.ToLowerInvariant())
+            sb.Append(ch switch { 'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', _ => ch });
+        return sb.ToString();
+    }
+
+    // Solo los insumos que realmente se usan en alguna receta.
+    private IEnumerable<(int Id, string Nombre)> InsumosUsados =>
+        recetas?.SelectMany(r => r.Insumos)
+                .GroupBy(i => i.InsumoId)
+                .Select(g => (Id: g.Key, Nombre: g.First().InsumoNombre ?? $"Insumo {g.Key}"))
+                .OrderBy(x => x.Nombre)
+            ?? Enumerable.Empty<(int, string)>();
+
+    private IEnumerable<RecetaDto> Filtradas
+    {
+        get
+        {
+            if (recetas is null) return Enumerable.Empty<RecetaDto>();
+            var q = recetas.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(busqueda))
+            {
+                var b = Norm(busqueda.Trim());
+                q = q.Where(r => Norm(r.Nombre).Contains(b)
+                              || r.Insumos.Any(i => Norm(i.InsumoNombre ?? "").Contains(b)));
+            }
+            if (categoriaSel == SinCategoria) q = q.Where(r => string.IsNullOrEmpty(r.Categoria));
+            else if (categoriaSel != "") q = q.Where(r => r.Categoria == categoriaSel);
+
+            if (insumoSel != 0) q = q.Where(r => r.Insumos.Any(i => i.InsumoId == insumoSel));
+
+            return orden switch
+            {
+                "reciente" => q.OrderByDescending(r => r.FechaCreacion),
+                "costo_asc" => q.OrderBy(r => r.CostoPorPorcion),
+                "costo_desc" => q.OrderByDescending(r => r.CostoPorPorcion),
+                "ingredientes" => q.OrderByDescending(r => r.Insumos.Count),
+                _ => q.OrderBy(r => r.Nombre)
+            };
+        }
+    }
+
+    // Filas estilo Netflix. Con el orden por defecto salen las dos filas automáticas;
+    // con cualquier otro orden sale una fila global que respeta el orden elegido.
+    private List<FilaCarrusel> Filas(List<RecetaDto> lista)
+    {
+        var filas = new List<FilaCarrusel>();
+
+        if (orden == "nombre" && !HayFiltros && lista.Count >= 4)
+        {
+            filas.Add(new FilaCarrusel("🆕 Recién agregadas",
+                lista.OrderByDescending(r => r.FechaCreacion).Take(12).ToList()));
+            filas.Add(new FilaCarrusel("💸 Las más económicas por porción",
+                lista.Where(r => r.CostoPorPorcion > 0).OrderBy(r => r.CostoPorPorcion).Take(12).ToList()));
+        }
+        else if (orden != "nombre" && lista.Count > 1)
+        {
+            filas.Add(new FilaCarrusel($"↕️ Todas · {EtiquetasOrden[orden]}", lista));
+        }
+
+        // GroupBy conserva el orden de `lista`, así que cada categoría también queda ordenada.
+        foreach (var g in lista.GroupBy(r => r.Categoria ?? "").OrderBy(g => CategoriasReceta.Orden(g.Key)))
+            filas.Add(new FilaCarrusel(CategoriasReceta.Etiqueta(g.Key), g.ToList()));
+
+        return filas.Where(f => f.Items.Count > 0).ToList();
+    }
+
+    // ---------- Sugerencias tipo Google ----------
+    private List<Sugerencia> Sugerencias()
+    {
+        var lista = new List<Sugerencia>();
+        var q = Norm(busqueda.Trim());
+        if (q.Length == 0 || recetas is null) return lista;
+
+        lista.AddRange(recetas
+            .Where(r => Norm(r.Nombre).Contains(q))
+            .OrderByDescending(r => Norm(r.Nombre).StartsWith(q, StringComparison.Ordinal))
+            .ThenBy(r => r.Nombre)
+            .Take(5)
+            .Select(r => new Sugerencia("receta", r.Nombre, r.Id, "")));
+
+        lista.AddRange(InsumosUsados
+            .Where(i => Norm(i.Nombre).Contains(q))
+            .Take(3)
+            .Select(i => new Sugerencia("insumo", i.Nombre, i.Id, "")));
+
+        lista.AddRange(CategoriasReceta.Lista
+            .Where(c => Norm(c.Etiqueta).Contains(q) && recetas.Any(r => r.Categoria == c.Valor))
+            .Take(2)
+            .Select(c => new Sugerencia("categoria", c.Etiqueta, 0, c.Valor)));
+
+        return lista;
+    }
+
+    private static string IconoTipo(string tipo) => tipo switch { "insumo" => "🥕", "categoria" => "🏷️", _ => "🍽️" };
+    private static string EtiquetaTipo(string tipo) => tipo switch { "insumo" => "Ingrediente", "categoria" => "Categoría", _ => "Receta" };
+
+    // Pone en negrita la parte que coincide con lo escrito.
+    private MarkupString Resaltar(string texto)
+    {
+        var q = Norm(busqueda.Trim());
+        var n = Norm(texto);
+        var i = (q.Length == 0 || n.Length != texto.Length) ? -1 : n.IndexOf(q, StringComparison.Ordinal);
+        if (i < 0) return new MarkupString(WebUtility.HtmlEncode(texto));
+        return new MarkupString(
+            WebUtility.HtmlEncode(texto[..i]) +
+            "<strong>" + WebUtility.HtmlEncode(texto.Substring(i, q.Length)) + "</strong>" +
+            WebUtility.HtmlEncode(texto[(i + q.Length)..]));
+    }
+
+    private void AlEscribir(ChangeEventArgs e)
+    {
+        busqueda = e.Value?.ToString() ?? "";
+        abierto = true;
+        seleccion = -1;
+    }
+
+    private void AlTecla(KeyboardEventArgs e)
+    {
+        var lista = Sugerencias();
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                if (lista.Count > 0) { abierto = true; seleccion = (seleccion + 1) % lista.Count; }
+                break;
+            case "ArrowUp":
+                if (lista.Count > 0) { abierto = true; seleccion = seleccion <= 0 ? lista.Count - 1 : seleccion - 1; }
+                break;
+            case "Enter":
+                if (abierto && seleccion >= 0 && seleccion < lista.Count) Elegir(lista[seleccion]);
+                else abierto = false;
+                break;
+            case "Escape":
+                abierto = false;
+                break;
+        }
+    }
+
+    private void Elegir(Sugerencia s)
+    {
+        switch (s.Tipo)
+        {
+            case "receta": busqueda = s.Texto; break;
+            case "insumo": insumoSel = s.Id; busqueda = ""; break;
+            case "categoria": categoriaSel = s.Valor; busqueda = ""; break;
+        }
+        abierto = false;
+        seleccion = -1;
+    }
+
+    private void LimpiarBusqueda() { busqueda = ""; abierto = false; seleccion = -1; }
+    private void LimpiarFiltros() { busqueda = ""; categoriaSel = ""; insumoSel = 0; abierto = false; seleccion = -1; }
+
+    // ---------- Carga y acciones ----------
     protected override async Task OnInitializedAsync()
     {
         insumos = await Api.ListarInsumosAsync();
         await Cargar();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (recetas is null || mostrarForm) return;
+        try { await JS.InvokeVoidAsync("carrusel.iniciar"); } catch { }
+    }
+
+    private async Task MoverFila(string id, int dir)
+    {
+        try { await JS.InvokeVoidAsync("carrusel.mover", id, dir); } catch { }
+    }
+
     private async Task Cargar()
     {
-        var res = await Api.ListarAsync(busqueda);
+        var res = await Api.ListarAsync(null);
         if (res.Exito) { recetas = res.Datos; error = null; }
         else { recetas = new(); error = res.Mensaje; }
     }
 
-    private async Task BuscarConEnter(KeyboardEventArgs e) { if (e.Key == "Enter") await Cargar(); }
+    private void Abrir(RecetaDto r) => detalle = r;
+    private void CerrarDetalle() => detalle = null;
 
-    private void AlternarCosto(int id)
-    {
-        if (!costosAbiertos.Remove(id)) costosAbiertos.Add(id);
-    }
-    private void AlternarPrecio(int id)
-    {
-        if (!preciosAbiertos.Remove(id)) preciosAbiertos.Add(id);
-    }
-    private void AlternarEscalado(int id)
-    {
-        if (!escaladosAbiertos.Remove(id)) escaladosAbiertos.Add(id);
-    }
-
-    private void Nueva() { editando = null; AbrirForm(); }
-    private void Editar(RecetaDto r) { editando = r; AbrirForm(); }
+    private void Nueva() { editando = null; detalle = null; AbrirForm(); }
+    private void Editar(RecetaDto r) { editando = r; detalle = null; AbrirForm(); }
 
     private void AbrirForm()
     {
@@ -191,7 +448,8 @@
         await Cargar();
     }
 
-    private void PedirEliminar(RecetaDto r) { aEliminar = r; mostrarConfirm = true; }
+    // Se cierra el detalle antes de confirmar para que el diálogo quede encima.
+    private void PedirEliminar(RecetaDto r) { aEliminar = r; detalle = null; mostrarConfirm = true; }
     private void CancelarEliminar() { mostrarConfirm = false; aEliminar = null; }
 
     private async Task ConfirmarEliminar()

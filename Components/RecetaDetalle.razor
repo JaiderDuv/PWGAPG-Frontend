@@ -1,0 +1,112 @@
+﻿@using PWGAPG_Frontend.Models
+
+<div class="rc-modal-backdrop" @onclick="OnCerrar">
+    <div class="rc-modal" role="dialog" aria-modal="true" aria-label="@Receta.Nombre" @onclick:stopPropagation="true">
+        <button type="button" class="rc-modal-close" aria-label="Cerrar" @onclick="OnCerrar">✕</button>
+
+        <div class="rc-modal-hero">
+            @if (!string.IsNullOrEmpty(Imagen))
+            {
+                <img src="@Imagen" alt="@Receta.Nombre" />
+            }
+            else
+            {
+                <span>🍽️</span>
+            }
+            <div class="rc-modal-title">
+                <h3>@Receta.Nombre</h3>
+                <span>#@Receta.Id · @CategoriasReceta.Etiqueta(Receta.Categoria) · @Receta.PorcionesBase porción(es)</span>
+            </div>
+        </div>
+
+        <div class="rc-modal-body">
+            <div class="rc-modal-kpis">
+                <div class="rc-modal-kpi">
+                    <small>Costo de insumos</small>
+                    <strong>@Formato.Moneda(Receta.CostoTotal)</strong>
+                </div>
+                <div class="rc-modal-kpi">
+                    <small>Porciones base</small>
+                    <strong>@Receta.PorcionesBase</strong>
+                </div>
+                <div class="rc-modal-kpi rc-modal-kpi-main">
+                    <small>Costo por porción</small>
+                    <strong>@Formato.Moneda(Receta.CostoPorPorcion)</strong>
+                </div>
+            </div>
+
+            <div class="rc-modal-columns">
+                <div>
+                    <h6>Ingredientes</h6>
+                    <ul class="rc-ingredients">
+                        @foreach (var i in Receta.Insumos)
+                        {
+                            <li><span>@i.InsumoNombre</span><span>@i.Cantidad.ToString("0.###") @i.UnidadMedida</span></li>
+                        }
+                    </ul>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Receta.Instrucciones))
+                {
+                    <div>
+                        <h6>Instrucciones</h6>
+                        <p class="rc-instr">@Receta.Instrucciones</p>
+                    </div>
+                }
+            </div>
+
+            <div class="rc-analysis">
+                <span class="rc-analysis-label">Análisis de costos</span>
+                <div class="rc-analysis-btns">
+                    <button type="button" class="btn btn-sm @(verCostos ? "btn-primary" : "btn-outline-secondary")"
+                            aria-pressed="@verCostos" @onclick="() => verCostos = !verCostos">
+                        @(verCostos ? "Ocultar costos fijos" : "Ver costos fijos")
+                    </button>
+                    <button type="button" class="btn btn-sm @(verPrecio ? "btn-primary" : "btn-outline-secondary")"
+                            aria-pressed="@verPrecio" @onclick="() => verPrecio = !verPrecio">
+                        @(verPrecio ? "Ocultar precio sugerido" : "Ver precio sugerido")
+                    </button>
+                    <button type="button" class="btn btn-sm @(verEscalado ? "btn-primary" : "btn-outline-secondary")"
+                            aria-pressed="@verEscalado" @onclick="() => verEscalado = !verEscalado">
+                        @(verEscalado ? "Ocultar escalado" : "Escalar porciones")
+                    </button>
+                </div>
+            </div>
+
+            @if (verCostos || verPrecio || verEscalado)
+            {
+                <div class="rc-panel-zone">
+                    @if (verCostos)
+                    {
+                        <CostoRecetaPanel RecetaId="Receta.Id" />
+                    }
+                    @if (verPrecio)
+                    {
+                        <SugerenciaPrecioVenta RecetaId="Receta.Id" />
+                    }
+                    @if (verEscalado)
+                    {
+                        <EscaladoPorcionesPanel RecetaId="Receta.Id" PorcionesBase="Receta.PorcionesBase" />
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="rc-modal-actions">
+            <button type="button" class="btn btn-outline-secondary" @onclick="OnEditar">Editar</button>
+            <button type="button" class="btn btn-outline-danger" @onclick="OnEliminar">Eliminar</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public RecetaDto Receta { get; set; } = default!;
+    [Parameter] public string? Imagen { get; set; }
+    [Parameter] public EventCallback OnCerrar { get; set; }
+    [Parameter] public EventCallback OnEditar { get; set; }
+    [Parameter] public EventCallback OnEliminar { get; set; }
+
+    // Las tres opciones de análisis siguen disponibles desde el detalle de la receta.
+    private bool verCostos = true;
+    private bool verPrecio;
+    private bool verEscalado;
+}
