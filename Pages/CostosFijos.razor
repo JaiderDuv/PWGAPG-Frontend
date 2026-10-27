@@ -1,6 +1,7 @@
 ﻿@page "/costos-fijos"
 @attribute [Authorize]
 @using System.ComponentModel.DataAnnotations
+@using System.Globalization
 @using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Services
 @using PWGAPG_Frontend.Components
@@ -125,53 +126,94 @@
                         Por ejemplo, si pagas $1.000.000 de arriendo y haces 60 preparaciones base,
                         cada preparación carga $16.667 de ese arriendo.
                         No es un pago adicional: es una forma de incluir en el <strong>costo completo</strong>
-                        un gasto que ya tienes. No cambia el costo directo ni el precio sugerido; los costos fijos
+                        un gasto que ya tienes. No cambia el costo de insumos y empaques ni el precio sugerido; los costos fijos
                         se cubren con el punto de equilibrio.
                     </div>
                 </div>
 
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="rc-label">
-                            Nombre *
-                            <span class="campo-ayuda" tabindex="0"
-                                  data-tip="Nombre con el que identificarás el costo fijo. Ej.: Arriendo del local, Nómina, Internet.">?</span>
-                        </label>
-                        <InputText class="form-control" @bind-Value="modelo.Nombre" maxlength="150"
-                                   placeholder="Ej: Arriendo del local" />
-                        <ValidationMessage For="() => modelo.Nombre" class="rc-error" />
-                    </div>
-                    <div class="col-md-6">
-                        <label class="rc-label">
-                            Categoría *
-                            <span class="campo-ayuda" tabindex="0"
-                                  data-tip="Agrupa el costo para analizarlo. Puedes elegir una sugerencia o escribir tu propia categoría. Ej.: Arriendo, Servicios, Nómina.">?</span>
-                        </label>
-                        <InputText class="form-control" @bind-Value="modelo.Categoria" maxlength="50"
-                                   list="categorias-costo-fijo" placeholder="Ej: Arriendo" />
-                        <datalist id="categorias-costo-fijo">
-                            @foreach (var cat in CategoriasBase) { <option value="@cat"></option> }
-                        </datalist>
-                        <ValidationMessage For="() => modelo.Categoria" class="rc-error" />
-                    </div>
-                    <div class="col-md-6">
-                        <label class="rc-label">
-                            Monto mensual *
-                            <span class="campo-ayuda" tabindex="0"
-                                  data-tip="Valor total que pagas al mes por este costo. Ej.: 1.000.000 de arriendo. No cambia el costo directo de los productos.">?</span>
-                        </label>
-                        <InputNumber class="form-control" @bind-Value="modelo.MontoMensual" min="0" step="1" />
-                        <ValidationMessage For="() => modelo.MontoMensual" class="rc-error" />
-                    </div>
-                    <div class="col-12">
-                        <div class="form-check">
-                            <InputCheckbox class="form-check-input" id="cf-activo" @bind-Value="modelo.Activo" />
-                            <label class="form-check-label" for="cf-activo">
-                                Activo (se incluye en el costo completo)
-                                <span class="campo-ayuda" tabindex="0"
-                                      data-tip="Si está activo, entra en el costo completo y en el análisis del punto de equilibrio. Desactívalo si ya no pagas ese costo, sin borrar el historial.">?</span>
-                            </label>
+                <div class="row g-4">
+                    <div class="col-lg-7">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="rc-label">
+                                    Nombre *
+                                    <span class="campo-ayuda" tabindex="0"
+                                          data-tip="Nombre con el que identificarás el costo fijo. Ej.: Arriendo del local, Nómina, Internet.">?</span>
+                                </label>
+                                <InputText class="form-control" @bind-Value="modelo.Nombre" maxlength="150"
+                                           placeholder="Ej: Arriendo del local" />
+                                <ValidationMessage For="() => modelo.Nombre" class="rc-error" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="rc-label">
+                                    Categoría *
+                                    <span class="campo-ayuda" tabindex="0"
+                                          data-tip="Agrupa el costo para analizarlo. Puedes elegir una sugerencia o escribir tu propia categoría. Ej.: Arriendo, Servicios, Nómina.">?</span>
+                                </label>
+                                <InputText class="form-control" @bind-Value="modelo.Categoria" maxlength="50"
+                                           list="categorias-costo-fijo" placeholder="Ej: Arriendo" />
+                                <datalist id="categorias-costo-fijo">
+                                    @foreach (var cat in CategoriasCostoFijo) { <option value="@cat"></option> }
+                                </datalist>
+                                <ValidationMessage For="() => modelo.Categoria" class="rc-error" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="rc-label">
+                                    Monto mensual *
+                                    <span class="campo-ayuda" tabindex="0"
+                                          data-tip="Valor total que pagas al mes por este costo. Ej.: 1.000.000 de arriendo. No cambia el costo de insumos y empaques de los productos.">?</span>
+                                </label>
+                                <InputNumber class="form-control" @bind-Value="modelo.MontoMensual" min="0" step="1" />
+                                <ValidationMessage For="() => modelo.MontoMensual" class="rc-error" />
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <InputCheckbox class="form-check-input" id="cf-activo" @bind-Value="modelo.Activo" />
+                                    <label class="form-check-label" for="cf-activo">
+                                        Activo (se incluye en el costo completo)
+                                        <span class="campo-ayuda" tabindex="0"
+                                              data-tip="Si está activo, entra en el costo completo y en el análisis del punto de equilibrio. Desactívalo si ya no pagas ese costo, sin borrar el historial.">?</span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
+                    </div>
+
+                    <div class="col-lg-5">
+                        <aside class="cs-costos-existentes">
+                            <div class="cs-costos-existentes-header">
+                                <h6>Costos fijos actuales</h6>
+                                <span>@CantidadActivos @(CantidadActivos == 1 ? "activo" : "activos") · @Formato.Moneda(TotalMensual)/mes</span>
+                            </div>
+                            <p>
+                                Revisa los que ya tienes para evitar duplicados y reutilizar categorías
+                                como Nómina o Servicios.
+                            </p>
+
+                            @if (costos is null)
+                            {
+                                <p class="mb-0">Cargando costos...</p>
+                            }
+                            else if (costos.Count == 0)
+                            {
+                                <p class="mb-0">Todavía no tienes costos fijos. Este será el primero.</p>
+                            }
+                            else
+                            {
+                                <ul class="cs-lista-costos">
+                                    @foreach (var c in CostosParaLista)
+                                    {
+                                        <li class="@(c.Activo ? "" : "cs-inactivo")">
+                                            <div>
+                                                <strong>@c.Nombre</strong>
+                                                <small>@(Categoria(c) + (c.Activo ? "" : " · Inactivo"))</small>
+                                            </div>
+                                            <span>@Formato.Moneda(c.MontoMensual)</span>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </aside>
                     </div>
                 </div>
 
@@ -188,7 +230,7 @@
                         </p>
                         <small class="text-muted d-block mt-1">
                             Se refleja en el costo completo de las recetas y productos. No es un cobro extra
-                            ni cambia el costo directo.
+                            ni cambia el costo de insumos y empaques.
                         </small>
                     </div>
                 }
@@ -317,7 +359,7 @@
                 <div>
                     <h5 class="mb-0">Punto de equilibrio mensual</h5>
                     <small class="text-muted">
-                        Cuánto dinero necesitas facturar al mes para que, después de pagar insumos y empaques,
+                        Cuánto necesitas vender al mes para que, después de pagar insumos y empaques,
                         te alcance para cubrir arriendo, nómina y demás costos fijos. No es una meta de ventas
                         ni una ganancia: es el mínimo para no perder dinero.
                     </small>
@@ -337,50 +379,84 @@
                 }
                 else
                 {
-                    <div class="cs-kpis">
-                        <div class="cs-kpi">
-                            <small>Costos fijos mensuales</small>
-                            <strong>@Formato.Moneda(equilibrio.CostosFijosMensuales)</strong>
-                            <em>Lo que pagas aunque no vendas</em>
-                        </div>
-                        <div class="cs-kpi">
-                            <small>Margen de contribución promedio</small>
-                            <strong>@(equilibrio.MargenContribucionPromedioPorcentaje.HasValue ? equilibrio.MargenContribucionPromedioPorcentaje.Value.ToString("0.##") + " %" : "—")</strong>
-                            <em>Lo que queda de cada venta después del costo directo</em>
-                        </div>
-                        @if (CostoDirectoIncluido is decimal costoDirectoIncluido)
-                        {
-                            <div class="cs-kpi">
-                                <small>Costo directo incluido</small>
-                                <strong>@Formato.Moneda(costoDirectoIncluido)</strong>
-                                <em>Insumos y empaques dentro de esas ventas</em>
-                            </div>
-                        }
-                        <div class="cs-kpi cs-kpi-main">
-                            <small>Facturación mínima / mes</small>
-                            <strong>@(equilibrio.VentasEquilibrioMensuales.HasValue ? Formato.Moneda(equilibrio.VentasEquilibrioMensuales.Value) : "—")</strong>
-                            <em>Es lo que vendes, no lo que ganas</em>
-                        </div>
-                    </div>
-
-                    @if (equilibrio.VentasEquilibrioMensuales is decimal ventasEquilibrio
-                         && equilibrio.MargenContribucionPromedioPorcentaje is decimal margenPromedio
-                         && equilibrio.CostosFijosMensuales > 0)
+                    @if (equilibrio.CostosFijosMensuales <= 0m)
                     {
-                        <div class="cs-equilibrio-explicacion">
-                            <strong>¿Por qué la facturación de equilibrio es mayor que los costos fijos?</strong>
-                            <p>
-                                Porque la facturación no es lo que te queda. De cada $100 que vendes, aproximadamente
-                                $ @((100m - margenPromedio).ToString("0.##")) se van en insumos y empaques, y solo
-                                $ @margenPromedio.ToString("0.##") quedan para cubrir los costos fijos.
-                                Con @Formato.Moneda(equilibrio.CostosFijosMensuales) de costos fijos, necesitas facturar
-                                @Formato.Moneda(ventasEquilibrio) para que esa contribución alcance.
-                                Al llegar a ese punto, tu utilidad es $0.
-                            </p>
+                        <div class="cs-kpis">
+                            <div class="cs-kpi">
+                                <small>Costos fijos mensuales</small>
+                                <strong>@Formato.Moneda(equilibrio.CostosFijosMensuales)</strong>
+                                <em>No hay gastos fijos activos</em>
+                            </div>
+                        </div>
+                        <div class="cs-aviso cs-aviso-info mb-0">
+                            <div>
+                                <strong>No hay costos fijos activos.</strong>
+                                Agrega o activa un costo fijo para calcular cuánto necesitas vender y cubrirlo.
+                            </div>
+                        </div>
+                    }
+                    else if (equilibrio.VentasEquilibrioMensuales is decimal ventasEquilibrio
+                             && equilibrio.MargenContribucionPromedioPorcentaje is decimal margenPromedio)
+                    {
+                        <div class="cs-kpis">
+                            <div class="cs-kpi cs-kpi-main">
+                                <small>Ventas necesarias para no perder</small>
+                                <strong>@Formato.Moneda(ventasEquilibrio)</strong>
+                                <em>Es lo que vendes, no lo que ganas</em>
+                            </div>
+                            <div class="cs-kpi">
+                                <small>Insumos y empaques</small>
+                                <strong>@Formato.Moneda(ventasEquilibrio - equilibrio.CostosFijosMensuales)</strong>
+                                <em>Parte de esas ventas que se consume en producir</em>
+                            </div>
+                            <div class="cs-kpi">
+                                <small>Costos fijos</small>
+                                <strong>@Formato.Moneda(equilibrio.CostosFijosMensuales)</strong>
+                                <em>Arriendo, nómina, servicios y otros</em>
+                            </div>
+                            <div class="cs-kpi">
+                                <small>Utilidad al equilibrio</small>
+                                <strong>@Formato.Moneda(0m)</strong>
+                                <em>Después de cubrir insumos y costos fijos</em>
+                            </div>
+                        </div>
+
+                        <div class="cs-reparto-ventas">
+                            <div class="cs-reparto-barra" aria-hidden="true">
+                                <span class="cs-reparto-directo" style="width:@AnchoPorcentajeDirecto%"></span>
+                                <span class="cs-reparto-fijo" style="width:@AnchoPorcentajeFijo%"></span>
+                            </div>
+                            <div class="cs-reparto-leyenda">
+                                <span><i class="cs-reparto-punto cs-reparto-punto-directo"></i>Insumos y empaques: @(PorcentajeDirecto.ToString("0.##")) %</span>
+                                <span><i class="cs-reparto-punto cs-reparto-punto-fijo"></i>Costos fijos: @(PorcentajeFijo.ToString("0.##")) %</span>
+                            </div>
                             <p class="mb-0">
-                                Si tus costos fijos son bajos pero tu margen también es bajo, igual necesitas vender mucho.
-                                Mejorar el margen —subiendo el precio o bajando el costo directo— reduce la facturación necesaria.
+                                De cada $100 que vendes, aproximadamente
+                                $@((100m - margenPromedio).ToString("0.##")) se van en insumos y empaques,
+                                y $@(margenPromedio.ToString("0.##")) quedan para cubrir los costos fijos.
+                                Al llegar a @Formato.Moneda(ventasEquilibrio), tu utilidad es $0.
                             </p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="cs-kpis">
+                            <div class="cs-kpi">
+                                <small>Costos fijos mensuales</small>
+                                <strong>@Formato.Moneda(equilibrio.CostosFijosMensuales)</strong>
+                                <em>Lo que pagas aunque no vendas</em>
+                            </div>
+                            <div class="cs-kpi">
+                                <small>Margen de contribución promedio</small>
+                                <strong>@(equilibrio.MargenContribucionPromedioPorcentaje.HasValue ? equilibrio.MargenContribucionPromedioPorcentaje.Value.ToString("0.##") + " %" : "—")</strong>
+                                <em>Lo que queda de cada venta después de insumos y empaques</em>
+                            </div>
+                        </div>
+                        <div class="cs-aviso cs-aviso-warn mb-0">
+                            <div>
+                                <strong>No se pudo calcular la venta mínima.</strong>
+                                Revisa que tus productos tengan precio, costo de insumos y empaques y margen positivo.
+                            </div>
                         </div>
                     }
 
@@ -406,11 +482,11 @@
                                     <tr>
                                         <th>Producto</th>
                                         <th class="text-end">Precio</th>
-                                        <th class="text-end">Costo directo</th>
+                                        <th class="text-end">Insumos y empaques</th>
                                         <th class="text-end">Margen contribución</th>
                                         <th class="text-end">Margen %</th>
                                         <th class="text-end">Unidades necesarias/mes*</th>
-                                        <th class="text-end" title="Dinero que tendrías que facturar en el mes si vendieras solo este producto. No es ganancia: incluye el costo directo.">Facturación necesaria/mes*</th>
+                                        <th class="text-end" title="Dinero que tendrías que facturar en el mes si vendieras solo este producto. No es ganancia: incluye insumos y empaques.">Facturación necesaria/mes*</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -432,7 +508,7 @@
                         <p class="text-muted mt-2 mb-0">
                             <small>
                                 * Unidades y facturación si vendieras únicamente ese producto.
-                                La facturación necesaria es dinero que entra, no utilidad: incluye el costo directo
+                                La facturación necesaria es dinero que entra, no utilidad: incluye insumos y empaques
                                 y el margen que cubre los costos fijos. El total global usa el margen de contribución
                                 promedio y supone que todos los productos se venden en la misma proporción.
                             </small>
@@ -472,16 +548,39 @@
     private bool cargandoEquilibrio;
     private string? errorEquilibrio;
 
-    private decimal? CostoDirectoIncluido =>
-        equilibrio is { VentasEquilibrioMensuales: decimal ventas }
-            ? ventas - equilibrio.CostosFijosMensuales
-            : null;
+    private decimal PorcentajeFijo =>
+        equilibrio?.MargenContribucionPromedioPorcentaje is decimal margen
+            ? Math.Clamp(margen, 0m, 100m)
+            : 0m;
+
+    private decimal PorcentajeDirecto => 100m - PorcentajeFijo;
+
+    private string AnchoPorcentajeFijo =>
+        PorcentajeFijo.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private string AnchoPorcentajeDirecto =>
+        PorcentajeDirecto.ToString("0.##", CultureInfo.InvariantCulture);
 
     private decimal? Aporte(CostoFijoDto c) =>
         preparacionesBaseMes is > 0 ? c.MontoMensual / preparacionesBaseMes.Value : null;
 
     private decimal TotalMensual => costos?.Where(c => c.Activo).Sum(c => c.MontoMensual) ?? 0;
     private decimal CuotaGlobal => preparacionesBaseMes is > 0 ? TotalMensual / preparacionesBaseMes.Value : 0;
+
+    private int CantidadActivos => costos?.Count(c => c.Activo) ?? 0;
+
+    private IEnumerable<string> CategoriasCostoFijo =>
+        CategoriasBase
+            .Concat((costos ?? new List<CostoFijoDto>()).Select(Categoria))
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(c => c, StringComparer.CurrentCultureIgnoreCase);
+
+    private IEnumerable<CostoFijoDto> CostosParaLista =>
+        (costos ?? new List<CostoFijoDto>())
+            .OrderByDescending(c => c.Activo)
+            .ThenBy(Categoria, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(c => c.Nombre, StringComparer.CurrentCultureIgnoreCase);
 
     private static string Categoria(CostoFijoDto c) =>
         string.IsNullOrWhiteSpace(c.Categoria) ? "Otros" : c.Categoria;

@@ -1,0 +1,392 @@
+.sim-page {
+    --sim-ok: #15803d;
+    --sim-ok-soft: #f0fdf4;
+    --sim-ok-border: #bbf7d0;
+    --sim-warn: #92400e;
+    --sim-warn-soft: #fffbeb;
+    --sim-warn-border: #fde68a;
+    --sim-loss: #b91c1c;
+    --sim-loss-soft: #fef2f2;
+    --sim-loss-border: #fecaca;
+}
+
+.sim-eyebrow {
+    display: inline-block;
+    margin-bottom: .35rem;
+    color: var(--cm-primary-dark);
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.sim-header-actions {
+    display: flex;
+    gap: .5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.sim-intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 230px;
+    gap: 1rem;
+    align-items: start;
+    margin-bottom: 1rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid #f0d9b5;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #fffdf9 0%, #fdf3e4 100%);
+}
+
+    .sim-intro strong {
+        color: #7c2d12;
+        font-size: .95rem;
+    }
+
+    .sim-intro p {
+        max-width: 75ch;
+        margin: .35rem 0 0;
+        color: #5f4a3a;
+        font-size: .9rem;
+        line-height: 1.6;
+    }
+
+.sim-intro-tip {
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+    padding: .75rem .9rem;
+    border: 1px solid #f0d9b5;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.sim-intro-label {
+    color: var(--cm-muted);
+    font-size: .68rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.sim-intro-tip strong {
+    color: var(--cm-primary-dark);
+    font-size: 1.25rem;
+    line-height: 1.15;
+}
+
+.sim-intro-tip small {
+    color: var(--cm-muted);
+    font-size: .72rem;
+    line-height: 1.35;
+}
+
+.sim-toolbar {
+    margin-bottom: .75rem;
+}
+
+.sim-toolbar-meta {
+    margin-left: auto;
+    color: var(--cm-muted);
+    font-size: .85rem;
+    white-space: nowrap;
+}
+
+.sim-card {
+    overflow: hidden;
+}
+
+.sim-table {
+    min-width: 900px;
+}
+
+    .sim-table td {
+        vertical-align: middle;
+    }
+
+    .sim-table tbody tr {
+        transition: background .15s ease;
+    }
+
+        .sim-table tbody tr:hover {
+            background: #fffaf2;
+        }
+
+.sim-fila-activa {
+    background: #fff8ed;
+}
+
+    .sim-fila-activa:hover {
+        background: #fff3e0;
+    }
+
+.sim-fila-no-disponible {
+    opacity: .55;
+}
+
+.sim-cantidad-celda {
+    width: 110px;
+}
+
+.sim-cantidad {
+    width: 88px;
+    margin-left: auto;
+    text-align: right;
+}
+
+.sim-no-disponible {
+    color: var(--cm-muted);
+    font-size: .72rem;
+}
+
+.sim-badge {
+    display: inline-block;
+    margin-left: .35rem;
+    padding: .1rem .45rem;
+    border-radius: 999px;
+    background: var(--sim-loss-soft);
+    color: var(--sim-loss);
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+}
+
+.sim-placeholder {
+    margin-top: 1rem;
+    padding: 1rem 1.15rem;
+    border: 1px dashed var(--cm-border);
+    border-radius: 14px;
+    background: #fff;
+    color: var(--cm-muted);
+    text-align: center;
+}
+
+.sim-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: .65rem;
+    margin: 1rem 0;
+}
+
+.sim-kpi {
+    padding: .8rem .9rem;
+    border: 1px solid var(--cm-border);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .03);
+}
+
+    .sim-kpi small {
+        display: block;
+        color: var(--cm-muted);
+        font-size: .7rem;
+        letter-spacing: .035em;
+        text-transform: uppercase;
+    }
+
+    .sim-kpi strong {
+        display: block;
+        margin-top: .15rem;
+        color: var(--cm-primary-dark);
+        font-size: 1.25rem;
+        line-height: 1.2;
+    }
+
+    .sim-kpi em {
+        display: block;
+        margin-top: .1rem;
+        color: var(--cm-muted);
+        font-size: .75rem;
+        font-style: normal;
+        line-height: 1.35;
+    }
+
+.sim-kpi-main {
+    border-color: #111;
+    background: #111;
+}
+
+    .sim-kpi-main small,
+    .sim-kpi-main em {
+        color: #d4d4d4;
+    }
+
+    .sim-kpi-main strong {
+        color: #fff;
+        font-size: 1.35rem;
+    }
+
+.sim-kpi-ok {
+    border-color: var(--sim-ok-border);
+    background: var(--sim-ok-soft);
+}
+
+    .sim-kpi-ok strong {
+        color: var(--sim-ok);
+    }
+
+.sim-kpi-loss {
+    border-color: var(--sim-loss-border);
+    background: var(--sim-loss-soft);
+}
+
+    .sim-kpi-loss strong {
+        color: var(--sim-loss);
+    }
+
+.sim-progress-wrap {
+    margin: .25rem 0 1rem;
+}
+
+.sim-progress-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: .35rem;
+    color: var(--cm-muted);
+    font-size: .85rem;
+}
+
+    .sim-progress-label strong {
+        color: var(--cm-text);
+    }
+
+.sim-progress {
+    height: 10px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #f1f5f9;
+}
+
+.sim-progress-bar {
+    height: 100%;
+    border-radius: 999px;
+    transition: width .35s ease;
+}
+
+.sim-progress-ok {
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+
+.sim-progress-warn {
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.sim-progress-low {
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.sim-callout {
+    margin: 1rem 0;
+    padding: 1rem 1.1rem;
+    border: 1px solid;
+    border-radius: 14px;
+}
+
+    .sim-callout strong {
+        display: block;
+        margin-bottom: .25rem;
+    }
+
+    .sim-callout p {
+        margin: 0;
+        font-size: .9rem;
+        line-height: 1.6;
+    }
+
+.sim-callout-ok {
+    border-color: var(--sim-ok-border);
+    background: var(--sim-ok-soft);
+    color: #166534;
+}
+
+.sim-callout-warn {
+    border-color: var(--sim-warn-border);
+    background: var(--sim-warn-soft);
+    color: var(--sim-warn);
+}
+
+.sim-delta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin: .75rem 0 1rem;
+    padding: .75rem 1rem;
+    border-radius: 12px;
+    font-size: .9rem;
+}
+
+    .sim-delta span {
+        font-weight: 600;
+    }
+
+    .sim-delta strong {
+        font-size: 1.1rem;
+    }
+
+.sim-delta-falta {
+    background: var(--sim-loss-soft);
+    color: #991b1b;
+}
+
+.sim-delta-ok {
+    background: var(--sim-ok-soft);
+    color: #166534;
+}
+
+.sim-warnings {
+    margin-top: .5rem;
+}
+
+.sim-explain {
+    margin-top: 1.25rem;
+}
+
+    .sim-explain .rc-card-header {
+        border-top-color: var(--cm-brand);
+    }
+
+    .sim-explain p {
+        font-size: .9rem;
+        line-height: 1.6;
+    }
+
+@media (max-width: 768px) {
+    .sim-intro {
+        grid-template-columns: 1fr;
+    }
+
+    .sim-header-actions {
+        width: 100%;
+    }
+
+        .sim-header-actions .btn {
+            flex: 1;
+        }
+
+    .sim-toolbar-meta {
+        margin-left: 0;
+    }
+
+    .sim-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sim-kpi strong {
+        font-size: 1.1rem;
+    }
+
+    .sim-delta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: .25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .sim-kpis {
+        grid-template-columns: 1fr;
+    }
+}

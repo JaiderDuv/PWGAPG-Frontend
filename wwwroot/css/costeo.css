@@ -171,7 +171,7 @@
     line-height: 1.6;
 }
 
-.cs-equilibrio-explicacion {
+.cs-reparto-ventas {
     margin-top: .9rem;
     padding: 1rem 1.1rem;
     border: 1px solid #f0d9b5;
@@ -182,17 +182,134 @@
     line-height: 1.6;
 }
 
-    .cs-equilibrio-explicacion > strong {
+    .cs-reparto-ventas p {
+        margin: 0;
+    }
+
+.cs-reparto-barra {
+    display: flex;
+    height: 14px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #f1f5f9;
+    margin-bottom: .5rem;
+}
+
+    .cs-reparto-barra > span {
         display: block;
-        margin-bottom: .35rem;
+        height: 100%;
+    }
+
+.cs-reparto-directo {
+    background: #d97706;
+}
+
+.cs-reparto-fijo {
+    background: #15803d;
+}
+
+.cs-reparto-leyenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem 1rem;
+    margin-bottom: .55rem;
+    font-size: .8rem;
+    color: #5f4a3a;
+}
+
+    .cs-reparto-leyenda span {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+    }
+
+.cs-reparto-punto {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+}
+
+.cs-reparto-punto-directo {
+    background: #d97706;
+}
+
+.cs-reparto-punto-fijo {
+    background: #15803d;
+}
+
+.cs-costos-existentes {
+    height: 100%;
+    padding: .9rem 1rem;
+    border: 1px solid var(--cm-border);
+    border-radius: 14px;
+    background: #fbfaf8;
+}
+
+.cs-costos-existentes-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .25rem .5rem;
+    margin-bottom: .35rem;
+}
+
+    .cs-costos-existentes-header h6 {
+        margin: 0;
         color: #7c2d12;
         font-size: .95rem;
     }
 
-    .cs-equilibrio-explicacion p {
-        margin: 0 0 .5rem;
+    .cs-costos-existentes-header span {
+        color: var(--cm-muted);
+        font-size: .75rem;
     }
 
-    .cs-equilibrio-explicacion p:last-child {
-        margin-bottom: 0;
+.cs-costos-existentes > p {
+    margin-bottom: .65rem;
+    color: var(--cm-muted);
+    font-size: .8rem;
+    line-height: 1.45;
+}
+
+.cs-lista-costos {
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+    max-height: 320px;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+    .cs-lista-costos li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .75rem;
+        padding: .5rem .6rem;
+        border: 1px solid var(--cm-border);
+        border-radius: 10px;
+        background: #fff;
     }
+
+        .cs-lista-costos li strong {
+            display: block;
+            color: var(--cm-text, #2f2a26);
+            font-size: .85rem;
+        }
+
+        .cs-lista-costos li small {
+            display: block;
+            color: var(--cm-muted);
+            font-size: .72rem;
+        }
+
+        .cs-lista-costos li > span {
+            color: #7c2d12;
+            font-size: .82rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
