@@ -21,6 +21,7 @@
             <NavLink class="nav-link" href="proveedores">Proveedores</NavLink>
             <NavLink class="nav-link" href="recetas">Recetas</NavLink>
             <NavLink class="nav-link" href="menu">Menú</NavLink>
+            <NavLink class="nav-link" href="menu/evaluacion">Rentabilidad</NavLink>
             <NavLink class="nav-link" href="costos-fijos">Costos fijos</NavLink>
 
             <div class="user-profile-menu">
@@ -39,7 +40,7 @@
                 {
                     <div class="dropdown-menu-custom shadow-lg">
                         <div class="dropdown-header-custom">
-                            <p class="dropdown-user-name">@(string.IsNullOrWhiteSpace(AuthService.NombreEmpresa) ? "Usuario" : AuthService.NombreEmpresa)</p>
+                            <p class="dropdown-user-name">@(string.IsNullOrWhiteSpace(AuthService.NombreDuenio) ? "Usuario" : AuthService.NombreDuenio)</p>
                             <span class="dropdown-user-role">EMPRENDEDOR</span>
                         </div>
 

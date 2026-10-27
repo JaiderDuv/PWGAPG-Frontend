@@ -45,15 +45,21 @@ public class MenuApiService
         await Leer<CostoProductoDto>(await _http.PostAsJsonAsync("api/productos-menu/costo-preview",
             new { recetas, insumosDirectos = empaques }));
 
-    public async Task<ApiResultado<PrecioSugeridoProductoDto>> PrecioSugeridoAsync(int id, decimal margen) =>
+    // costosFijosIds vacío = precio con costo directo; null = todos los fijos.
+    // La interfaz envía lista vacía por defecto para no cargar todos los fijos
+    // al precio de un solo producto.
+    public async Task<ApiResultado<PrecioSugeridoProductoDto>> PrecioSugeridoAsync(
+        int id, decimal margen, List<int>? costosFijosIds = null) =>
         await Leer<PrecioSugeridoProductoDto>(await _http.PostAsJsonAsync(
-            $"api/productos-menu/{id}/precio-sugerido", new { margenDeseado = margen }));
+            $"api/productos-menu/{id}/precio-sugerido",
+            new { margenDeseado = margen, costosFijosIds }));
 
     public async Task<ApiResultado<PrecioSugeridoProductoDto>> PrecioPreviewAsync(
-        List<RecetaEnProductoDto> recetas, List<InsumoDirectoDto> empaques, decimal margen) =>
+        List<RecetaEnProductoDto> recetas, List<InsumoDirectoDto> empaques,
+        decimal margen, List<int>? costosFijosIds = null) =>
         await Leer<PrecioSugeridoProductoDto>(await _http.PostAsJsonAsync(
             "api/productos-menu/precio-sugerido-preview",
-            new { recetas, insumosDirectos = empaques, margenDeseado = margen }));
+            new { recetas, insumosDirectos = empaques, margenDeseado = margen, costosFijosIds }));
 
     private static async Task<ApiResultado<T>> Leer<T>(HttpResponseMessage res)
     {

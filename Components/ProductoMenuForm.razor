@@ -20,11 +20,11 @@
                 <ValidationMessage For="() => modelo.Nombre" class="rc-error" />
             </div>
             <div class="col-md-3">
-                <label class="rc-label">Precio base</label>
+                <label class="rc-label">Costo directo</label>
                 <input class="form-control" readonly
-                       value="@(costoPreview is not null ? Formato.Moneda(costoPreview.CostoTotal) : (calculando ? "Calculando..." : "$ 0"))"
+                       value="@(costoPreview is not null ? Formato.Moneda(costoPreview.CostoDirecto) : (calculando ? "Calculando..." : "$ 0"))"
                        placeholder="$ 0" />
-                <small class="text-muted">Suma automática: recetas + empaques.</small>
+                <small class="text-muted">Recetas + empaques. Los fijos se muestran aparte.</small>
             </div>
             <div class="col-md-3 d-flex align-items-end">
                 <div class="form-check">
@@ -44,7 +44,7 @@
                 <thead>
                     <tr>
                         <th>Receta</th>
-                        <th style="width:160px">Cantidad</th>
+                        <th style="width:160px">Porciones</th>
                         <th style="width:50px"></th>
                     </tr>
                 </thead>
@@ -62,7 +62,7 @@
                                 </select>
                             </td>
                             <td>
-                                <input type="number" class="form-control" min="0.001" max="10000" step="0.001"
+                                <input type="number" class="form-control" min="0" max="10000" step="1"
                                        @bind="f.Cantidad" @bind:event="oninput" @bind:after="AlCambiarComposicion" />
                             </td>
                             <td>
@@ -77,8 +77,10 @@
         <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AgregarReceta">+ Agregar receta</button>
         @if (errorRecetas is not null) { <div class="rc-error mt-2">@errorRecetas</div> }
 
-        <h6 class="rc-section-title mt-4">Empaques / insumos directos <small class="text-muted">(opcional, solo costeo)</small></h6>
-        <p class="text-muted small">No se almacenan (sin cambios de BD): se usan para el costo en vivo y la sugerencia de precio.</p>
+        <h6 class="rc-section-title mt-4">Empaques / insumos directos <small class="text-muted">(opcional)</small></h6>
+        <p class="text-muted small">
+            Ej.: caja, bolsa o etiqueta. Se guardan con el producto y entran en el costo completo, el margen y la evaluación del menú.
+        </p>
         <div class="table-responsive">
             <table class="table rc-table align-middle">
                 <thead>
@@ -103,7 +105,7 @@
                                 </select>
                             </td>
                             <td>
-                                <input type="number" class="form-control" min="0.001" step="0.001"
+                                <input type="number" class="form-control" min="0" step="1"
                                        @bind="f.Cantidad" @bind:event="oninput" @bind:after="AlCambiarComposicion" />
                             </td>
                             <td>
@@ -125,8 +127,15 @@
         <div class="cs-preview mt-3">
             @if (costoPreview is not null)
             {
-                <span>Costo en vivo: <strong>@Formato.Moneda(costoPreview.CostoTotal)</strong></span>
+                <span>Costo directo en vivo: <strong>@Formato.Moneda(costoPreview.CostoDirecto)</strong></span>
                 <span class="text-muted"> (recetas @Formato.Moneda(costoPreview.CostoRecetas) + empaques @Formato.Moneda(costoPreview.CostoInsumosDirectos))</span>
+                @if (costoPreview.CostoFijoProrrateado > 0)
+                {
+                    <span class="text-muted d-block">
+                        Costo completo con fijos: @Formato.Moneda(costoPreview.CostoTotal)
+                        (fijos @Formato.Moneda(costoPreview.CostoFijoProrrateado)). Solo para análisis.
+                    </span>
+                }
             }
             else if (calculando)
             {
@@ -140,8 +149,8 @@
 
         <div class="row g-3 mt-2">
             <div class="col-md-4">
-                <label class="rc-label">Margen de ganancia % <small class="text-muted">(sobre precio base)</small></label>
-                <input type="number" class="form-control" min="1" max="99" step="0.5" @bind="margenSugerido" />
+                <label class="rc-label">Margen de ganancia % <small class="text-muted">(sobre el precio de venta)</small></label>
+                <input type="number" class="form-control" min="1" max="99" step="1" @bind="margenSugerido" />
             </div>
             <div class="col-md-8 d-flex align-items-end gap-2">
                 <button type="button" class="btn btn-outline-secondary" @onclick="SugerirPrecio" disabled="@sugiriendo">
@@ -149,10 +158,23 @@
                 </button>
                 @if (precioSugerido?.PrecioSugerido.HasValue == true)
                 {
-                    <span class="text-muted">Puedes colocar <strong>@Formato.Moneda(precioSugerido.PrecioSugerido.Value)</strong> en Precio de venta:</span>
+                    <span class="text-muted">
+                        Puedes colocar <strong>@Formato.Moneda(precioSugerido.PrecioSugerido.Value)</strong>
+                        (base: @(precioSugerido.IncluyeCostosFijos ? "costo completo con fijos" : "costo directo")) en Precio de venta:
+                    </span>
                     <button type="button" class="btn btn-sm btn-outline-primary" @onclick="UsarSugerido">Usar</button>
                 }
             </div>
+        </div>
+
+        <div class="form-check mt-2">
+            <InputCheckbox class="form-check-input" id="pm-incluir-fijos"
+                           @bind-Value="incluirFijosPrecio" @bind:after="LimpiarSugerencia" />
+            <label class="form-check-label" for="pm-incluir-fijos">Incluir costos fijos en el precio sugerido</label>
+            <small class="text-muted d-block">
+                Por defecto el precio usa el costo directo. Los fijos se cubren con el punto de equilibrio;
+                actívalo solo si quieres que este producto cargue con todos los fijos activos.
+            </small>
         </div>
         @if (errorSugerido is not null) { <div class="rc-error mt-2">@errorSugerido</div> }
 
@@ -160,14 +182,17 @@
             <div class="col-md-6">
                 <label class="rc-label">Precio de venta</label>
                 <InputNumber class="form-control" @bind-Value="modelo.PrecioVenta"
-                             min="0.01" max="999999.99" step="0.01" placeholder="Ej: 25000"
+                             min="0" max="999999.99" step="1" placeholder="Ej: 25000"
                              ParsingErrorMessage="El precio debe ser un número válido." />
                 <ValidationMessage For="() => modelo.PrecioVenta" class="rc-error" />
                 <small class="text-muted">Máximo 6 dígitos (999.999,99). Se reescribe con “Usar”.</small>
                 @if (MargenRealResultante.HasValue)
                 {
-                    <small class="d-block mt-1">Margen real resultante: <strong>@MargenRealResultante.Value.ToString("0.##") %</strong>
-                    <span class="text-muted">(es el que verás en el inicio)</span></small>
+                    <small class="d-block mt-1">
+                        @(incluirFijosPrecio ? "Margen con fijos resultante:" : "Margen directo resultante:")
+                        <strong>@MargenRealResultante.Value.ToString("0.##") %</strong>
+                        <span class="text-muted">(según la base elegida)</span>
+                    </small>
                 }
             </div>
         </div>
@@ -203,6 +228,7 @@
     private CostoProductoDto? costoPreview;
     private PrecioSugeridoProductoDto? precioSugerido;
     private decimal margenSugerido = 30;
+    private bool incluirFijosPrecio;
     private System.Threading.CancellationTokenSource? debounceCts;
     private bool mostrarAvisoMargen;
     private string mensajeAvisoMargen = "";
@@ -224,6 +250,13 @@
                 FilasReceta = Editando.Recetas.Select(r => new ProductoMenuFormModelo.FilaReceta
                 {
                     RecetaId = r.RecetaId, Cantidad = r.Cantidad
+                }).ToList(),
+                // Empaques guardados del producto (ProductMenuInsumo en la BD).
+                FilasEmpaque = Editando.InsumosDirectos.Select(d => new ProductoMenuFormModelo.FilaEmpaque
+                {
+                    InsumoId = d.InsumoId,
+                    Cantidad = d.Cantidad,
+                    UnidadMedida = string.IsNullOrWhiteSpace(d.UnidadReceta) ? "unidad" : d.UnidadReceta
                 }).ToList()
             };
         }
@@ -327,10 +360,19 @@
             .Where(f => f.InsumoId > 0 && f.Cantidad > 0)
             .Select(f => new InsumoDirectoDto { InsumoId = f.InsumoId, Cantidad = f.Cantidad, UnidadMedida = f.UnidadMedida })
             .ToList();
-        var res = await MenuApi.PrecioPreviewAsync(recetas, empaques, margenSugerido);
+        // Lista vacía = precio con costo directo (recomendado por defecto).
+        // null = incluir todos los costos fijos activos.
+        var costosFijosIds = incluirFijosPrecio ? null : new List<int>();
+        var res = await MenuApi.PrecioPreviewAsync(recetas, empaques, margenSugerido, costosFijosIds);
         sugiriendo = false;
         if (!res.Exito) { errorSugerido = res.Mensaje; return; }
         precioSugerido = res.Datos;
+    }
+
+    private void LimpiarSugerencia()
+    {
+        precioSugerido = null;
+        errorSugerido = null;
     }
 
     private async Task ConfirmarMargen()
@@ -348,17 +390,28 @@
 
     private void UsarSugerido()
     {
-        // Única vía que reescribe el precio: siempre la misma acción.
+        // Única vía que reescribe el precio: usa la sugerencia tal cual
+        // para respetar el margen pedido (sugerencia con 2 decimales).
         if (precioSugerido?.PrecioSugerido.HasValue == true)
-            modelo.PrecioVenta = decimal.Ceiling(precioSugerido.PrecioSugerido.Value / 100m) * 100;
+            modelo.PrecioVenta = precioSugerido.PrecioSugerido.Value;
     }
 
-    // Margen real con la misma fórmula del inicio: (precio − costo) ÷ costo × 100.
-    private decimal? MargenRealResultante =>
-        modelo.PrecioVenta.HasValue && modelo.PrecioVenta.Value > 0
-            && costoPreview is not null && costoPreview.CostoTotal > 0
-            ? decimal.Round((modelo.PrecioVenta.Value - costoPreview.CostoTotal) / costoPreview.CostoTotal * 100m, 2)
-            : null;
+    // Margen sobre el precio de venta: (precio − costo base) ÷ precio × 100.
+    // La base es el costo directo por defecto; si se activa la casilla,
+    // se usa el costo completo con fijos.
+    private decimal? MargenRealResultante
+    {
+        get
+        {
+            if (!modelo.PrecioVenta.HasValue || modelo.PrecioVenta.Value <= 0 || costoPreview is null)
+                return null;
+
+            var costoBase = incluirFijosPrecio ? costoPreview.CostoTotal : costoPreview.CostoDirecto;
+            return costoBase > 0
+                ? decimal.Round((modelo.PrecioVenta.Value - costoBase) / modelo.PrecioVenta.Value * 100m, 2)
+                : null;
+        }
+    }
 
     private void AlInvalido() => errorForm = "Revisa los campos: hay valores no válidos.";
 
@@ -390,13 +443,18 @@
             errorForm = "El precio de venta no puede exceder los 6 dígitos (máximo 999.999,99).";
             return;
         }
-        // Todo hacia arriba a la centena al guardar (143 → 200).
-        if (modelo.PrecioVenta.HasValue)
-            modelo.PrecioVenta = decimal.Ceiling(modelo.PrecioVenta.Value / 100m) * 100;
+        // El precio se guarda tal como lo escribe el usuario; ya no se fuerza
+        // el redondeo a la centena (distorsionaba el margen pedido).
         // El backend conserva sus validaciones (6 dígitos, >0).
 
         guardando = true;
         var recetas = validas.Select(f => new RecetaEnProductoDto { RecetaId = f.RecetaId, Cantidad = f.Cantidad }).ToList();
+
+        // Empaques válidos del formulario; se guardan en ProductoMenuInsumo.
+        var empaques = modelo.FilasEmpaque
+            .Where(f => f.InsumoId > 0 && f.Cantidad > 0)
+            .Select(f => new InsumoDirectoDto { InsumoId = f.InsumoId, Cantidad = f.Cantidad, UnidadMedida = f.UnidadMedida })
+            .ToList();
 
         ApiResultado<ProductoMenuDetalleDto> res;
         if (Editando is null)
@@ -406,7 +464,8 @@
                 Nombre = modelo.Nombre.Trim(),
                 PrecioVenta = modelo.PrecioVenta,
                 Activo = modelo.Activo,
-                Recetas = recetas
+                Recetas = recetas,
+                InsumosDirectos = empaques
             });
         }
         else
@@ -417,7 +476,8 @@
                 Nombre = modelo.Nombre.Trim(),
                 PrecioVenta = modelo.PrecioVenta,
                 Activo = modelo.Activo,
-                Recetas = recetas
+                Recetas = recetas,
+                InsumosDirectos = empaques
             });
         }
         guardando = false;

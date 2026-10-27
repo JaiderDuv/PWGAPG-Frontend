@@ -32,7 +32,7 @@
     @if (mostrarForm)
     {
         <RecetaForm @key="formKey" Editando="editando" Insumos="insumos"
-                    OnGuardado="AlGuardar" OnCancelar="CerrarForm" />
+                    OnGuardado="AlGuardar" OnInsumoCreado="AlCrearInsumo" OnCancelar="CerrarForm" />
     }
     else if (recetas is null)
     {
@@ -432,6 +432,14 @@
     }
 
     private void CerrarForm() => mostrarForm = false;
+
+    private void AlCrearInsumo(InsumoOpcionDto insumo)
+    {
+        if (insumos.All(i => i.Id != insumo.Id))
+        {
+            insumos.Add(insumo);
+        }
+    }
 
     private async Task AlGuardar(string? aviso)
     {

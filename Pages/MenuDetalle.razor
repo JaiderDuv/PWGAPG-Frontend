@@ -38,9 +38,32 @@
                 <div class="cs-grid">
                     <div><small>Precio venta</small><strong>@(producto.PrecioVenta.HasValue ? Formato.Moneda(producto.PrecioVenta.Value) : "—")</strong></div>
                     <div><small>Costo recetas</small><strong>@Formato.Moneda(producto.CostoRecetas)</strong></div>
-                    <div><small>Costo total</small><strong>@Formato.Moneda(producto.CostoTotal)</strong></div>
-                    <div><small>Margen real</small><strong>@(producto.MargenReal.HasValue ? producto.MargenReal.Value.ToString("0.##") + " %" : "—")</strong></div>
+                    <div><small>Empaques directos</small><strong>@Formato.Moneda(producto.CostoInsumosDirectos)</strong></div>
+                    <div><small>Costo directo</small><strong>@Formato.Moneda(producto.CostoDirecto)</strong></div>
+                    <div><small>Margen directo</small><strong>@(producto.MargenDirecto.HasValue ? producto.MargenDirecto.Value.ToString("0.##") + " %" : "—")</strong></div>
                 </div>
+
+                <p class="text-muted mt-2 mb-0">
+                    <small>
+                        El costo directo es la base para fijar el precio. Los costos fijos se cubren con el
+                        punto de equilibrio y no se cargan completos a este producto.
+                    </small>
+                </p>
+
+                <details class="mt-3">
+                    <summary>Análisis con costos fijos (opcional)</summary>
+                    <div class="cs-grid mt-2">
+                        <div><small>Costos fijos asignados</small><strong>@Formato.Moneda(producto.CostoFijoProrrateado)</strong></div>
+                        <div><small>Costo completo (con fijos)</small><strong>@Formato.Moneda(producto.CostoTotal)</strong></div>
+                        <div><small>Margen con fijos</small><strong>@(producto.MargenReal.HasValue ? producto.MargenReal.Value.ToString("0.##") + " %" : "—")</strong></div>
+                    </div>
+                    <p class="text-muted mt-2 mb-0">
+                        <small>
+                            Esta referencia reparte los costos fijos entre las preparaciones del negocio.
+                            No modifica el precio ni el margen directo del producto.
+                        </small>
+                    </p>
+                </details>
 
                 <h6 class="rc-section-title mt-3">Recetas que lo componen</h6>
                 <div class="table-responsive">
@@ -48,8 +71,8 @@
                         <thead>
                             <tr>
                                 <th>Receta</th>
-                                <th class="text-end">Cantidad</th>
-                                <th class="text-end">Costo unidad</th>
+                                <th class="text-end">Porciones</th>
+                                <th class="text-end">Costo por porción</th>
                                 <th class="text-end">Costo aportado</th>
                             </tr>
                         </thead>

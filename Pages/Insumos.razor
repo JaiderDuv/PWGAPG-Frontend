@@ -70,7 +70,6 @@
         <select class="form-select" value="@ordenarPor" @onchange="OnOrdenChanged" title="Ordenar por">
             <option value="nombre">Nombre</option>
             <option value="costo">Costo</option>
-            <option value="merma">% Merma</option>
             <option value="cantidad">Cantidad</option>
         </select>
 
@@ -107,7 +106,6 @@
                         <th>Unidad</th>
                         <th>Categoría</th>
                         <th>Costo</th>
-                        <th>% Merma</th>
                         <th>Cantidad</th>
                         <th>Proveedor</th>
                         <th>Estado</th>
@@ -165,7 +163,7 @@
                             <td>
                                 @if (EsEditando(insumo.Id, "costo"))
                                 {
-                                    <input type="number" step="any" min="0.01" class="form-control form-control-sm input-edicion-rapida" value="@edicionRapidaValor" @oninput="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" @onblur="GuardarEdicionRapida" />
+                                    <input type="number" step="1" min="0" class="form-control form-control-sm input-edicion-rapida" value="@edicionRapidaValor" @oninput="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" @onblur="GuardarEdicionRapida" />
                                 }
                                 else
                                 {
@@ -173,19 +171,9 @@
                                 }
                             </td>
                             <td>
-                                @if (EsEditando(insumo.Id, "merma"))
-                                {
-                                    <input type="number" step="any" min="0" max="100" class="form-control form-control-sm input-edicion-rapida" value="@edicionRapidaValor" @oninput="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" @onblur="GuardarEdicionRapida" />
-                                }
-                                else
-                                {
-                                    <span class="celda-editable" @onclick='() => IniciarEdicionRapida(insumo, "merma")' title="Clic para editar">@insumo.PorcentajeMerma.ToString("N2")%</span>
-                                }
-                            </td>
-                            <td>
                                 @if (EsEditando(insumo.Id, "cantidad"))
                                 {
-                                    <input type="number" step="any" min="0" class="form-control form-control-sm input-edicion-rapida" value="@edicionRapidaValor" @oninput="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" @onblur="GuardarEdicionRapida" />
+                                    <input type="number" step="1" min="0" class="form-control form-control-sm input-edicion-rapida" value="@edicionRapidaValor" @oninput="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" @onblur="GuardarEdicionRapida" />
                                 }
                                 else
                                 {
@@ -195,7 +183,33 @@
                             <td>
                                 @if (EsEditando(insumo.Id, "proveedor"))
                                 {
-                                    <input class="form-control form-control-sm input-edicion-rapida" value="@edicionRapidaValor" @oninput="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" @onblur="GuardarEdicionRapida" />
+                                    <div class="proveedor-edicion-rapida">
+                                        <input class="form-control form-control-sm input-edicion-rapida" value="@edicionRapidaValor" @oninput="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" @onblur="GuardarEdicionRapida" placeholder="Escribe o elige un proveedor" />
+                                        @if (cargandoProveedoresRapida)
+                                        {
+                                            <small class="text-muted">Cargando proveedores...</small>
+                                        }
+                                        else if (proveedoresEdicionRapida.Any())
+                                        {
+                                            <div class="proveedores-asociados-rapida">
+                                                <small>Proveedores de este insumo:</small>
+                                                @foreach (var p in proveedoresEdicionRapida)
+                                                {
+                                                    <button type="button"
+                                                            class="proveedor-asociado-rapida @(NombreIgual(p.Nombre, insumo.Proveedor) ? "proveedor-asociado-actual" : "")"
+                                                            @onmousedown:preventDefault
+                                                            @onclick="() => SeleccionarProveedorRapidoAsync(p.Nombre)">
+                                                        <span>@p.Nombre</span>
+                                                        <small>@Formato.Moneda(p.Costo) · @p.Cantidad.ToString("0.##") @p.UnidadMedida</small>
+                                                    </button>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <small class="proveedor-sin-asociados">Este insumo aún no tiene proveedores. Escribe uno nuevo y se creará al guardar.</small>
+                                        }
+                                    </div>
                                 }
                                 else
                                 {
@@ -233,10 +247,10 @@
         <div class="socio-modal">
             <h3 class="onboarding-subtitulo">@(esEdicion ? "Editar insumo" : "Nuevo insumo")</h3>
 
-            <EditForm Model="@form" OnSubmit="@GuardarFormulario">
+            <EditForm Model="@form" OnSubmit="@GuardarFormulario" novalidate>
                 @if (esEdicion && camposVaciadosParaProveedorNuevo && !string.IsNullOrWhiteSpace(form.Proveedor))
                 {
-                    <div class="text-muted" style="font-size:0.8rem; margin-bottom:12px;">Asociando nuevo proveedor '@form.Proveedor.Trim()'. Completa unidad, cantidad, costo y merma y guarda para asociarlo.</div>
+                    <div class="text-muted" style="font-size:0.8rem; margin-bottom:12px;">Asociando nuevo proveedor '@form.Proveedor.Trim()'. Completa unidad, cantidad y costo, y guarda para asociarlo.</div>
                 }
                 @if (esEdicion && errores.TryGetValue(nameof(form.Proveedor), out var errProvEdit))
                 {
@@ -252,42 +266,30 @@
                     }
                 </div>
 
-                <div class="onb-grid">
-                    <div class="form-group-sm">
-                        <label class="auth-label">Unidad de medida * <span class="campo-ayuda-wrap"><span id="ayuda-unidad-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("unidad")' @onmouseenter='() => AlEntrarAyuda("unidad")' @onmouseleave="AlSalirAyuda">?</span></span></label>
-                        <span id="ayuda-unidad-caja" class="campo-ayuda-caja" style='@EstiloAyuda("unidad")' @onmouseenter='() => AlEntrarAyuda("unidad")' @onmouseleave="AlSalirAyuda">Unidad en la que compras y usas el insumo. Define cómo se calculan cantidades y costos en tus recetas. Ej.: kg para harina, l para leche.</span>
-                        <InputSelect @bind-Value="form.UnidadMedida" class="form-select">
-                            <option value="">Selecciona...</option>
-                            <option value="g">g</option>
-                            <option value="kg">kg</option>
-                            <option value="l">l</option>
-                            <option value="ml">ml</option>
-                            <option value="oz">oz</option>
-                            <option value="lb">lb</option>
-                            <option value="unidad">unidad</option>
-                            <option value="taza">taza</option>
-                        </InputSelect>
-                        @if (errores.TryGetValue(nameof(form.UnidadMedida), out var errUnidad))
-                        {
-                            <span class="text-danger msg-error">@errUnidad</span>
-                        }
-                    </div>
-
-                    <div class="form-group-sm">
-                        <label class="auth-label">% Merma <span class="campo-ayuda-wrap"><span id="ayuda-merma-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("merma")' @onmouseenter='() => AlEntrarAyuda("merma")' @onmouseleave="AlSalirAyuda">?</span></span></label>
-                        <span id="ayuda-merma-caja" class="campo-ayuda-caja" style='@EstiloAyuda("merma")' @onmouseenter='() => AlEntrarAyuda("merma")' @onmouseleave="AlSalirAyuda">Porcentaje del insumo que se pierde al prepararlo (cáscaras, recortes, evaporación). Se usa para calcular cuánto debes comprar y su costo real.</span>
-                        <InputNumber @bind-Value="form.PorcentajeMerma" class="form-control" min="0" max="100" step="any" placeholder="Ej.: 0" />
-                        @if (errores.TryGetValue(nameof(form.PorcentajeMerma), out var errMerma))
-                        {
-                            <span class="text-danger msg-error">@errMerma</span>
-                        }
-                    </div>
+                <div class="form-group-sm">
+                    <label class="auth-label">Unidad de medida * <span class="campo-ayuda-wrap"><span id="ayuda-unidad-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("unidad")' @onmouseenter='() => AlEntrarAyuda("unidad")' @onmouseleave="AlSalirAyuda">?</span></span></label>
+                    <span id="ayuda-unidad-caja" class="campo-ayuda-caja" style='@EstiloAyuda("unidad")' @onmouseenter='() => AlEntrarAyuda("unidad")' @onmouseleave="AlSalirAyuda">Unidad en la que compras y usas el insumo. Define cómo se calculan cantidades y costos en tus recetas. Ej.: kg para harina, l para leche.</span>
+                    <InputSelect @bind-Value="form.UnidadMedida" class="form-select">
+                        <option value="">Selecciona...</option>
+                        <option value="g">g</option>
+                        <option value="kg">kg</option>
+                        <option value="l">l</option>
+                        <option value="ml">ml</option>
+                        <option value="oz">oz</option>
+                        <option value="lb">lb</option>
+                        <option value="unidad">unidad</option>
+                        <option value="taza">taza</option>
+                    </InputSelect>
+                    @if (errores.TryGetValue(nameof(form.UnidadMedida), out var errUnidad))
+                    {
+                        <span class="text-danger msg-error">@errUnidad</span>
+                    }
                 </div>
 
                 <div class="form-group-sm">
                     <label class="auth-label">Cantidad * <span class="campo-ayuda-wrap"><span id="ayuda-cantidad-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("cantidad")' @onmouseenter='() => AlEntrarAyuda("cantidad")' @onmouseleave="AlSalirAyuda">?</span></span></label>
                     <span id="ayuda-cantidad-caja" class="campo-ayuda-caja" style='@EstiloAyuda("cantidad")' @onmouseenter='() => AlEntrarAyuda("cantidad")' @onmouseleave="AlSalirAyuda">Cantidad que compraste en la unidad elegida. Ej.: 10 significa 10 kg si elegiste kg. Máximo 999.99 para 'taza' o 'unidad', 999999.99 para el resto.</span>
-                        <InputNumber @bind-Value="form.Cantidad" @oninput="OnCantidadRawInput" class="form-control" min="0" step="any" placeholder="Ej.: 10" />
+                        <InputNumber @bind-Value="form.Cantidad" @oninput="OnCantidadRawInput" class="form-control" min="0" step="1" placeholder="Ej.: 10" />
                     @if (errores.TryGetValue(nameof(form.Cantidad), out var errCantidad))
                     {
                         <span class="text-danger msg-error">@errCantidad</span>
@@ -297,8 +299,8 @@
                 <div class="@(esEdicion ? string.Empty : "onb-grid")">
                     <div class="form-group-sm">
                         <label class="auth-label">Costo * <span class="campo-ayuda-wrap"><span id="ayuda-costo-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("costo")' @onmouseenter='() => AlEntrarAyuda("costo")' @onmouseleave="AlSalirAyuda">?</span></span></label>
-                        <span id="ayuda-costo-caja" class="campo-ayuda-caja" style='@EstiloAyuda("costo")' @onmouseenter='() => AlEntrarAyuda("costo")' @onmouseleave="AlSalirAyuda">Lo que pagaste por la cantidad indicada arriba. Debe ser mayor a 0 y no superar 999999.99. Se usa para calcular el costo real por receta (con merma incluida).</span>
-                        <InputNumber @bind-Value="form.CostoUnitario" @oninput="OnCostoRawInput" class="form-control" min="0.01" step="any" placeholder="Ej.: 2500" />
+                        <span id="ayuda-costo-caja" class="campo-ayuda-caja" style='@EstiloAyuda("costo")' @onmouseenter='() => AlEntrarAyuda("costo")' @onmouseleave="AlSalirAyuda">Lo que pagaste por la cantidad indicada arriba. Debe ser mayor a 0 y no superar 999999.99. Se usa como respaldo para calcular el costo de tus recetas.</span>
+                        <InputNumber @bind-Value="form.CostoUnitario" @oninput="OnCostoRawInput" class="form-control" min="0" step="1" placeholder="Ej.: 2500" />
                         @if (errores.TryGetValue(nameof(form.CostoUnitario), out var errCosto))
                         {
                             <span class="text-danger msg-error">@errCosto</span>
@@ -351,7 +353,7 @@
                             }
                             else if (ProveedorNoManejaInsumo())
                             {
-                                <span class="text-muted" style="font-size:0.8rem;">'@form.Proveedor.Trim()' aún no maneja este insumo. Se vaciaron unidad, cantidad, costo y merma: complétalos y al guardar quedará asociado.</span>
+                                <span class="text-muted" style="font-size:0.8rem;">'@form.Proveedor.Trim()' aún no maneja este insumo. Se vaciaron unidad, cantidad y costo: complétalos y al guardar quedará asociado.</span>
                             }
                             else if (MostrarAvisoSinCoincidencia)
                             {
@@ -447,7 +449,6 @@
     {
         ["nombre"] = "display:none;",
         ["unidad"] = "display:none;",
-        ["merma"] = "display:none;",
         ["cantidad"] = "display:none;",
         ["costo"] = "display:none;",
         ["proveedor"] = "display:none;",
@@ -465,6 +466,8 @@
     private string? edicionRapidaCampo;
     private string edicionRapidaValor = string.Empty;
     private bool guardandoRapido;
+    private List<InsumoProveedorDTO> proveedoresEdicionRapida = new();
+    private bool cargandoProveedoresRapida;
 
     private CancellationTokenSource? debounceCts;
 
@@ -696,14 +699,12 @@
     {
         form.UnidadMedida = string.Empty;
         form.CostoUnitario = null;
-        form.PorcentajeMerma = null;
         form.Cantidad = null;
         proveedorAutocompletado = null;
         camposVaciadosParaProveedorNuevo = true;
         errores.Remove(nameof(form.CostoUnitario));
         errores.Remove(nameof(form.Cantidad));
         errores.Remove(nameof(form.UnidadMedida));
-        errores.Remove(nameof(form.PorcentajeMerma));
     }
 
     private void AutocompletarDesdeProveedor()
@@ -731,7 +732,7 @@
             return;
         }
         // Proveedor que aún no maneja este insumo (existente o nuevo):
-        // se vacían unidad, costo, merma y cantidad una sola vez para no
+        // se vacían unidad, costo y cantidad una sola vez para no
         // borrar lo que el usuario ya digite para ese proveedor.
         if (camposVaciadosParaProveedorNuevo) return;
         VaciarCamposParaNuevoProveedor();
@@ -881,7 +882,6 @@
             UnidadMedida = insumo.UnidadMedida,
             Categoria = CategoriaMostrar(insumo.Categoria),
             CostoUnitario = insumo.CostoUnitario,
-            PorcentajeMerma = insumo.PorcentajeMerma,
             Cantidad = insumo.Cantidad,
             Proveedor = insumo.Proveedor ?? string.Empty,
             Activo = insumo.Activo
@@ -1048,15 +1048,6 @@
             errores[nameof(form.CostoUnitario)] = "El costo no puede superar 999999.99 (6 enteros y 2 decimales).";
         }
 
-        if (form.PorcentajeMerma is null)
-        {
-            form.PorcentajeMerma = 0;
-        }
-        else if (form.PorcentajeMerma.Value < 0 || form.PorcentajeMerma.Value > 100)
-        {
-            errores[nameof(form.PorcentajeMerma)] = "La merma debe estar entre 0 y 100 (solo números).";
-        }
-
         if (string.IsNullOrWhiteSpace(form.Proveedor))
         {
             errores[nameof(form.Proveedor)] = "El proveedor es obligatorio.";
@@ -1129,7 +1120,6 @@
             UnidadMedida = form.UnidadMedida.Trim().ToLowerInvariant(),
             Categoria = CategoriaEnvio(form.Categoria),
             CostoUnitario = form.CostoUnitario!.Value,
-            PorcentajeMerma = form.PorcentajeMerma!.Value,
             Cantidad = form.Cantidad,
             Proveedor = string.IsNullOrWhiteSpace(form.Proveedor) ? null : form.Proveedor.Trim(),
             Activo = form.Activo
@@ -1187,10 +1177,6 @@
         {
             request.Proveedor = string.IsNullOrWhiteSpace(form.Proveedor) ? string.Empty : form.Proveedor.Trim();
         }
-        if (form.PorcentajeMerma!.Value != original.PorcentajeMerma)
-        {
-            request.PorcentajeMerma = form.PorcentajeMerma.Value;
-        }
         if (form.Cantidad != original.Cantidad)
         {
             request.Cantidad = form.Cantidad;
@@ -1201,8 +1187,8 @@
         }
 
         if (request.Nombre is null && request.UnidadMedida is null && request.Categoria is null &&
-            request.CostoUnitario is null && request.PorcentajeMerma is null &&
-            request.Cantidad is null && request.Proveedor is null && request.Activo is null)
+            request.CostoUnitario is null && request.Cantidad is null &&
+            request.Proveedor is null && request.Activo is null)
         {
             CerrarModal();
             mensajeExito = "No has editado ningún campo.";
@@ -1244,12 +1230,14 @@
     private bool EsEditando(int id, string campo) =>
         edicionRapidaId == id && edicionRapidaCampo == campo;
 
-    private void IniciarEdicionRapida(InsumoApiDto insumo, string campo)
+    private async Task IniciarEdicionRapida(InsumoApiDto insumo, string campo)
     {
         if (guardandoRapido || procesando) return;
         LimpiarMensajes();
         edicionRapidaId = insumo.Id;
         edicionRapidaCampo = campo;
+        proveedoresEdicionRapida.Clear();
+        cargandoProveedoresRapida = false;
         var invariante = System.Globalization.CultureInfo.InvariantCulture;
         edicionRapidaValor = campo switch
         {
@@ -1257,11 +1245,48 @@
             "unidad" => insumo.UnidadMedida,
             "categoria" => CategoriaEnvio(insumo.Categoria),
             "costo" => insumo.CostoUnitario.ToString(invariante),
-            "merma" => insumo.PorcentajeMerma.ToString(invariante),
             "cantidad" => insumo.Cantidad?.ToString(invariante) ?? string.Empty,
             "proveedor" => insumo.Proveedor ?? string.Empty,
             _ => string.Empty
         };
+
+        if (campo == "proveedor")
+        {
+            var idSolicitado = insumo.Id;
+            cargandoProveedoresRapida = true;
+            try
+            {
+                var resultado = await InsumoService.ListarProveedoresDeInsumoAsync(insumo.Id);
+                if (edicionRapidaId == idSolicitado && edicionRapidaCampo == "proveedor")
+                {
+                    proveedoresEdicionRapida = resultado.Success && resultado.Data is not null
+                        ? resultado.Data
+                        : new List<InsumoProveedorDTO>();
+                }
+            }
+            catch (Exception)
+            {
+                if (edicionRapidaId == idSolicitado && edicionRapidaCampo == "proveedor")
+                {
+                    proveedoresEdicionRapida = new List<InsumoProveedorDTO>();
+                }
+            }
+            finally
+            {
+                if (edicionRapidaId == idSolicitado && edicionRapidaCampo == "proveedor")
+                {
+                    cargandoProveedoresRapida = false;
+                    StateHasChanged();
+                }
+            }
+        }
+    }
+
+    private async Task SeleccionarProveedorRapidoAsync(string nombre)
+    {
+        if (guardandoRapido) return;
+        edicionRapidaValor = nombre;
+        await GuardarEdicionRapida();
     }
 
     private void CancelarEdicionRapida()
@@ -1269,6 +1294,8 @@
         edicionRapidaId = null;
         edicionRapidaCampo = null;
         edicionRapidaValor = string.Empty;
+        proveedoresEdicionRapida.Clear();
+        cargandoProveedoresRapida = false;
     }
 
     private void AvisarSinCambios()
@@ -1338,12 +1365,6 @@
             request.CostoUnitario = costo;
             request.Proveedor = prov;
         }
-        else if (campo == "merma")
-        {
-            if (!IntentarDecimal(texto, out var merma) || merma < 0 || merma > 100) { mensajeError = "La merma debe estar entre 0 y 100."; return; }
-            if (merma == objetivo.PorcentajeMerma) { AvisarSinCambios(); return; }
-            request.PorcentajeMerma = merma;
-        }
         else if (campo == "cantidad")
         {
             if (texto.Length == 0) { mensajeError = "La cantidad es obligatoria."; return; }
@@ -1372,7 +1393,7 @@
                 {
                     // Proveedor que aún no maneja este insumo: no se guarda solo el
                     // proveedor (quedaría asociado con los datos viejos). Se abre el
-                    // formulario con unidad, costo, merma y cantidad vacíos para que
+                    // formulario con unidad, costo y cantidad vacíos para que
                     // el usuario los complete y al guardar quede asociado.
                     var nuevoProveedor = texto;
                     mensajeError = null;
@@ -1642,7 +1663,6 @@
         Comparison<InsumoApiDto> comparacion = ordenarPor switch
         {
             "costo" => (a, b) => a.CostoUnitario.CompareTo(b.CostoUnitario),
-            "merma" => (a, b) => a.PorcentajeMerma.CompareTo(b.PorcentajeMerma),
             "cantidad" => (a, b) => Nullable.Compare(a.Cantidad, b.Cantidad),
             _ => (a, b) => string.Compare(a.Nombre, b.Nombre, StringComparison.OrdinalIgnoreCase)
         };
@@ -1790,7 +1810,6 @@
         public string UnidadMedida { get; set; } = string.Empty;
         public string Categoria { get; set; } = "otro";
         public decimal? CostoUnitario { get; set; }
-        public decimal? PorcentajeMerma { get; set; }
         public decimal? Cantidad { get; set; }
         public string Proveedor { get; set; } = string.Empty;
         public bool Activo { get; set; } = true;

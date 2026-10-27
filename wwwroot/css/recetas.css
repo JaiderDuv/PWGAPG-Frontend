@@ -1046,6 +1046,22 @@
     font-size: .85rem;
 }
 
+.rc-combo-crear {
+    margin-top: .2rem;
+    border-top: 1px solid var(--cm-border);
+    border-radius: 0 0 8px 8px;
+    color: var(--cm-primary-dark);
+    font-weight: 600;
+}
+
+    .rc-combo-crear .rc-combo-nombre {
+        color: var(--cm-primary-dark);
+    }
+
+    .rc-combo-crear:hover:not(:disabled) {
+        background: var(--cm-soft);
+    }
+
 .rc-combo-seleccionado {
     display: flex;
     align-items: center;

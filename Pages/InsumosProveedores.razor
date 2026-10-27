@@ -2,6 +2,8 @@
 @attribute [Authorize]
 @using PWGAPG_Frontend.Models
 @using System.Net.Http.Json
+@using System.Globalization
+@using System.Text
 @implements IDisposable
 @inject HttpClient Http
 @inject NavigationManager Navigation
@@ -20,11 +22,43 @@
         </div>
     </div>
 
-    <section class="insumos-toolbar">
-        <input class="form-control insumos-buscador"
-               placeholder="Buscar por nombre o proveedor..."
-               value="@textoBusqueda"
-               @oninput="e => textoBusqueda = e.Value?.ToString() ?? string.Empty" />
+    <section class="insumos-toolbar pm-toolbar">
+        <div class="pm-filtro-item pm-filtro-busqueda">
+            <label class="pm-filtro-label">Buscar</label>
+            <input class="form-control insumos-buscador"
+                   placeholder="Nombre o proveedor..."
+                   value="@textoBusqueda"
+                   @oninput="e => textoBusqueda = e.Value?.ToString() ?? string.Empty" />
+        </div>
+
+        <div class="pm-filtro-item">
+            <label class="pm-filtro-label">Unidad</label>
+            <select class="form-select" @bind="unidadFiltro">
+                <option value="">Todas las unidades</option>
+                <option value="g">g</option>
+                <option value="kg">kg</option>
+                <option value="l">l</option>
+                <option value="ml">ml</option>
+                <option value="oz">oz</option>
+                <option value="lb">lb</option>
+                <option value="unidad">unidad</option>
+                <option value="taza">taza</option>
+            </select>
+        </div>
+
+        <div class="pm-filtro-item">
+            <label class="pm-filtro-label">Costo mín.</label>
+            <input type="number" class="form-control pm-input-numero" min="0" step="1" @bind="costoMin" @bind:event="oninput" />
+        </div>
+        <div class="pm-filtro-item">
+            <label class="pm-filtro-label">Costo máx.</label>
+            <input type="number" class="form-control pm-input-numero" min="0" step="1" @bind="costoMax" @bind:event="oninput" />
+        </div>
+
+        <div class="pm-filtro-item pm-filtro-acciones">
+            <label class="pm-filtro-label">&nbsp;</label>
+            <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarFiltrosLocales">Limpiar</button>
+        </div>
     </section>
 
     @if (mensajeError != null)
@@ -38,6 +72,10 @@
     }
     else
     {
+        <p class="text-muted small-texto">
+            Mostrando @insumosFiltrados.Count de @insumos.Count insumo(s) en esta página (@total en total).
+        </p>
+
         <div class="inventario-tabla-wrap">
             <table class="inventario-tabla">
                 <thead>
@@ -51,9 +89,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @if (insumos.Any())
+                    @if (insumosFiltrados.Any())
                     {
-                        @foreach (var i in insumos)
+                        @foreach (var i in insumosFiltrados)
                         {
                             <tr>
                                 <td><strong>@i.Nombre</strong></td>
@@ -75,11 +113,12 @@
                     else
                     {
                         <tr>
-                            <td colspan="6" class="text-muted"
-                                style="text-align:center; padding:24px;">
-                                @(string.IsNullOrWhiteSpace(textoBusqueda)
+                            <td colspan="6" class="text-muted" style="text-align:center; padding:24px;">
+                                @(insumos.Any()
+                                                        ? "Ningún insumo de esta página coincide con los filtros."
+                                                        : (string.IsNullOrWhiteSpace(textoBusqueda)
                                                         ? "Aún no tienes insumos registrados."
-                                                        : "No hay insumos que coincidan con la búsqueda.")
+                                                        : "No hay insumos que coincidan con la búsqueda."))
                     </td>
                 </tr>
                                 }
@@ -111,8 +150,38 @@
         }
     }
 
+    // ---------- Filtros locales (sobre la página ya cargada) ----------
+    private string unidadFiltro = string.Empty;
+    private decimal? costoMin;
+    private decimal? costoMax;
+
     private List<InsumoApiDto> insumos = new();
     private CancellationTokenSource? debounceCts;
+
+    private List<InsumoApiDto> insumosFiltrados
+    {
+        get
+        {
+            var termino = Normalizar(textoBusqueda);
+
+            return insumos.Where(i =>
+            {
+                if (!string.IsNullOrWhiteSpace(unidadFiltro) &&
+                    !string.Equals(i.UnidadMedida, unidadFiltro, StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                if (!string.IsNullOrWhiteSpace(termino) &&
+                    !Normalizar(i.Nombre).Contains(termino) &&
+                    !Normalizar(i.Proveedor).Contains(termino))
+                    return false;
+
+                if (costoMin.HasValue && i.CostoUnitario < costoMin.Value) return false;
+                if (costoMax.HasValue && i.CostoUnitario > costoMax.Value) return false;
+
+                return true;
+            }).ToList();
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -180,9 +249,33 @@
         await Buscar();
     }
 
+    private void LimpiarFiltrosLocales()
+    {
+        unidadFiltro = string.Empty;
+        costoMin = null;
+        costoMax = null;
+    }
+
     private void IrAProveedores(int insumoId)
     {
         Navigation.NavigateTo($"insumos/{insumoId}/proveedores");
+    }
+
+    // Quita tildes/diacríticos y pasa a minúsculas (mismo patrón usado en EvaluacionMenu.razor).
+    private static string Normalizar(string? texto)
+    {
+        if (string.IsNullOrWhiteSpace(texto)) return string.Empty;
+
+        var formaD = texto.Trim().Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder();
+
+        foreach (var c in formaD)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                sb.Append(c);
+        }
+
+        return sb.ToString().Normalize(NormalizationForm.FormC).ToLowerInvariant();
     }
 
     public void Dispose()

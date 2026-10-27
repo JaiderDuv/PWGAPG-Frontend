@@ -28,30 +28,70 @@
     }
     else if (escalado is not null)
     {
-        @foreach (var a in escalado.Advertencias)
+        @foreach (var a in escalado.Advertencias.Where(a => !a.StartsWith("No seleccionaste ningún costo fijo")))
         {
             <div class="cs-aviso cs-aviso-info"><div>@a</div></div>
         }
 
         <div class="cs-kpis">
+            <div class="cs-kpi cs-kpi-main">
+                <small>Costo directo por porción</small>
+                <strong>@Formato.Moneda(CostoDirectoPorPorcion)</strong>
+                <em>sin costos fijos · @escalado.PorcionesDeseadas porción(es)</em>
+            </div>
             <div class="cs-kpi">
-                <small>Costo de insumos</small>
+                <small>Costo de insumos (directo)</small>
                 <strong>@Formato.Moneda(escalado.CostoInsumos)</strong>
                 <em>incluye @Formato.Moneda(escalado.CostoMermaAplicada) de merma</em>
             </div>
             <div class="cs-kpi">
                 <small>Costo fijo prorrateado</small>
                 <strong>@Formato.Moneda(escalado.CostoFijoProrrateado)</strong>
+                <em>solo para el costo completo</em>
             </div>
             <div class="cs-kpi">
-                <small>Costo total (@escalado.PorcionesDeseadas porciones)</small>
+                <small>Costo completo (con fijos, @escalado.PorcionesDeseadas porciones)</small>
                 <strong>@Formato.Moneda(escalado.CostoTotal)</strong>
-            </div>
-            <div class="cs-kpi cs-kpi-main">
-                <small>Costo por porción</small>
-                <strong>@Formato.Moneda(escalado.CostoPorPorcion)</strong>
+                <em>@Formato.Moneda(escalado.CostoPorPorcion) por porción</em>
             </div>
         </div>
+
+        @if (!escalado.SinCostosFijos && escalado.CostoFijoProrrateado > 0)
+        {
+            <p class="text-muted mt-2 mb-0">
+                <small>
+                    La cuota fija se calcula sobre @escalado.FactorEscala.ToString("0.####")
+                    preparación(es) equivalente(s): porciones deseadas ÷ rendimiento base
+                    (@PorcionesBase porciones).
+                </small>
+            </p>
+        }
+
+        @if (fijosCargados && fijos.Count > 0)
+        {
+            <details class="cs-detalle" open>
+                <summary>Costos fijos para el análisis (@seleccionados.Count de @fijos.Count)</summary>
+                <div class="cs-fijos-acciones">
+                    <small class="text-muted me-auto">Marca los que quieras sumar al costo completo.</small>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="SeleccionarTodosFijos">Todos</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="DeseleccionarTodosFijos">Ninguno</button>
+                    @if (cargando) { <small class="text-muted">Recalculando...</small> }
+                </div>
+                <ul class="cs-fijos">
+                    @foreach (var f in fijos)
+                    {
+                        <li>
+                            <label>
+                                <input type="checkbox" checked="@seleccionados.Contains(f.Id)"
+                                       @onchange="(e) => AlternarFijo(f.Id, (bool)e.Value!)" />
+                                <span>@f.Nombre</span>
+                            </label>
+                            <span class="cs-fijos-aporte">@(preparacionesBaseMes is > 0 ? Formato.Moneda(f.MontoMensual / preparacionesBaseMes.Value) : "—")</span>
+                        </li>
+                    }
+                </ul>
+            </details>
+        }
 
         <details class="cs-detalle" open>
             <summary>Ver insumos escalados</summary>
@@ -79,7 +119,7 @@
                 </table>
             </div>
         </details>
-        <p class="text-muted mt-2 mb-0"><small>Simulación temporal: no modifica la receta base.</small></p>
+        <p class="text-muted mt-2 mb-0"><small>Simulación temporal: no modifica la receta base. El costo directo es la base del precio; los fijos se cubren con el punto de equilibrio.</small></p>
     }
 </div>
 
@@ -93,6 +133,18 @@
     private string porcionesTexto = "";
     private int idCargado;
     private CancellationTokenSource? debounceCts;
+
+    // Selección de costos fijos: por defecto no se marca ninguno.
+    // El usuario los agrega solo si quiere analizar el costo completo.
+    private List<CostoFijoDto> fijos = new();
+    private readonly HashSet<int> seleccionados = new();
+    private bool fijosCargados;
+    private int? preparacionesBaseMes;
+
+    // Costo de insumos por porción, sin la cuota de costos fijos.
+    private decimal CostoDirectoPorPorcion => escalado is { PorcionesDeseadas: > 0 }
+        ? decimal.Round(escalado.CostoInsumos / escalado.PorcionesDeseadas, 2)
+        : 0;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -127,10 +179,52 @@
         }
         errorValidacion = null;
         cargando = true;
-        var res = await Api.ObtenerEscaladoAsync(RecetaId, porciones);
+        // Se envía la selección actual. En la primera carga está vacía:
+        // el escalado muestra el costo directo, sin absorber los fijos.
+        var costosFijosIds = seleccionados.ToList();
+        var tEscalado = Api.ObtenerEscaladoAsync(RecetaId, porciones, costosFijosIds);
+        var tConfig = Api.ObtenerConfiguracionCostosFijosAsync();
+        await Task.WhenAll(tEscalado, tConfig);
         cargando = false;
+        var res = tEscalado.Result;
         if (!res.Exito) { error = res.Mensaje; escalado = null; return; }
         escalado = res.Datos;
+
+        var resConfig = tConfig.Result;
+        if (resConfig.Exito && resConfig.Datos is not null)
+        {
+            var anteriores = fijosCargados ? new HashSet<int>(seleccionados) : null;
+            preparacionesBaseMes = resConfig.Datos.PreparacionesBaseMes;
+            fijos = resConfig.Datos.Costos.Where(f => f.Activo).ToList();
+            seleccionados.Clear();
+            if (anteriores is not null)
+            {
+                // Conserva la selección del usuario; los fijos eliminados quedan fuera.
+                foreach (var f in fijos.Where(f => anteriores.Contains(f.Id))) seleccionados.Add(f.Id);
+            }
+            // Primera carga: la selección queda vacía a propósito (costo directo).
+        }
+        fijosCargados = true;
+    }
+
+    private async Task AlternarFijo(int id, bool marcado)
+    {
+        if (marcado) seleccionados.Add(id);
+        else seleccionados.Remove(id);
+        await Cargar();
+    }
+
+    private async Task SeleccionarTodosFijos()
+    {
+        seleccionados.Clear();
+        foreach (var f in fijos) seleccionados.Add(f.Id);
+        await Cargar();
+    }
+
+    private async Task DeseleccionarTodosFijos()
+    {
+        seleccionados.Clear();
+        await Cargar();
     }
 
     public void Dispose()

@@ -1,72 +1,250 @@
 ﻿@page "/"
 @page "/home"
-@inject NavigationManager Navigation
+@page "/dashboard-empresa"
+@using PWGAPG_Frontend.Components
 
-<section class="hero-banner">
-    <span class="hero-badge">
-        RED DE EMPRENDIMIENTO 2026
-    </span>
-    <h1 class="hero-titulo">
-        Conecta, Crece e Impulsa tu Negocio
-    </h1>
-    <p class="hero-descripcion">
-        La plataforma diseñada para visibilizar a pequeños y medianos emprendedores. Registra tu marca y da a conocer tus productos.
-    </p>
-    <div class="hero-acciones">
-        <button class="btn-banner-primary" @onclick='() => Navigation.NavigateTo("registro")'>
-            Registrar mi Emprendimiento
-        </button>
-        <button class="btn-banner-secondary" @onclick='() => Navigation.NavigateTo("emprendimientos")'>
-            Explorar Negocios
-        </button>
-    </div>
-</section>
+<PageTitle>Chef Metrics | Controla los costos de tu cocina</PageTitle>
 
-<section class="seccion-busqueda">
-    <div class="contenedor-busqueda">
-        <input type="text" placeholder="¿Qué producto o servicio buscas?" class="input-busqueda">
-        <button class="btn-solid btn-buscar">Buscar</button>
-    </div>
-</section>
+<AuthorizeView>
+    <Authorized>
+        <PanelEmpresa />
+    </Authorized>
 
-<section>
-    <h2 class="titulo-seccion">Emprendimientos Destacados</h2>
+    <NotAuthorized>
+        <div class="landing">
+            <section class="hero-banner landing-hero">
+                <div class="landing-hero-copy">
+                    <span class="hero-badge">GESTIÓN GASTRONÓMICA CON DATOS REALES</span>
+                    <h1 class="hero-titulo">
+                        Tu cocina,<br />
+                        <span class="hero-titulo-acento">en números claros.</span>
+                    </h1>
+                    <p class="hero-descripcion">
+                        Chef Metrics conecta tus insumos, recetas, menú y costos fijos para que sepas
+                        cuánto cuesta realmente cada plato, cuánto deberías cobrar y cuánto necesitas
+                        vender para que tu negocio sea rentable.
+                    </p>
 
-    <div class="grid-emprendimientos">
-        <article class="card-emprendimiento">
-            <div class="imagen-placeholder">
-                [ Imagen del Negocio ]
-            </div>
-            <div class="card-cuerpo">
-                <span class="categoria-tag">Gastronomía</span>
-                <h3 class="card-titulo">Cafetería Artesanal</h3>
-                <p class="card-descripcion">Café de origen y pan recién horneado cada mañana.</p>
-                <button class="btn-outline btn-ver-perfil" @onclick='() => Navigation.NavigateTo("emprendimientos")'>Ver Perfil</button>
-            </div>
-        </article>
+                    <div class="hero-acciones">
+                        <a class="btn-banner-primary landing-btn" href="registro">Crear mi cuenta</a>
+                        <a class="btn-banner-secondary landing-btn" href="login">Iniciar sesión</a>
+                    </div>
 
-        <article class="card-emprendimiento">
-            <div class="imagen-placeholder">
-                [ Imagen del Negocio ]
-            </div>
-            <div class="card-cuerpo">
-                <span class="categoria-tag">Repostería</span>
-                <h3 class="card-titulo">Panadería</h3>
-                <p class="card-descripcion">Panadería y repostería fresca inmediata.</p>
-                <button class="btn-outline btn-ver-perfil" @onclick='() => Navigation.NavigateTo("emprendimientos")'>Ver Perfil</button>
-            </div>
-        </article>
+                    <ul class="hero-beneficios">
+                        <li>Costo real por receta y porción</li>
+                        <li>Precios con margen, no por intuición</li>
+                        <li>Alertas de productos poco rentables</li>
+                    </ul>
+                </div>
 
-        <article class="card-emprendimiento">
-            <div class="imagen-placeholder">
-                [ Imagen del Negocio ]
-            </div>
-            <div class="card-cuerpo">
-                <span class="categoria-tag">Productos frescos</span>
-                <h3 class="card-titulo">Pasteleria Saludable</h3>
-                <p class="card-descripcion">Combinar lo delicioso de los postres con productos naturales perfectos para la salud.</p>
-                <button class="btn-outline btn-ver-perfil" @onclick='() => Navigation.NavigateTo("emprendimientos")'>Ver Perfil</button>
-            </div>
-        </article>
-    </div>
-</section>
+                <div class="hero-visual" aria-hidden="true">
+                    <div class="mock-dashboard">
+                        <div class="mock-topbar">
+                            <span class="mock-topbar-title">
+                                <span class="mock-brand-mark">CM</span>
+                                Panel del negocio
+                            </span>
+                            <span class="mock-live">Ejemplo</span>
+                        </div>
+
+                        <div class="mock-kpi-grid">
+                            <div class="mock-kpi">
+                                <small>Precio de venta</small>
+                                <strong>$ 12.941</strong>
+                                <span>por porción</span>
+                            </div>
+                            <div class="mock-kpi">
+                                <small>Costo directo</small>
+                                <strong>$ 9.059</strong>
+                                <span>insumos + empaque</span>
+                            </div>
+                        </div>
+
+                        <div class="mock-chart">
+                            <div class="mock-chart-head">
+                                <span>Margen por producto</span>
+                                <strong>30 %</strong>
+                            </div>
+                            <div class="mock-bar"><span class="bar-1"></span></div>
+                            <div class="mock-bar"><span class="bar-2"></span></div>
+                            <div class="mock-bar"><span class="bar-3"></span></div>
+                        </div>
+
+                        <div class="mock-alert">✓ 8 productos dentro del margen mínimo</div>
+                    </div>
+
+                    <div class="mock-float mock-float-a">
+                        <span>Facturación de equilibrio</span>
+                        <strong>$ 11,6 M</strong>
+                        <small>mínimo mensual</small>
+                    </div>
+
+                    <div class="mock-float mock-float-b">
+                        <span>Margen promedio</span>
+                        <strong>28,33 %</strong>
+                        <small>sobre ventas</small>
+                    </div>
+                </div>
+            </section>
+
+            <section class="landing-section landing-intro">
+                <div class="landing-section-head">
+                    <span class="landing-eyebrow">UNA SOLA PLATAFORMA</span>
+                    <h2>Deja de calcular costos en hojas sueltas</h2>
+                    <p class="landing-lead">
+                        Chef Metrics ordena la información de tu negocio gastronómico y la convierte
+                        en decisiones concretas: qué comprar, cuánto cobrar y qué productos impulsar.
+                    </p>
+                </div>
+
+                <div class="landing-pillars">
+                    <article class="landing-pillar">
+                        <span class="landing-pillar-number">01</span>
+                        <h3>Centraliza</h3>
+                        <p>Insumos, proveedores, recetas, menú y gastos fijos en un mismo lugar.</p>
+                    </article>
+                    <article class="landing-pillar">
+                        <span class="landing-pillar-number">02</span>
+                        <h3>Calcula</h3>
+                        <p>Convierte compras por empaque, mermas y porciones en costos reales por plato.</p>
+                    </article>
+                    <article class="landing-pillar">
+                        <span class="landing-pillar-number">03</span>
+                        <h3>Decide</h3>
+                        <p>Compara margen, precio y punto de equilibrio antes de tomar decisiones.</p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="landing-section landing-features-section">
+                <div class="landing-section-head">
+                    <span class="landing-eyebrow">LO QUE PUEDES HACER</span>
+                    <h2>Todo lo que necesitas para que tu menú sea rentable</h2>
+                    <p class="landing-lead">
+                        Desde el precio del mercado hasta el plato que sirves: cada dato de tu operación
+                        se conecta para mostrarte dónde estás ganando y dónde estás perdiendo.
+                    </p>
+                </div>
+
+                <div class="landing-features">
+                    <article class="landing-feature">
+                        <div class="landing-feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 8.5 12 3 3 8.5v7L12 21l9-5.5v-7Z" />
+                                <path d="m3 8.5 9 5.5 9-5.5M12 14v7" />
+                            </svg>
+                        </div>
+                        <span class="landing-feature-tag">Compras</span>
+                        <h3>Insumos y proveedores</h3>
+                        <p>Registra precios por empaque, compara proveedores y conoce el costo real de cada ingrediente.</p>
+                    </article>
+
+                    <article class="landing-feature">
+                        <div class="landing-feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22V4.5Z" />
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M8 6h8M8 10h6" />
+                            </svg>
+                        </div>
+                        <span class="landing-feature-tag">Producción</span>
+                        <h3>Recetas y menú</h3>
+                        <p>Calcula el costo por porción, escala recetas y mantén el precio de cada plato al día.</p>
+                    </article>
+
+                    <article class="landing-feature">
+                        <div class="landing-feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M3 3v18h18" />
+                                <path d="m7 15 4-4 3 3 5-6" />
+                                <path d="M15 8h4v4" />
+                            </svg>
+                        </div>
+                        <span class="landing-feature-tag">Operación</span>
+                        <h3>Costos fijos y equilibrio</h3>
+                        <p>Reparte arriendo, nómina y servicios, y descubre cuánto necesitas facturar para cubrirlos.</p>
+                    </article>
+
+                    <article class="landing-feature">
+                        <div class="landing-feature-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M12 8v5M12 16.5h.01" />
+                            </svg>
+                        </div>
+                        <span class="landing-feature-tag">Análisis</span>
+                        <h3>Rentabilidad y alertas</h3>
+                        <p>Detecta productos con margen bajo y toma decisiones antes de que afecten tu utilidad.</p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="landing-section landing-how-section">
+                <div class="landing-how-copy">
+                    <span class="landing-eyebrow">CÓMO FUNCIONA</span>
+                    <h2>De la compra al precio, en tres pasos</h2>
+                    <p class="landing-lead">
+                        No necesitas ser contador. Chef Metrics hace los cálculos por ti y te muestra
+                        qué hacer con ellos.
+                    </p>
+
+                    <ol class="landing-steps">
+                        <li>
+                            <span>01</span>
+                            <div>
+                                <h3>Registra tus insumos</h3>
+                                <p>Agrega precios, empaques y proveedores. La plataforma calcula el costo por unidad.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span>02</span>
+                            <div>
+                                <h3>Arma recetas y menú</h3>
+                                <p>Define porciones, mermas y empaques. Obtén el costo directo de cada producto.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span>03</span>
+                            <div>
+                                <h3>Revisa y ajusta</h3>
+                                <p>Compara margen, precio y punto de equilibrio para decidir con datos.</p>
+                            </div>
+                        </li>
+                    </ol>
+                </div>
+
+                <aside class="landing-example-card">
+                    <span class="landing-example-label">EJEMPLO DE COSTEO</span>
+                    <h3>Así se forma el precio de un plato</h3>
+                    <div class="landing-price-row">
+                        <span>Insumos y empaque</span>
+                        <strong>$ 9.059</strong>
+                    </div>
+                    <div class="landing-price-row">
+                        <span>Margen para tu negocio</span>
+                        <strong>$ 3.882</strong>
+                    </div>
+                    <div class="landing-price-total">
+                        <span>Precio sugerido</span>
+                        <strong>$ 12.941</strong>
+                    </div>
+                    <p>
+                        Ese margen es lo que queda para cubrir arriendo, nómina y otros gastos fijos.
+                        Si no lo calculas, puedes vender mucho y aun así no ganar.
+                    </p>
+                </aside>
+            </section>
+
+            <section class="landing-cta">
+                <div>
+                    <span class="landing-eyebrow">EMPIEZA HOY</span>
+                    <h2>Convierte tu menú en un negocio rentable</h2>
+                    <p>Registra tu emprendimiento y empieza a tomar decisiones con costos reales.</p>
+                </div>
+                <div class="landing-cta-actions">
+                    <a class="btn-banner-primary landing-btn" href="registro">Crear mi cuenta</a>
+                    <a class="btn-banner-secondary landing-btn" href="login">Iniciar sesión</a>
+                </div>
+            </section>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>

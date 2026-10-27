@@ -1,3 +1,4 @@
 <Solution>
-  <Project Path="PWGAPG-Frontend/PWGAPG-Frontend.csproj" />
+  <Project Path="PWGAPG-Frontend.csproj" />
+  <Project Path="../ChefMetrics-BackEnd/ChefMetrics.Contracts/ChefMetrics.Contracts.csproj" />
 </Solution>

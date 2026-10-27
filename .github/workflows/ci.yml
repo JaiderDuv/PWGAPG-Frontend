@@ -1,0 +1,64 @@
+name: CI Frontend
+
+on:
+  push:
+    branches:
+      - Inconsistencias
+      - develop
+      - main
+  pull_request:
+    branches:
+      - Inconsistencias
+      - develop
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-frontend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Compilar frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout frontend
+        uses: actions/checkout@v4
+        with:
+          path: PWGAPG-Frontend
+
+      # El frontend referencia ..\ChefMetrics-BackEnd\ChefMetrics.Contracts.
+      # Por eso el backend se clona en un directorio hermano.
+      # El repositorio del backend es público, así que se clona sin token.
+      - name: Checkout contratos del backend
+        env:
+          BACKEND_REF: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/JaiderDuv/ChefMetrics-BackEnd.git "$BACKEND_REF" > /dev/null 2>&1; then
+            echo "Clonando backend en la rama $BACKEND_REF."
+          else
+            echo "La rama $BACKEND_REF no existe en el backend; se usará develop."
+            BACKEND_REF=develop
+          fi
+
+          git clone --depth 1 --branch "$BACKEND_REF" https://github.com/JaiderDuv/ChefMetrics-BackEnd.git ChefMetrics-BackEnd
+
+      - name: Configurar .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Restaurar dependencias
+        working-directory: PWGAPG-Frontend
+        run: dotnet restore PWGAPG-Frontend.csproj
+
+      - name: Compilar
+        working-directory: PWGAPG-Frontend
+        run: dotnet build PWGAPG-Frontend.csproj --configuration Release --no-restore

@@ -1,0 +1,540 @@
+@page "/menu/evaluacion"
+@attribute [Authorize]
+@using PWGAPG_Frontend.Models
+@using PWGAPG_Frontend.Services
+@using PWGAPG_Frontend.Components
+@using System.Globalization
+@using System.Text
+@inject EvaluacionMenuApiService Api
+@inject MenuApiService MenuApi
+@inject NavigationManager Navigation
+
+<div class="rc-page container py-4">
+    <button class="btn btn-sm btn-outline-secondary mb-3" @onclick='() => Navigation.NavigateTo("menu")'>← Volver al menú</button>
+
+    <div class="rc-header">
+        <div>
+            <h2 class="rc-title">Rentabilidad del menú</h2>
+            <p class="rc-subtitle">
+                Los productos con menor margen directo aparecen primero. Los costos fijos se revisan
+                aparte con el punto de equilibrio para no cargarlos a cada producto.
+            </p>
+        </div>
+    </div>
+
+    <div class="rc-card mb-3">
+        <div class="rc-card-body">
+            <p class="pm-nota-obligatorio">Los campos marcados con * son obligatorios.</p>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <label class="rc-label mb-0">Umbral de margen mínimo (%) *</label>
+
+                <span class="pm-ayuda-icono" tabindex="0">
+                    ?
+                    <span class="pm-ayuda-tooltip">
+                        El margen directo descuenta ingredientes y empaques y es el indicador de esta
+                        evaluación. Los costos fijos no se cargan a cada producto: se cubren con el
+                        punto de equilibrio.
+                        <br /><br />
+                        Un producto queda "en riesgo" si su margen directo está por debajo de este
+                        valor. El umbral permitido va de 0 a 100 %.
+                    </span>
+                </span>
+
+                <input type="number" class="form-control pm-input-umbral" min="0" max="100" step="1"
+                       @bind="umbralEditado" @bind:event="oninput" @bind:after="AlCambiarUmbral" />
+
+                @if (guardandoUmbral)
+                {
+                    <span class="text-muted">Guardando...</span>
+                }
+                @if (errorUmbral is not null)
+                {
+                    <div class="pm-aviso-suave">@errorUmbral</div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (error is not null)
+    {
+        <div class="alert alert-danger">@error</div>
+    }
+
+    @if (cargando)
+    {
+        <p class="text-muted">Cargando...</p>
+    }
+    else if (evaluacion is null || evaluacion.Productos.Count == 0)
+    {
+        <div class="rc-empty">
+            <span>📊</span>
+            <p>Aún no tienes productos de menú para evaluar.</p>
+        </div>
+    }
+    else
+    {
+        <section class="rc-toolbar pm-toolbar">
+            <div class="pm-filtro-item pm-filtro-busqueda">
+                <label class="pm-filtro-label">Producto</label>
+                <input class="form-control" placeholder="Buscar..."
+                       @bind="textoBusqueda" @bind:event="oninput" @bind:after="AlFiltrar" />
+            </div>
+
+            <div class="pm-filtro-item">
+                <label class="pm-filtro-label">Costo directo mín.</label>
+                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="1"
+                       @bind="costoMin" @bind:event="oninput" @bind:after="AlFiltrar" />
+            </div>
+            <div class="pm-filtro-item">
+                <label class="pm-filtro-label">Costo directo máx.</label>
+                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="1"
+                       @bind="costoMax" @bind:event="oninput" @bind:after="AlFiltrar" />
+            </div>
+
+            <div class="pm-filtro-item">
+                <label class="pm-filtro-label">Precio mín.</label>
+                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="1"
+                       @bind="precioMin" @bind:event="oninput" @bind:after="AlFiltrar" />
+            </div>
+            <div class="pm-filtro-item">
+                <label class="pm-filtro-label">Precio máx.</label>
+                <input type="number" class="form-control pm-input-numero" min="0" max="99999999" step="1"
+                       @bind="precioMax" @bind:event="oninput" @bind:after="AlFiltrar" />
+            </div>
+
+            <div class="pm-filtro-item">
+                <label class="pm-filtro-label">Margen directo mín. %</label>
+                <input type="number" class="form-control pm-input-margen" min="-999" max="999" step="1"
+                       @bind="margenMin" @bind:event="oninput" @bind:after="AlFiltrar" />
+            </div>
+            <div class="pm-filtro-item">
+                <label class="pm-filtro-label">Margen directo máx. %</label>
+                <input type="number" class="form-control pm-input-margen" min="-999" max="999" step="1"
+                       @bind="margenMax" @bind:event="oninput" @bind:after="AlFiltrar" />
+            </div>
+
+            <div class="pm-filtro-item pm-filtro-orden">
+                <label class="pm-filtro-label">Ordenar por</label>
+                <select class="form-select" @bind="ordenarPor" @bind:after="AlFiltrar">
+                    <option value="margen">Margen directo</option>
+                    <option value="costo">Costo directo</option>
+                    <option value="precio">Precio</option>
+                    <option value="nombre">Nombre</option>
+                </select>
+            </div>
+            <div class="pm-filtro-item pm-filtro-orden">
+                <label class="pm-filtro-label">Dirección</label>
+                <select class="form-select" @bind="direccionOrden" @bind:after="AlFiltrar">
+                    <option value="asc">Ascendente</option>
+                    <option value="desc">Descendente</option>
+                </select>
+            </div>
+
+            <div class="pm-filtro-item pm-filtro-acciones">
+                <label class="pm-filtro-label">&nbsp;</label>
+                <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarFiltros">Limpiar</button>
+            </div>
+
+            <span class="rc-count">@productosFiltrados.Count resultado(s)</span>
+        </section>
+
+        @if (mensajeExito is not null)
+        {
+            <div class="alert alert-success">@mensajeExito</div>
+        }
+
+        @if (productosPagina.Count == 0)
+        {
+            <div class="rc-empty">
+                <span>🔍</span>
+                <p>Ningún producto coincide con los filtros.</p>
+            </div>
+        }
+        else
+        {
+            <div class="rc-card">
+                <div class="table-responsive">
+                    <table class="table rc-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Producto</th>
+                                <th class="text-end">Costo directo</th>
+                                <th class="text-end">Precio</th>
+                                <th class="text-end">Margen directo</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in productosPagina)
+                            {
+                                <tr class="pm-fila @(p.EnRiesgo ? "pm-fila-riesgo" : "") @(p.MargenNoCalculable ? "pm-fila-sin-datos" : "")">
+                                    <td @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">
+                                        @if (p.EnRiesgo)
+                                        {
+                                            <span class="pm-alerta" title="Margen directo por debajo del umbral">⚠️</span>
+                                        }
+                                    </td>
+                                    <td @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">@p.Nombre</td>
+                                    <td class="text-end" @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">
+                                        @Formato.Moneda(p.CostoDirecto)
+                                    </td>
+                                    <td class="text-end" @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">@(p.PrecioVenta.HasValue? Formato.Moneda(p.PrecioVenta.Value) : "—")</td>
+                                    <td class="text-end" @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">
+                                        @if (p.MargenNoCalculable)
+                                        {
+                                            <span class="pm-badge-sin-datos">@(p.MotivoNoCalculable ?? "Margen no calculable")</span>
+                                        }
+                                        else
+                                        {
+                                            <strong class="@(p.EnRiesgo ? "pm-texto-riesgo" : "")"
+                                                    title="Margen sobre el costo directo, sin costos fijos">
+                                                @p.MargenDirecto!.Value.ToString("0.##") %
+                                            </strong>
+                                        }
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn-mini-editar"
+                                                @onclick="() => AbrirModalEditar(p)" @onclick:stopPropagation="true">
+                                            Editar margen
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <Paginador Pagina="pagina" Total="productosFiltrados.Count" TamanoPagina="TamanoPagina" PaginaChanged="CambiarPagina" />
+        }
+    }
+</div>
+
+@if (mostrarModalEditar && productoEditando is not null)
+{
+    <div class="pm-modal-overlay">
+        <div class="pm-modal-box">
+            <h5 class="mb-1">Ajustar margen de "@productoEditando.Nombre"</h5>
+            <p class="text-muted small mb-3">Define el margen de ganancia que quieres lograr; calculamos el precio de venta necesario.</p>
+
+            <div class="pm-modal-datos mb-3">
+                <div><span class="text-muted small">Costo directo</span><strong>@Formato.Moneda(productoEditando.CostoDirecto)</strong></div>
+                <div><span class="text-muted small">Precio actual</span><strong>@(productoEditando.PrecioVenta.HasValue? Formato.Moneda(productoEditando.PrecioVenta.Value) : "—")</strong></div>
+                <div><span class="text-muted small">Margen directo</span><strong>@(productoEditando.MargenDirecto.HasValue? productoEditando.MargenDirecto.Value.ToString("0.##") + " %" : "—")</strong></div>
+            </div>
+
+            <p class="text-muted small mb-2">
+                La sugerencia usa el costo directo; los costos fijos se cubren con el punto de equilibrio.
+            </p>
+
+            <label class="rc-label">Margen deseado (%) *</label>
+            <input type="number" class="form-control" min="0" max="99.99" step="1"
+                   @bind="margenNuevo" @bind:event="oninput" @bind:after="AlCambiarMargenNuevo" />
+
+            <div class="pm-modal-sugerido mt-2">
+                @if (calculandoSugerencia)
+                {
+                    <span class="text-muted">Calculando precio sugerido...</span>
+                }
+                else if (precioSugerido.HasValue)
+                {
+                    <span>Precio de venta necesario: <strong>@Formato.Moneda(precioSugerido.Value)</strong></span>
+                    <small class="text-muted d-block">Base: costo directo</small>
+                }
+            </div>
+
+            @if (errorEdicion is not null)
+            {
+                <div class="rc-error mt-2">@errorEdicion</div>
+            }
+
+            <div class="d-flex gap-2 justify-content-end mt-3">
+                <button type="button" class="btn btn-outline-secondary" @onclick="CerrarModalEditar" disabled="@guardandoEdicion">Cancelar</button>
+                <button type="button" class="btn btn-primary" @onclick="GuardarEdicionMargen"
+                        disabled="@(guardandoEdicion || !precioSugerido.HasValue)">
+                    @(guardandoEdicion ? "Guardando..." : "Guardar")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private EvaluacionMenuDto? evaluacion;
+    private bool cargando = true;
+    private string? error;
+    private string? mensajeExito;
+
+    private decimal umbralEditado = 30;
+    private bool guardandoUmbral;
+    private string? errorUmbral;
+    private CancellationTokenSource? debounceCts;
+
+    private string textoBusqueda = string.Empty;
+    private decimal? costoMin, costoMax, precioMin, precioMax, margenMin, margenMax;
+    private string ordenarPor = "margen";
+    private string direccionOrden = "asc";
+
+    private List<ProductoEvaluacionDto> productosFiltrados = new();
+
+    private int pagina = 1;
+    private const int TamanoPagina = 50;
+
+    private List<ProductoEvaluacionDto> productosPagina =>
+        productosFiltrados.Skip((pagina - 1) * TamanoPagina).Take(TamanoPagina).ToList();
+
+    // ---------- Editar margen ----------
+    private bool mostrarModalEditar;
+    private ProductoEvaluacionDto? productoEditando;
+    private decimal margenNuevo = 30;
+    private decimal? precioSugerido;
+    private bool calculandoSugerencia;
+    private bool guardandoEdicion;
+    private string? errorEdicion;
+    private CancellationTokenSource? debounceModalCts;
+
+    protected override async Task OnInitializedAsync() => await Cargar();
+
+    private async Task Cargar()
+    {
+        cargando = true; error = null;
+        var res = await Api.ObtenerEvaluacionAsync();
+        cargando = false;
+
+        if (!res.Exito) { error = res.Mensaje; evaluacion = null; return; }
+
+        evaluacion = res.Datos;
+        umbralEditado = evaluacion?.UmbralMargenMinimo ?? 30;
+        AplicarFiltros();
+    }
+
+    private async Task AlCambiarUmbral()
+    {
+        errorUmbral = null;
+        debounceCts?.Cancel();
+
+        if (umbralEditado < 0 || umbralEditado > 100)
+        {
+            errorUmbral = "El umbral debe estar entre 0 y 100 %.";
+            return;
+        }
+
+        debounceCts = new CancellationTokenSource();
+        var token = debounceCts.Token;
+        try { await Task.Delay(500, token); }
+        catch (TaskCanceledException) { return; }
+
+        guardandoUmbral = true;
+        StateHasChanged();
+
+        var res = await Api.ActualizarUmbralAsync(umbralEditado);
+        guardandoUmbral = false;
+
+        if (!res.Exito)
+        {
+            errorUmbral = res.Mensaje;
+            return;
+        }
+
+        if (evaluacion is not null)
+        {
+            evaluacion.UmbralMargenMinimo = umbralEditado;
+            foreach (var p in evaluacion.Productos)
+            {
+                p.EnRiesgo = EstaEnRiesgo(p.MargenDirecto, umbralEditado);
+            }
+            AplicarFiltros();
+        }
+    }
+
+    private void AlFiltrar()
+    {
+        pagina = 1;
+        AplicarFiltros();
+    }
+
+    private void LimpiarFiltros()
+    {
+        textoBusqueda = string.Empty;
+        costoMin = costoMax = precioMin = precioMax = margenMin = margenMax = null;
+        ordenarPor = "margen";
+        direccionOrden = "asc";
+        pagina = 1;
+        AplicarFiltros();
+    }
+
+    private void AplicarFiltros()
+    {
+        var lista = evaluacion?.Productos ?? new();
+        var termino = Normalizar(textoBusqueda);
+
+        var filtrados = lista.Where(p =>
+        {
+            if (!string.IsNullOrWhiteSpace(termino) && !Normalizar(p.Nombre).Contains(termino))
+                return false;
+
+            if (costoMin.HasValue && p.CostoDirecto < costoMin.Value) return false;
+            if (costoMax.HasValue && p.CostoDirecto > costoMax.Value) return false;
+
+            if (precioMin.HasValue && (!p.PrecioVenta.HasValue || p.PrecioVenta.Value < precioMin.Value)) return false;
+            if (precioMax.HasValue && (!p.PrecioVenta.HasValue || p.PrecioVenta.Value > precioMax.Value)) return false;
+
+            if (margenMin.HasValue && (!p.MargenDirecto.HasValue || p.MargenDirecto.Value < margenMin.Value)) return false;
+            if (margenMax.HasValue && (!p.MargenDirecto.HasValue || p.MargenDirecto.Value > margenMax.Value)) return false;
+
+            return true;
+        });
+
+        IOrderedEnumerable<ProductoEvaluacionDto> ordenados = ordenarPor switch
+        {
+            "costo" => direccionOrden == "desc"
+                ? filtrados.OrderByDescending(p => p.CostoDirecto)
+                : filtrados.OrderBy(p => p.CostoDirecto),
+            "precio" => direccionOrden == "desc"
+                ? filtrados.OrderByDescending(p => p.PrecioVenta ?? decimal.MinValue)
+                : filtrados.OrderBy(p => p.PrecioVenta ?? decimal.MaxValue),
+            "nombre" => direccionOrden == "desc"
+                ? filtrados.OrderByDescending(p => p.Nombre)
+                : filtrados.OrderBy(p => p.Nombre),
+            _ => direccionOrden == "desc"
+                ? filtrados.OrderByDescending(p => p.MargenNoCalculable ? 1 : 0).ThenByDescending(p => p.MargenDirecto)
+                : filtrados.OrderBy(p => p.MargenNoCalculable ? 1 : 0).ThenBy(p => p.MargenDirecto),
+        };
+
+        productosFiltrados = ordenados.ToList();
+    }
+
+    private void CambiarPagina(int nuevaPagina)
+    {
+        pagina = nuevaPagina;
+    }
+
+    private static string Normalizar(string? texto)
+    {
+        if (string.IsNullOrWhiteSpace(texto)) return string.Empty;
+
+        var formaD = texto.Trim().Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder();
+
+        foreach (var c in formaD)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                sb.Append(c);
+        }
+
+        return sb.ToString().Normalize(NormalizationForm.FormC).ToLowerInvariant();
+    }
+
+    // ---------- Editar margen ----------
+
+    private void AbrirModalEditar(ProductoEvaluacionDto p)
+    {
+        productoEditando = p;
+        margenNuevo = p.MargenDirecto ?? umbralEditado;
+        precioSugerido = p.PrecioVenta;
+        errorEdicion = null;
+        mensajeExito = null;
+        mostrarModalEditar = true;
+        _ = CalcularSugerencia();
+    }
+
+    private void CerrarModalEditar()
+    {
+        mostrarModalEditar = false;
+        productoEditando = null;
+        precioSugerido = null;
+    }
+
+    private async Task AlCambiarMargenNuevo()
+    {
+        errorEdicion = null;
+
+        if (margenNuevo <= 0 || margenNuevo >= 100)
+        {
+            errorEdicion = "El margen debe estar entre 0 y 100.";
+            precioSugerido = null;
+            return;
+        }
+
+        debounceModalCts?.Cancel();
+        debounceModalCts = new CancellationTokenSource();
+        var token = debounceModalCts.Token;
+        try { await Task.Delay(400, token); }
+        catch (TaskCanceledException) { return; }
+
+        await CalcularSugerencia();
+    }
+
+    private async Task CalcularSugerencia()
+    {
+        if (productoEditando is null) return;
+
+        calculandoSugerencia = true;
+        StateHasChanged();
+
+        // Lista vacía = precio con costo directo, sin cargar los fijos al producto.
+        var res = await MenuApi.PrecioSugeridoAsync(productoEditando.ProductoId, margenNuevo, new List<int>());
+        calculandoSugerencia = false;
+
+        if (!res.Exito || res.Datos is null)
+        {
+            errorEdicion = res.Mensaje;
+            precioSugerido = null;
+            return;
+        }
+
+        if (!res.Datos.MargenValido || !res.Datos.PrecioSugerido.HasValue)
+        {
+            errorEdicion = res.Datos.Advertencias.FirstOrDefault() ?? "No se pudo calcular un precio válido para ese margen.";
+            precioSugerido = null;
+            return;
+        }
+
+        errorEdicion = null;
+        precioSugerido = res.Datos.PrecioSugerido;
+    }
+
+    private async Task GuardarEdicionMargen()
+    {
+        if (productoEditando is null || !precioSugerido.HasValue) return;
+
+        errorEdicion = null;
+        guardandoEdicion = true;
+
+        var res = await MenuApi.ActualizarPatchAsync(productoEditando.ProductoId, new PatchProductoMenuDto
+        {
+            PrecioVenta = precioSugerido.Value
+        });
+        guardandoEdicion = false;
+
+        if (!res.Exito || res.Datos is null)
+        {
+            errorEdicion = res.Mensaje;
+            return;
+        }
+
+        // Actualiza la fila en memoria con lo que realmente quedó guardado (el backend redondea a la centena).
+        var actualizado = res.Datos;
+        var item = evaluacion?.Productos.FirstOrDefault(p => p.ProductoId == productoEditando.ProductoId);
+        if (item is not null)
+        {
+            item.CostoDirecto = actualizado.CostoDirecto;
+            item.CostoTotal = actualizado.CostoTotal;
+            item.PrecioVenta = actualizado.PrecioVenta;
+            item.MargenDirecto = actualizado.MargenDirecto;
+            item.MargenReal = actualizado.MargenReal;
+            item.MargenNoCalculable = !actualizado.MargenDirecto.HasValue;
+            item.EnRiesgo = EstaEnRiesgo(actualizado.MargenDirecto, umbralEditado);
+        }
+
+        AplicarFiltros();
+        mensajeExito = $"El precio de \"{productoEditando.Nombre}\" se actualizó a {Formato.Moneda(actualizado.PrecioVenta ?? 0)}. Ya se refleja en la página de Menú.";
+        CerrarModalEditar();
+    }
+
+    // La evaluación usa el margen directo. Los costos fijos se cubren con el
+    // punto de equilibrio y no se cargan producto por producto.
+    private static bool EstaEnRiesgo(decimal? margenDirecto, decimal umbral) =>
+        margenDirecto.HasValue && margenDirecto.Value < umbral;
+}
