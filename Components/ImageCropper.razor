@@ -1,0 +1,129 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@if (hayImagenNueva)
+{
+    <div class="rc-crop-frame">
+        <canvas id="@CanvasId" width="600" height="450" class="rc-crop-canvas"></canvas>
+    </div>
+    <div class="rc-crop-zoom">
+        <span>−</span>
+        <input id="@SliderId" type="range" min="1" max="3" step="0.01" value="1" aria-label="Zoom" />
+        <span>+</span>
+    </div>
+    <small class="rc-crop-hint">Arrastra la foto para encuadrarla. Zoom con la barra, la rueda del mouse o pellizcando.</small>
+}
+else
+{
+    <div class="rc-image-box">
+        @if (MostrarActual)
+        {
+            <img src="@ImagenActualUrl" alt="Imagen actual" />
+        }
+        else
+        {
+
+            <div class="rc-image-placeholder"><span>🍽️</span><small>Sin imagen</small></div>
+        }
+    </div>
+}
+
+<div class="d-flex gap-2 mt-2 flex-wrap">
+    <label class="btn btn-sm btn-outline-secondary mb-0">
+        @(hayImagenNueva || MostrarActual ? "Cambiar imagen" : "Elegir imagen")
+        <InputFile class="d-none" OnChange="AlElegirImagen"
+                   accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" />
+    </label>
+    @if (hayImagenNueva)
+    {
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="Reiniciar">Reencuadrar</button>
+    }
+    @if (hayImagenNueva || MostrarActual)
+    {
+        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="Quitar">Quitar</button>
+    }
+</div>
+<small class="text-muted d-block mt-1">JPG, PNG o WEBP, hasta 8 MB. Se recorta a 4:3 y se comprime sola.</small>
+@if (error is not null)
+{
+    <div class="rc-error">@error</div>
+}
+
+@code {
+    [Parameter] public string? ImagenActualUrl { get; set; }
+
+    public bool HayImagenNueva => hayImagenNueva;
+    public bool QuitarImagenActual => quitarImagen;
+
+    private const long MaxBytes = 8 * 1024 * 1024;
+    private static readonly string[] Ext = { ".jpg", ".jpeg", ".png", ".webp" };
+    private static readonly string[] Tipos = { "image/jpeg", "image/png", "image/webp" };
+
+    private readonly string uid = Guid.NewGuid().ToString("N")[..8];
+    private string CanvasId => $"crop-{uid}";
+    private string SliderId => $"zoom-{uid}";
+
+    private bool hayImagenNueva, quitarImagen, pendienteIniciar;
+    private string? error;
+
+    private bool MostrarActual => !quitarImagen && !string.IsNullOrEmpty(ImagenActualUrl);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!pendienteIniciar) return;
+        pendienteIniciar = false;
+        try { await JS.InvokeVoidAsync("recetaCrop.iniciar", CanvasId, SliderId); } catch { }
+    }
+
+    private async Task AlElegirImagen(InputFileChangeEventArgs e)
+    {
+        error = null;
+        var f = e.File;
+        var ext = Path.GetExtension(f.Name).ToLowerInvariant();
+
+        if (!Ext.Contains(ext) || !Tipos.Contains(f.ContentType))
+        { error = "Solo se permiten imágenes JPG, PNG o WEBP."; return; }
+        if (f.Size > MaxBytes)
+        { error = "La imagen no puede superar los 8 MB."; return; }
+
+        try
+        {
+            using var ms = new MemoryStream();
+            await f.OpenReadStream(MaxBytes).CopyToAsync(ms);
+            var dataUrl = $"data:{f.ContentType};base64,{Convert.ToBase64String(ms.ToArray())}";
+            await JS.InvokeAsync<bool>("recetaCrop.cargar", CanvasId, dataUrl);
+        }
+        catch { error = "No se pudo leer la imagen. Prueba con otra."; return; }
+
+        hayImagenNueva = true;
+        quitarImagen = false;
+        pendienteIniciar = true;   // se enlaza cuando el canvas ya existe en pantalla
+    }
+
+    private async Task Reiniciar()
+    {
+        try { await JS.InvokeVoidAsync("recetaCrop.reiniciar", CanvasId); } catch { }
+    }
+
+    private async Task Quitar()
+    {
+        hayImagenNueva = false;
+        quitarImagen = true;
+        error = null;
+        try { await JS.InvokeVoidAsync("recetaCrop.liberar", CanvasId); } catch { }
+    }
+
+    // Devuelve el JPEG ya encuadrado (1200x900) o null si no hay imagen nueva.
+    public async Task<byte[]?> ExportarAsync()
+    {
+        if (!hayImagenNueva) return null;
+        var b64 = await JS.InvokeAsync<string?>("recetaCrop.exportar", CanvasId);
+        return b64 is null ? null : Convert.FromBase64String(b64);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try { await JS.InvokeVoidAsync("recetaCrop.liberar", CanvasId); } catch { }
+    }
+}

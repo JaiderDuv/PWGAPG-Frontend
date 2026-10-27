@@ -1,0 +1,54 @@
+﻿@using PWGAPG_Frontend.Models
+
+<article class="rc-mini" role="button" tabindex="0"
+         aria-label="Abrir receta @Receta.Nombre"
+         @onclick="OnAbrir" @onkeydown="AlTecla">
+    <div class="rc-mini-img">
+        @if (!string.IsNullOrEmpty(Imagen))
+        {
+            <img src="@Imagen" alt="@Receta.Nombre" loading="lazy" />
+        }
+        else
+        {
+            <span class="rc-mini-placeholder">🍽️</span>
+        }
+        <small class="rc-id">#@Receta.Id</small>
+        <span class="rc-cat">@CategoriasReceta.Etiqueta(Receta.Categoria)</span>
+        <div class="rc-mini-actions">
+            <button type="button" title="Editar" aria-label="Editar @Receta.Nombre"
+                    @onclick="OnEditar" @onclick:stopPropagation="true">✏️</button>
+            <button type="button" title="Eliminar" aria-label="Eliminar @Receta.Nombre"
+                    @onclick="OnEliminar" @onclick:stopPropagation="true">🗑️</button>
+        </div>
+    </div>
+    <div class="rc-mini-body">
+        <h6 title="@Receta.Nombre">@Receta.Nombre</h6>
+        <div class="rc-mini-meta">
+            <span>@Receta.PorcionesBase porción(es)</span>
+            <span>@Receta.Insumos.Count ingrediente(s)</span>
+        </div>
+        <div class="rc-mini-price">
+            <div>
+                <small>Por porción</small>
+                <strong>@Formato.Moneda(Receta.CostoPorPorcion)</strong>
+            </div>
+            <div class="rc-mini-total">
+                <small>Total</small>
+                <span>@Formato.Moneda(Receta.CostoTotal)</span>
+            </div>
+        </div>
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public RecetaDto Receta { get; set; } = default!;
+    [Parameter] public string? Imagen { get; set; }
+    [Parameter] public EventCallback OnAbrir { get; set; }
+    [Parameter] public EventCallback OnEditar { get; set; }
+    [Parameter] public EventCallback OnEliminar { get; set; }
+
+    private async Task AlTecla(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await OnAbrir.InvokeAsync();
+    }
+}
