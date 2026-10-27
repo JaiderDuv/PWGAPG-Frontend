@@ -38,7 +38,7 @@
     @* ---------- Alerta de riesgo: lo más urgente primero ---------- *@
     @if (cargandoRiesgo)
     {
-        <div class="panel-alerta-riesgo">Revisando la rentabilidad de tu menú...</div>
+        <div class="panel-alerta-riesgo">Revisando los márgenes de tu menú...</div>
     }
     else if (errorRiesgo is not null)
     {
@@ -302,7 +302,7 @@
             }
             if (intento == 2)
             {
-                errorRiesgo = "No se pudo cargar la rentabilidad del menú.";
+                errorRiesgo = "No se pudieron cargar los márgenes del menú.";
                 cargandoRiesgo = false;
                 return;
             }
