@@ -87,7 +87,7 @@
     }
 
     <div class="onboarding-acciones">
-        <button type="submit" class="btn-solid btn-full">Guardar y continuar</button>
+        <button type="submit" class="btn-solid btn-full">Finalizar configuración</button>
     </div>
 </EditForm>
 
@@ -115,6 +115,7 @@
                 negocio.TelefonoEmpresa = datos.TelefonoContacto ?? string.Empty;
                 negocio.TieneSitioFisico = datos.TieneSitioFisico;
                 negocio.Direccion = datos.Direccion;
+                negocio.LogoBase64 = datos.LogoUrl;
                 negocio.Formalizado = string.Equals(datos.TipoFormalizacion, "formalizado", StringComparison.OrdinalIgnoreCase);
             }
         }
@@ -150,13 +151,20 @@
             negocio.Rues = null;
         }
 
-        // Cuando el backend tenga el endpoint listo, descomenta esto:
-        // var resp = await Http.PostAsJsonAsync("api/onboarding/negocio", negocio);
-        // if (!resp.IsSuccessStatusCode)
-        // {
-        //     mensajeErrorGeneral = "No se pudo guardar la información. Intenta de nuevo.";
-        //     return;
-        // }
+        try
+        {
+            var resp = await Http.PostAsJsonAsync("api/onboarding/datos-negocio", negocio);
+            if (!resp.IsSuccessStatusCode)
+            {
+                mensajeErrorGeneral = "No se pudo guardar la información. Revisa los datos e intenta de nuevo.";
+                return;
+            }
+        }
+        catch (HttpRequestException)
+        {
+            mensajeErrorGeneral = "No fue posible conectar con el servidor.";
+            return;
+        }
 
         await OnGuardado.InvokeAsync();
     }

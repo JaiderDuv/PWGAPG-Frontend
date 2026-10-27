@@ -35,14 +35,10 @@
             <label class="pm-filtro-label">Unidad</label>
             <select class="form-select" @bind="unidadFiltro">
                 <option value="">Todas las unidades</option>
-                <option value="g">g</option>
-                <option value="kg">kg</option>
-                <option value="l">l</option>
-                <option value="ml">ml</option>
-                <option value="oz">oz</option>
-                <option value="lb">lb</option>
-                <option value="unidad">unidad</option>
-                <option value="taza">taza</option>
+                @foreach (var unidad in ConversorUnidades.Unidades)
+                {
+                    <option value="@unidad">@unidad</option>
+                }
             </select>
         </div>
 

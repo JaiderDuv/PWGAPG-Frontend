@@ -13,5 +13,6 @@ namespace PWGAPG_Frontend.Models
         public string? CorreoEmpresa { get; set; }
         public bool TieneSitioFisico { get; set; }
         public string? Direccion { get; set; }
+        public string? LogoUrl { get; set; }
     }
 }

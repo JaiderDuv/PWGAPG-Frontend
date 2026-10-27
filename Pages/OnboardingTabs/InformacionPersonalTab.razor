@@ -63,7 +63,8 @@
 
         <div class="form-group-sm">
             <label class="auth-label">Correo Electrónico *</label>
-            <InputText @bind-Value="duenio.CorreoElectronico" class="form-control" type="email" />
+            <InputText @bind-Value="duenio.CorreoElectronico" class="form-control" type="email" readonly="true" />
+            <small class="text-muted">El correo de acceso se administra desde tu perfil.</small>
             <ValidationMessage For="@(() => duenio.CorreoElectronico)" class="text-danger msg-error" />
         </div>
     </div>
@@ -74,7 +75,7 @@
     }
 
     <div class="onboarding-acciones">
-        <button type="submit" class="btn-solid btn-full">Guardar y continuar</button>
+        <button type="submit" class="btn-solid btn-full">Continuar</button>
     </div>
 </EditForm>
 
@@ -134,18 +135,20 @@
     {
         mensajeErrorGeneral = null;
 
-        var payload = new
+        try
         {
-            Duenio = duenio
-        };
-
-        // Cuando el backend tenga el endpoint listo, descomenta esto:
-        // var resp = await Http.PostAsJsonAsync("api/onboarding/socios", payload);
-        // if (!resp.IsSuccessStatusCode)
-        // {
-        //     mensajeErrorGeneral = "No se pudo guardar la información. Intenta de nuevo.";
-        //     return;
-        // }
+            var resp = await Http.PostAsJsonAsync("api/onboarding/datos-personales", duenio);
+            if (!resp.IsSuccessStatusCode)
+            {
+                mensajeErrorGeneral = "No se pudo guardar la información. Revisa los datos e intenta de nuevo.";
+                return;
+            }
+        }
+        catch (HttpRequestException)
+        {
+            mensajeErrorGeneral = "No fue posible conectar con el servidor.";
+            return;
+        }
 
         await OnGuardado.InvokeAsync();
     }

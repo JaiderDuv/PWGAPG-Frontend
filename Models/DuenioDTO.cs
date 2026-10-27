@@ -14,11 +14,10 @@ namespace PWGAPG_Frontend.Models
         [Required(ErrorMessage = "El apellido es obligatorio.")]
         public string Apellidos { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Seleccione un tipo de documento.")]
-        public string TipoDocumento { get; set; } = string.Empty;
+        // En negocios formalizados la identificación es el NIT, no el documento personal.
+        public string? TipoDocumento { get; set; }
 
-        [Required(ErrorMessage = "El número de documento es obligatorio.")]
-        public string NumeroDocumento { get; set; } = string.Empty;
+        public string? NumeroDocumento { get; set; }
 
         [Required(ErrorMessage = "El teléfono es obligatorio.")]
         [Phone(ErrorMessage = "Ingrese un número válido.")]

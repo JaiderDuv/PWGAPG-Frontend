@@ -50,14 +50,10 @@
 
         <select class="form-select" value="@unidadFiltro" @onchange="OnUnidadFiltroChanged" title="Filtrar por unidad">
             <option value="">Todas las unidades</option>
-            <option value="g">g</option>
-            <option value="kg">kg</option>
-            <option value="l">l</option>
-            <option value="ml">ml</option>
-            <option value="oz">oz</option>
-            <option value="lb">lb</option>
-            <option value="unidad">unidad</option>
-            <option value="taza">taza</option>
+            @foreach (var unidad in ConversorUnidades.Unidades)
+            {
+                <option value="@unidad">@unidad</option>
+            }
         </select>
 
         <select class="form-select" value="@categoriaFiltro" @onchange="OnCategoriaFiltroChanged" title="Filtrar por categoría">
@@ -131,14 +127,10 @@
                                 @if (EsEditando(insumo.Id, "unidad"))
                                 {
                                     <select class="form-select form-select-sm input-edicion-rapida" value="@edicionRapidaValor" @onchange="e => CambiarEdicionRapida(e.Value?.ToString() ?? string.Empty)" @onblur="GuardarEdicionRapida">
-                                        <option value="g">g</option>
-                                        <option value="kg">kg</option>
-                                        <option value="l">l</option>
-                                        <option value="ml">ml</option>
-                                        <option value="oz">oz</option>
-                                        <option value="lb">lb</option>
-                                        <option value="unidad">unidad</option>
-                                        <option value="taza">taza</option>
+                                        @foreach (var unidad in ConversorUnidades.Unidades)
+                                        {
+                                            <option value="@unidad">@unidad</option>
+                                        }
                                     </select>
                                 }
                                 else
@@ -271,14 +263,10 @@
                     <span id="ayuda-unidad-caja" class="campo-ayuda-caja" style='@EstiloAyuda("unidad")' @onmouseenter='() => AlEntrarAyuda("unidad")' @onmouseleave="AlSalirAyuda">Unidad en la que compras y usas el insumo. Define cómo se calculan cantidades y costos en tus recetas. Ej.: kg para harina, l para leche.</span>
                     <InputSelect @bind-Value="form.UnidadMedida" class="form-select">
                         <option value="">Selecciona...</option>
-                        <option value="g">g</option>
-                        <option value="kg">kg</option>
-                        <option value="l">l</option>
-                        <option value="ml">ml</option>
-                        <option value="oz">oz</option>
-                        <option value="lb">lb</option>
-                        <option value="unidad">unidad</option>
-                        <option value="taza">taza</option>
+                        @foreach (var unidad in ConversorUnidades.Unidades)
+                        {
+                            <option value="@unidad">@unidad</option>
+                        }
                     </InputSelect>
                     @if (errores.TryGetValue(nameof(form.UnidadMedida), out var errUnidad))
                     {
@@ -287,8 +275,18 @@
                 </div>
 
                 <div class="form-group-sm">
+                    <label class="auth-label">Densidad (g/ml) opcional <span class="campo-ayuda-wrap"><span id="ayuda-densidad-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("densidad")' @onmouseenter='() => AlEntrarAyuda("densidad")' @onmouseleave="AlSalirAyuda">?</span></span></label>
+                    <span id="ayuda-densidad-caja" class="campo-ayuda-caja" style='@EstiloAyuda("densidad")' @onmouseenter='() => AlEntrarAyuda("densidad")' @onmouseleave="AlSalirAyuda">Permite convertir entre peso y volumen en las recetas (por ejemplo, una taza de harina a gramos). Déjala vacía si no la conoces; 0 también significa sin densidad.</span>
+                    <InputNumber @bind-Value="form.DensidadGPorMl" class="form-control" min="0" max="20" step="0.01" placeholder="Ej.: 0,53 para harina" />
+                    @if (errores.TryGetValue(nameof(form.DensidadGPorMl), out var errDensidad))
+                    {
+                        <span class="text-danger msg-error">@errDensidad</span>
+                    }
+                </div>
+
+                <div class="form-group-sm">
                     <label class="auth-label">Cantidad * <span class="campo-ayuda-wrap"><span id="ayuda-cantidad-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("cantidad")' @onmouseenter='() => AlEntrarAyuda("cantidad")' @onmouseleave="AlSalirAyuda">?</span></span></label>
-                    <span id="ayuda-cantidad-caja" class="campo-ayuda-caja" style='@EstiloAyuda("cantidad")' @onmouseenter='() => AlEntrarAyuda("cantidad")' @onmouseleave="AlSalirAyuda">Cantidad que compraste en la unidad elegida. Ej.: 10 significa 10 kg si elegiste kg. Máximo 999.99 para 'taza' o 'unidad', 999999.99 para el resto.</span>
+                    <span id="ayuda-cantidad-caja" class="campo-ayuda-caja" style='@EstiloAyuda("cantidad")' @onmouseenter='() => AlEntrarAyuda("cantidad")' @onmouseleave="AlSalirAyuda">Cantidad que compraste en la unidad elegida. Ej.: 10 significa 10 kg si elegiste kg. Máximo 999.99 para taza, cucharada, cucharadita, unidad o docena; 999999.99 para el resto.</span>
                         <InputNumber @bind-Value="form.Cantidad" @oninput="OnCantidadRawInput" class="form-control" min="0" step="1" placeholder="Ej.: 10" />
                     @if (errores.TryGetValue(nameof(form.Cantidad), out var errCantidad))
                     {
@@ -449,6 +447,7 @@
     {
         ["nombre"] = "display:none;",
         ["unidad"] = "display:none;",
+        ["densidad"] = "display:none;",
         ["cantidad"] = "display:none;",
         ["costo"] = "display:none;",
         ["proveedor"] = "display:none;",
@@ -692,9 +691,6 @@
         AutocompletarDesdeProveedor();
     }
 
-    private static readonly HashSet<string> UnidadesProveedorValidas = new(StringComparer.OrdinalIgnoreCase)
-        { "g", "kg", "l", "ml", "oz", "lb", "unidad", "taza" };
-
     private void VaciarCamposParaNuevoProveedor()
     {
         form.UnidadMedida = string.Empty;
@@ -724,7 +720,7 @@
             if (string.Equals(proveedorAutocompletado, asociado.Nombre, StringComparison.OrdinalIgnoreCase)) return;
             form.CostoUnitario = asociado.Costo;
             form.Cantidad = asociado.Cantidad;
-            if (UnidadesProveedorValidas.Contains(asociado.UnidadMedida)) form.UnidadMedida = asociado.UnidadMedida.Trim().ToLowerInvariant();
+            if (ConversorUnidades.EsValida(asociado.UnidadMedida)) form.UnidadMedida = asociado.UnidadMedida.Trim().ToLowerInvariant();
             proveedorAutocompletado = asociado.Nombre;
             errores.Remove(nameof(form.CostoUnitario));
             errores.Remove(nameof(form.Cantidad));
@@ -883,6 +879,7 @@
             Categoria = CategoriaMostrar(insumo.Categoria),
             CostoUnitario = insumo.CostoUnitario,
             Cantidad = insumo.Cantidad,
+            DensidadGPorMl = insumo.DensidadGPorMl,
             Proveedor = insumo.Proveedor ?? string.Empty,
             Activo = insumo.Activo
         };
@@ -936,19 +933,13 @@
     private static readonly System.Globalization.CompareInfo ComparadorNombres =
         System.Globalization.CultureInfo.InvariantCulture.CompareInfo;
 
-    private static decimal TopeCantidadUnidad(string? unidad)
-    {
-        var u = unidad?.Trim().ToLowerInvariant();
-        return u is "taza" or "unidad" ? 999.99m : 999999.99m;
-    }
+    private static decimal TopeCantidadUnidad(string? unidad) =>
+        ConversorUnidades.EsUnidadPequena(unidad) ? 999.99m : 999999.99m;
 
-    private static string MensajeTopeCantidad(string? unidad)
-    {
-        var u = unidad?.Trim().ToLowerInvariant();
-        return u is "taza" or "unidad"
-            ? "Para 'taza' o 'unidad' la cantidad máxima es 999.99 (3 enteros y 2 decimales)."
+    private static string MensajeTopeCantidad(string? unidad) =>
+        ConversorUnidades.EsUnidadPequena(unidad)
+            ? "Para taza, cucharada, cucharadita, unidad o docena la cantidad máxima es 999.99 (3 enteros y 2 decimales)."
             : "La cantidad máxima es 999999.99 (6 enteros y 2 decimales).";
-    }
 
     private static string CategoriaEnvio(string? valor)
     {
@@ -1027,6 +1018,15 @@
         if (string.IsNullOrWhiteSpace(form.UnidadMedida))
         {
             errores[nameof(form.UnidadMedida)] = "Selecciona una unidad de medida.";
+        }
+        else if (!ConversorUnidades.EsValida(form.UnidadMedida))
+        {
+            errores[nameof(form.UnidadMedida)] = "Selecciona una unidad de medida válida.";
+        }
+
+        if (form.DensidadGPorMl is < 0m or > 20m)
+        {
+            errores[nameof(form.DensidadGPorMl)] = "La densidad debe estar entre 0 y 20 g/ml.";
         }
 
         if (string.IsNullOrWhiteSpace(form.Categoria) ||
@@ -1121,6 +1121,7 @@
             Categoria = CategoriaEnvio(form.Categoria),
             CostoUnitario = form.CostoUnitario!.Value,
             Cantidad = form.Cantidad,
+            DensidadGPorMl = form.DensidadGPorMl,
             Proveedor = string.IsNullOrWhiteSpace(form.Proveedor) ? null : form.Proveedor.Trim(),
             Activo = form.Activo
         };
@@ -1181,6 +1182,14 @@
         {
             request.Cantidad = form.Cantidad;
         }
+
+        var densidadForm = form.DensidadGPorMl is 0m ? null : form.DensidadGPorMl;
+        if (densidadForm != original.DensidadGPorMl)
+        {
+            // 0 limpia la densidad; null en el DTO significa "no modificar".
+            request.DensidadGPorMl = densidadForm ?? 0m;
+        }
+
         if (form.Activo != original.Activo)
         {
             request.Activo = form.Activo;
@@ -1188,6 +1197,7 @@
 
         if (request.Nombre is null && request.UnidadMedida is null && request.Categoria is null &&
             request.CostoUnitario is null && request.Cantidad is null &&
+            request.DensidadGPorMl is null &&
             request.Proveedor is null && request.Activo is null)
         {
             CerrarModal();
@@ -1342,9 +1352,7 @@
         }
         else if (campo == "unidad")
         {
-            var unidades = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                { "g", "kg", "l", "ml", "oz", "lb", "unidad", "taza" };
-            if (!unidades.Contains(texto)) { mensajeError = "Selecciona una unidad de medida válida."; return; }
+            if (!ConversorUnidades.EsValida(texto)) { mensajeError = "Selecciona una unidad de medida válida."; return; }
             if (string.Equals(texto, objetivo.UnidadMedida, StringComparison.OrdinalIgnoreCase)) { AvisarSinCambios(); return; }
             request.UnidadMedida = texto.ToLowerInvariant();
         }
@@ -1409,8 +1417,7 @@
                     request.CostoUnitario = vinculado.Costo;
                     request.Cantidad = vinculado.Cantidad;
                     var uni = (vinculado.UnidadMedida ?? string.Empty).Trim().ToLowerInvariant();
-                    if (new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                        { "g", "kg", "l", "ml", "oz", "lb", "unidad", "taza" }.Contains(uni))
+                    if (ConversorUnidades.EsValida(uni))
                     {
                         request.UnidadMedida = uni;
                     }
@@ -1811,6 +1818,7 @@
         public string Categoria { get; set; } = "otro";
         public decimal? CostoUnitario { get; set; }
         public decimal? Cantidad { get; set; }
+        public decimal? DensidadGPorMl { get; set; }
         public string Proveedor { get; set; } = string.Empty;
         public bool Activo { get; set; } = true;
     }

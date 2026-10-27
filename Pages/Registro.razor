@@ -101,8 +101,12 @@
             <label class="auth-label">Categoría del Negocio *</label>
             <InputSelect @bind-Value="modelo.CategoriaNegocio" class="form-select">
                 <option value="">-- Seleccione una categoría --</option>
+                <option value="Panadería">Panadería</option>
+                <option value="Pastelería">Pastelería</option>
                 <option value="Repostería">Repostería</option>
                 <option value="Cafetería">Cafetería</option>
+                <option value="Gastronomía">Gastronomía</option>
+                <option value="Productos Frescos">Productos frescos</option>
                 <option value="Otros">Otros</option>
             </InputSelect>
             <ValidationMessage For="@(() => modelo.CategoriaNegocio)" class="text-danger msg-error" />

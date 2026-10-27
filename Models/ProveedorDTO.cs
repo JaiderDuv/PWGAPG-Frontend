@@ -4,9 +4,6 @@ namespace PWGAPG_Frontend.Models
 {
     public sealed class CantidadSegunUnidadAttribute : ValidationAttribute
     {
-        private static readonly HashSet<string> UnidadesPequenas =
-            new(StringComparer.OrdinalIgnoreCase) { "unidad", "taza" };
-
         private readonly string _propiedadUnidad;
 
         public CantidadSegunUnidadAttribute(string propiedadUnidad)
@@ -22,9 +19,7 @@ namespace PWGAPG_Frontend.Models
             var unidadProp = validationContext.ObjectType.GetProperty(_propiedadUnidad);
             var unidad = unidadProp?.GetValue(validationContext.ObjectInstance) as string;
 
-            var maximo = !string.IsNullOrWhiteSpace(unidad) && UnidadesPequenas.Contains(unidad.Trim())
-                ? 999.99m
-                : 999999.99m;
+            var maximo = ConversorUnidades.EsUnidadPequena(unidad) ? 999.99m : 999999.99m;
 
             if (cantidad <= 0)
                 return new ValidationResult("La cantidad debe ser mayor a 0.", new[] { validationContext.MemberName! });

@@ -1,13 +1,12 @@
 ﻿@page "/onboarding"
 @attribute [Authorize]
-@using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Pages.OnboardingTabs
 @inject NavigationManager Navigation
 @inject PWGAPG_Frontend.Services.AuthService AuthService
 
 <div class="onboarding-container">
     <h2 class="auth-titulo">Configura tu negocio</h2>
-    <p class="auth-subtitulo">Completa esta información para comenzar a usar Chef Metrics.</p>
+    <p class="auth-subtitulo">Revisa la información con la que creaste tu cuenta y confirma para comenzar a usar Chef Metrics.</p>
 
     <div class="onboarding-tabs">
         @for (int i = 0; i < NombresPestanas.Length; i++)
@@ -27,18 +26,7 @@
             <InformacionPersonalTab OnGuardado="AvanzarPestana" />
         </div>
         <div style="display: @(PestanaActiva == 1 ? "block" : "none")">
-            <InformacionNegocioTab OnGuardado="AvanzarPestana" />
-        </div>
-        <div style="display: @(PestanaActiva == 2 ? "block" : "none")">
-            <EmpleadosTab OnGuardado="AvanzarPestana" />
-        </div>
-        <div style="display: @(PestanaActiva == 3 ? "block" : "none")">
-            <ProductosTab OnGuardado="AvanzarPestana"
-                          OnProductosActualizados="@((List<ProductoDTO> p) => productosGuardados = p)" />
-        </div>
-        <div style="display: @(PestanaActiva == 4 ? "block" : "none")">
-            <InsumosTab OnGuardado="FinalizarOnboarding"
-                        IngredientesSugeridos="@productosGuardados.SelectMany(p => p.Ingredientes).Distinct().ToList()" />
+            <InformacionNegocioTab OnGuardado="FinalizarOnboarding" />
         </div>
     </div>
 </div>
@@ -47,16 +35,11 @@
     private readonly string[] NombresPestanas =
     {
         "Información Personal",
-        "Información del Negocio",
-        "Empleados",
-        "Productos",
-        "Insumos"
+        "Información del Negocio"
     };
 
     private int PestanaActiva = 0;
-    private List<ProductoDTO> productosGuardados = new();
     private int MaximaPestanaHabilitada = 0;
-
 
     private void AvanzarPestana()
     {
@@ -64,14 +47,16 @@
         {
             MaximaPestanaHabilitada = PestanaActiva + 1;
         }
+
         if (PestanaActiva < NombresPestanas.Length - 1)
         {
             PestanaActiva++;
         }
     }
+
     private async Task FinalizarOnboarding()
     {
-        // El backend confirma OnboardingCompletado = true y se redirige al Dashboard:
+        // El backend confirma OnboardingCompletado = true y se redirige al Dashboard.
         var ok = await AuthService.CompletarOnboardingAsync();
         if (ok)
         {

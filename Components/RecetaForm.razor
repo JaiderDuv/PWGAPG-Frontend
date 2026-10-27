@@ -218,14 +218,10 @@
                     <div class="form-group-sm">
                         <label class="auth-label">Unidad de medida *</label>
                         <InputSelect class="form-select" @bind-Value="nuevoInsumo.UnidadMedida">
-                            <option value="g">g</option>
-                            <option value="kg">kg</option>
-                            <option value="ml">ml</option>
-                            <option value="l">l</option>
-                            <option value="oz">oz</option>
-                            <option value="lb">lb</option>
-                            <option value="unidad">unidad</option>
-                            <option value="taza">taza</option>
+                            @foreach (var unidad in ConversorUnidades.Unidades)
+                            {
+                                <option value="@unidad">@unidad</option>
+                            }
                         </InputSelect>
                         <ValidationMessage For="() => nuevoInsumo.UnidadMedida" class="text-danger msg-error" />
                     </div>
@@ -237,6 +233,13 @@
                             <option value="otro">Otro</option>
                         </InputSelect>
                         <ValidationMessage For="() => nuevoInsumo.Categoria" class="text-danger msg-error" />
+                    </div>
+                    <div class="form-group-sm">
+                        <label class="auth-label">Densidad (g/ml) opcional</label>
+                        <InputNumber class="form-control" @bind-Value="nuevoInsumo.DensidadGPorMl"
+                                     min="0" max="20" step="0.01" />
+                        <small class="text-muted">Solo si compras por peso y usas tazas o cucharadas. Ej.: harina 0,53.</small>
+                        <ValidationMessage For="() => nuevoInsumo.DensidadGPorMl" class="text-danger msg-error" />
                     </div>
                 </div>
 
@@ -447,8 +450,9 @@
     private IEnumerable<string> UnidadesCompatibles(Fila fila)
     {
         var insumo = insumosDisponibles.FirstOrDefault(i => i.Id == fila.InsumoId);
-        return insumo is null ? ConversorUnidades.UnidadesDeLaMismaFamilia("g")
-                              : ConversorUnidades.UnidadesDeLaMismaFamilia(insumo.UnidadMedida);
+        return insumo is null
+            ? ConversorUnidades.UnidadesDeLaMismaFamilia("g")
+            : ConversorUnidades.UnidadesCompatibles(insumo.UnidadMedida, insumo.DensidadGPorMl);
     }
 
     private decimal CostoDeFila(Fila f)
@@ -459,7 +463,8 @@
         var costoPorUnidad = i.Cantidad.HasValue && i.Cantidad.Value > 0
             ? i.CostoUnitario / i.Cantidad.Value
             : i.CostoUnitario;
-        return ConversorUnidades.CostoLinea(f.Cantidad, f.UnidadMedida, i.UnidadMedida, costoPorUnidad, f.PorcentajeMerma);
+        return ConversorUnidades.CostoLinea(f.Cantidad, f.UnidadMedida, i.UnidadMedida,
+            costoPorUnidad, f.PorcentajeMerma, i.DensidadGPorMl);
     }
 
     private decimal CostoTotal => modelo.Filas.Sum(CostoDeFila);
@@ -542,6 +547,7 @@
                 Categoria = nuevoInsumo.Categoria,
                 CostoUnitario = nuevoInsumo.CostoUnitario!.Value,
                 Cantidad = nuevoInsumo.Cantidad!.Value,
+                DensidadGPorMl = nuevoInsumo.DensidadGPorMl,
                 Proveedor = nuevoInsumo.Proveedor.Trim(),
                 Activo = true
             };
@@ -700,6 +706,9 @@
 
         [Required(ErrorMessage = "La unidad de medida es obligatoria.")]
         public string UnidadMedida { get; set; } = "g";
+
+        [Range(typeof(decimal), "0", "20", ErrorMessage = "La densidad debe estar entre 0 y 20 g/ml.")]
+        public decimal? DensidadGPorMl { get; set; }
 
         [Required(ErrorMessage = "La categoría es obligatoria.")]
         public string Categoria { get; set; } = "materia_prima";

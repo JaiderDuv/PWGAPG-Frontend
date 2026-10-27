@@ -39,7 +39,7 @@ public class ProductoMenuFormModelo
         public decimal Cantidad { get; set; } = 1;
 
         [Required(ErrorMessage = "La unidad es obligatoria.")]
-        [RegularExpression(@"(?i)^(g|kg|ml|l|oz|lb|unidad|taza)$", ErrorMessage = "Unidad no válida.")]
+        [RegularExpression(ConversorUnidades.PatronUnidades, ErrorMessage = "Unidad no válida.")]
         public string UnidadMedida { get; set; } = "unidad";
     }
 }

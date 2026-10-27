@@ -189,14 +189,10 @@
                         </label>
                         <InputSelect @bind-Value="formularioEditar.UnidadMedida" class="form-select">
                             <option value="">Selecciona...</option>
-                            <option value="g">g</option>
-                            <option value="kg">kg</option>
-                            <option value="l">l</option>
-                            <option value="ml">ml</option>
-                            <option value="oz">oz</option>
-                            <option value="lb">lb</option>
-                            <option value="unidad">unidad</option>
-                            <option value="taza">taza</option>
+                            @foreach (var unidad in ConversorUnidades.Unidades)
+                            {
+                                <option value="@unidad">@unidad</option>
+                            }
                         </InputSelect>
                         @if (erroresEditar.TryGetValue("UnidadMedida", out var eUnidad))
                         {
@@ -366,14 +362,10 @@
                         </label>
                         <InputSelect @bind-Value="formularioAgregar.UnidadMedida" class="form-select">
                             <option value="">Selecciona...</option>
-                            <option value="g">g</option>
-                            <option value="kg">kg</option>
-                            <option value="l">l</option>
-                            <option value="ml">ml</option>
-                            <option value="oz">oz</option>
-                            <option value="lb">lb</option>
-                            <option value="unidad">unidad</option>
-                            <option value="taza">taza</option>
+                            @foreach (var unidad in ConversorUnidades.Unidades)
+                            {
+                                <option value="@unidad">@unidad</option>
+                            }
                         </InputSelect>
                         @if (erroresAgregar.TryGetValue("UnidadMedida", out var eUnidadA))
                         {
@@ -1122,7 +1114,7 @@
     }
 
     private static bool EsUnidadPequena(string? u) =>
-        u != null && (u == "unidad" || u == "taza");
+        ConversorUnidades.EsUnidadPequena(u);
 
     // Quita tildes y pasa a minúsculas para comparar textos sin importar acentos ni mayúsculas.
     private static string Normalizar(string? texto)

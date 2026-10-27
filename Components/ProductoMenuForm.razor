@@ -218,7 +218,7 @@
     [Parameter] public EventCallback<string?> OnGuardado { get; set; }
     [Parameter] public EventCallback OnCancelar { get; set; }
 
-    private static readonly string[] Unidades = ["g", "kg", "ml", "l", "oz", "lb", "unidad", "taza"];
+    private static readonly string[] Unidades = ConversorUnidades.Unidades.ToArray();
 
     private ProductoMenuFormModelo modelo = new();
     private List<RecetaDto> recetasDisponibles = new();
