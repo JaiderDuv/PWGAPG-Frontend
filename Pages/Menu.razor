@@ -19,7 +19,14 @@
         </div>
         @if (!mostrarForm)
         {
-            <button class="btn btn-primary" @onclick="Nuevo">+ Nuevo producto</button>
+            <div class="d-flex gap-2 flex-wrap">
+                <button class="btn btn-outline-secondary" @onclick="ActualizarCostosAsync"
+                        disabled="@actualizandoCostos"
+                        title="Recalcula el costo directo y el margen con los precios actuales de los insumos. No modifica el precio de venta.">
+                    @(actualizandoCostos ? "Actualizando..." : "Actualizar costos")
+                </button>
+                <button class="btn btn-primary" @onclick="Nuevo">+ Nuevo producto</button>
+            </div>
         }
     </div>
 
@@ -111,6 +118,7 @@
             <p class="text-muted mt-2 mb-0">
                 <small>
                     El costo directo incluye ingredientes y empaques; es la base del margen y del precio sugerido.
+                    Usa “Actualizar costos” para recalcularlo con los precios actuales de los insumos; el precio de venta no se modifica automáticamente.
                     Los costos fijos se cubren con el punto de equilibrio y se analizan aparte, sin cargarlos a cada producto.
                 </small>
             </p>
@@ -126,7 +134,7 @@
 @code {
     private List<ProductoMenuDto>? productos;
     private ProductoMenuDetalleDto? editando, aEliminar;
-    private bool mostrarForm, mostrarConfirm, incluirInactivos = true;
+    private bool mostrarForm, mostrarConfirm, incluirInactivos = true, actualizandoCostos;
     private string? busqueda, error, mensajeOk;
     private Guid formKey = Guid.NewGuid();
 
@@ -137,6 +145,34 @@
         var res = await Api.ListarAsync(busqueda, incluirInactivos);
         if (res.Exito) { productos = res.Datos; error = null; }
         else { productos = new(); error = res.Mensaje; }
+    }
+
+    private async Task ActualizarCostosAsync()
+    {
+        if (actualizandoCostos) return;
+
+        actualizandoCostos = true;
+        mensajeOk = null;
+        error = null;
+
+        try
+        {
+            // El costo directo y el margen se recalculan en el backend con los
+            // precios actuales de los insumos; el precio de venta no se modifica.
+            await Cargar();
+            if (error is null)
+            {
+                mensajeOk = "Costos y márgenes actualizados. Los precios de venta no se modificaron.";
+            }
+        }
+        catch
+        {
+            error = "No se pudieron actualizar los costos. Intenta de nuevo.";
+        }
+        finally
+        {
+            actualizandoCostos = false;
+        }
     }
 
     private async Task BuscarConEnter(KeyboardEventArgs e) { if (e.Key == "Enter") await Cargar(); }

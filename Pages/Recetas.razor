@@ -16,7 +16,14 @@
         </div>
         @if (!mostrarForm)
         {
-            <button class="btn btn-primary rc-btn-nueva" @onclick="Nueva">+ Nueva receta</button>
+            <div class="d-flex gap-2 flex-wrap">
+                <button class="btn btn-outline-secondary" @onclick="ActualizarCostosAsync"
+                        disabled="@actualizandoCostos"
+                        title="Recalcula los costos con los precios actuales de los insumos. No modifica precios de venta.">
+                    @(actualizandoCostos ? "Actualizando..." : "Actualizar costos")
+                </button>
+                <button class="btn btn-primary rc-btn-nueva" @onclick="Nueva">+ Nueva receta</button>
+            </div>
         }
     </div>
 
@@ -192,6 +199,8 @@
 @if (detalle is not null)
 {
     <RecetaDetalle @key="detalle.Id" Receta="detalle" Imagen="@Api.UrlImagen(detalle.ImagenUrl)"
+                   RefreshToken="detalleRefreshToken" Actualizando="actualizandoCostos"
+                   OnActualizar="ActualizarCostosAsync"
                    OnCerrar="CerrarDetalle"
                    OnEditar="() => Editar(detalle!)"
                    OnEliminar="() => PedirEliminar(detalle!)" />
@@ -211,9 +220,10 @@
     private List<RecetaDto>? recetas;
     private List<InsumoOpcionDto> insumos = new();
     private RecetaDto? editando, aEliminar, detalle;
-    private bool mostrarForm, mostrarConfirm;
+    private bool mostrarForm, mostrarConfirm, actualizandoCostos;
     private string? error, mensajeOk;
     private Guid formKey = Guid.NewGuid();
+    private int detalleRefreshToken;
 
     // Filtros
     private string busqueda = "";
@@ -416,6 +426,42 @@
         var res = await Api.ListarAsync(null);
         if (res.Exito) { recetas = res.Datos; error = null; }
         else { recetas = new(); error = res.Mensaje; }
+    }
+
+    private async Task ActualizarCostosAsync()
+    {
+        if (actualizandoCostos) return;
+
+        actualizandoCostos = true;
+        mensajeOk = null;
+        error = null;
+
+        try
+        {
+            // Los costos dependen de los precios vigentes de los insumos.
+            // Se recargan ambos para que la vista y el formulario usen la misma información.
+            insumos = await Api.ListarInsumosAsync();
+            await Cargar();
+
+            if (detalle is not null && recetas is not null)
+            {
+                detalle = recetas.FirstOrDefault(r => r.Id == detalle.Id);
+                if (detalle is not null) detalleRefreshToken++;
+            }
+
+            if (error is null)
+            {
+                mensajeOk = "Costos actualizados con los precios actuales de los insumos.";
+            }
+        }
+        catch
+        {
+            error = "No se pudieron actualizar los costos. Intenta de nuevo.";
+        }
+        finally
+        {
+            actualizandoCostos = false;
+        }
     }
 
     private void Abrir(RecetaDto r) => detalle = r;

@@ -6,7 +6,19 @@
 @inject NavigationManager Navigation
 
 <div class="rc-page container py-4">
-    <button class="btn btn-sm btn-outline-secondary mb-3" @onclick='() => Navigation.NavigateTo("menu")'>← Volver al menú</button>
+    <div class="d-flex gap-2 flex-wrap mb-3">
+        <button class="btn btn-sm btn-outline-secondary" @onclick='() => Navigation.NavigateTo("menu")'>← Volver al menú</button>
+        <button class="btn btn-sm btn-outline-secondary" @onclick="ActualizarCostosAsync"
+                disabled="@cargando"
+                title="Recalcula el costo directo y el margen con los precios actuales de los insumos. No modifica el precio de venta.">
+            @(cargando ? "Actualizando..." : "Actualizar costos")
+        </button>
+    </div>
+
+    @if (mensajeOk is not null)
+    {
+        <div class="alert alert-success py-2" role="status">@mensajeOk</div>
+    }
 
     @if (cargando)
     {
@@ -120,16 +132,37 @@
 
     private ProductoMenuDetalleDto? producto;
     private bool cargando = true;
-    private string? error;
+    private string? error, mensajeOk;
 
     protected override async Task OnParametersSetAsync() => await Cargar();
 
     private async Task Cargar()
     {
         cargando = true; error = null;
-        var res = await Api.ObtenerAsync(Id);
-        cargando = false;
-        if (!res.Exito) { error = res.Mensaje; producto = null; return; }
-        producto = res.Datos;
+        try
+        {
+            var res = await Api.ObtenerAsync(Id);
+            if (!res.Exito) { error = res.Mensaje; producto = null; return; }
+            producto = res.Datos;
+        }
+        catch
+        {
+            error = "No se pudo cargar el producto. Intenta de nuevo.";
+            producto = null;
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task ActualizarCostosAsync()
+    {
+        mensajeOk = null;
+        await Cargar();
+        if (error is null)
+        {
+            mensajeOk = "Costos actualizados con los precios actuales de los insumos.";
+        }
     }
 }

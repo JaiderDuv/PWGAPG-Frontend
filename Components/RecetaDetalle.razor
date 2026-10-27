@@ -77,21 +77,26 @@
                 <div class="rc-panel-zone">
                     @if (verCostos)
                     {
-                        <CostoRecetaPanel RecetaId="Receta.Id" />
+                        <CostoRecetaPanel @key="@($"{Receta.Id}-{RefreshToken}")" RecetaId="Receta.Id" />
                     }
                     @if (verPrecio)
                     {
-                        <SugerenciaPrecioVenta RecetaId="Receta.Id" />
+                        <SugerenciaPrecioVenta @key="@($"{Receta.Id}-{RefreshToken}")" RecetaId="Receta.Id" />
                     }
                     @if (verEscalado)
                     {
-                        <EscaladoPorcionesPanel RecetaId="Receta.Id" PorcionesBase="Receta.PorcionesBase" />
+                        <EscaladoPorcionesPanel @key="@($"{Receta.Id}-{RefreshToken}")" RecetaId="Receta.Id" PorcionesBase="Receta.PorcionesBase" />
                     }
                 </div>
             }
         </div>
 
         <div class="rc-modal-actions">
+            <button type="button" class="btn btn-outline-secondary" @onclick="OnActualizar"
+                    disabled="@Actualizando"
+                    title="Recalcula los costos con los precios actuales de los insumos. No modifica precios de venta.">
+                @(Actualizando ? "Actualizando..." : "Actualizar costos")
+            </button>
             <button type="button" class="btn btn-outline-secondary" @onclick="OnEditar">Editar</button>
             <button type="button" class="btn btn-outline-danger" @onclick="OnEliminar">Eliminar</button>
         </div>
@@ -101,6 +106,9 @@
 @code {
     [Parameter, EditorRequired] public RecetaDto Receta { get; set; } = default!;
     [Parameter] public string? Imagen { get; set; }
+    [Parameter] public int RefreshToken { get; set; }
+    [Parameter] public bool Actualizando { get; set; }
+    [Parameter] public EventCallback OnActualizar { get; set; }
     [Parameter] public EventCallback OnCerrar { get; set; }
     [Parameter] public EventCallback OnEditar { get; set; }
     [Parameter] public EventCallback OnEliminar { get; set; }

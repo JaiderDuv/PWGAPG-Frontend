@@ -716,6 +716,7 @@
 
 .rc-modal-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: .5rem;
     justify-content: flex-end;
     padding: .9rem 1.5rem;
