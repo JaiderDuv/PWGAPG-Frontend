@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using PWGAPG_Frontend.Models;
@@ -8,6 +9,26 @@ public class MenuApiService
 {
     private readonly HttpClient _http;
     public MenuApiService(HttpClient http) => _http = http;
+
+    // Convierte "/uploads/menu/x.jpg" en la URL absoluta del backend.
+    public string? UrlImagen(string? ruta) =>
+        string.IsNullOrWhiteSpace(ruta) || _http.BaseAddress is null
+            ? null
+            : new Uri(_http.BaseAddress, ruta).ToString();
+
+    public async Task<ApiResultado<ProductoMenuDetalleDto>> SubirImagenAsync(
+        int id, byte[] bytes, string nombre, string contentType)
+    {
+        using var contenido = new MultipartFormDataContent();
+        var archivo = new ByteArrayContent(bytes);
+        archivo.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+        contenido.Add(archivo, "archivo", nombre);   // "archivo" = nombre del parámetro del controller
+        return await Leer<ProductoMenuDetalleDto>(
+            await _http.PostAsync($"api/productos-menu/{id}/imagen", contenido));
+    }
+
+    public async Task<ApiResultado<ProductoMenuDetalleDto>> EliminarImagenAsync(int id) =>
+        await Leer<ProductoMenuDetalleDto>(await _http.DeleteAsync($"api/productos-menu/{id}/imagen"));
 
     public async Task<ApiResultado<List<ProductoMenuDto>>> ListarAsync(string? busqueda, bool incluirInactivos = true)
     {
