@@ -461,11 +461,6 @@
     color: #6B7280;
 }
 
-.mn-badge-id {
-    background: rgba(35, 24, 14, .55);
-    color: #fff;
-}
-
 .mn-card-actions {
     position: absolute;
     top: .65rem;
