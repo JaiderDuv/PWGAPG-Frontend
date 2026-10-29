@@ -6,121 +6,281 @@
 @inject MenuApiService Api
 @inject NavigationManager Navigation
 
-<style>
-    .menu-tabla th, .menu-tabla td { padding: 0.85rem 1.25rem; vertical-align: middle; }
-    .menu-tabla td:last-child { white-space: nowrap; }
-</style>
-
-<div class="rc-page container py-4">
-    <div class="rc-header">
-        <div>
-            <h2 class="rc-title">Menú</h2>
-            <p class="rc-subtitle">Tus productos: recetas con su cantidad, costo directo, precio y margen.</p>
+<div class="mn-page">
+    <section class="mn-hero">
+        <div class="mn-hero-copy">
+            <span class="mn-eyebrow">TU CARTA</span>
+            <h1 class="mn-title">Menú</h1>
+            <p class="mn-subtitle">
+                Organiza tus productos, revisa su costo real y mantén una carta visual
+                lista para compartir con tus clientes.
+            </p>
         </div>
         @if (!mostrarForm)
         {
-            <div class="d-flex gap-2 flex-wrap">
-                <button class="btn btn-outline-secondary" @onclick="ActualizarCostosAsync"
+            <div class="mn-hero-actions">
+                <button type="button" class="mn-btn mn-btn-ghost" @onclick="ActualizarCostosAsync"
                         disabled="@actualizandoCostos"
                         title="Recalcula el costo directo y el margen con los precios actuales de los insumos. No modifica el precio de venta.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M20 11a8 8 0 1 0-2.3 5.7" />
+                        <path d="M20 4v7h-7" />
+                    </svg>
                     @(actualizandoCostos ? "Actualizando..." : "Actualizar costos")
                 </button>
-                <button class="btn btn-primary" @onclick="Nuevo">+ Nuevo producto</button>
+                <button type="button" class="mn-btn mn-btn-primary" @onclick="Nuevo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" aria-hidden="true">
+                        <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    Nuevo producto
+                </button>
             </div>
         }
-    </div>
+    </section>
 
-    @if (mensajeOk is not null) { <div class="alert alert-success">@mensajeOk</div> }
-    @if (error is not null) { <div class="alert alert-danger">@error</div> }
+    @if (mensajeOk is not null)
+    {
+        <div class="mn-alert mn-alert-ok" role="status">@mensajeOk</div>
+    }
+    @if (error is not null)
+    {
+        <div class="mn-alert mn-alert-error" role="alert">@error</div>
+    }
 
     @if (mostrarForm)
     {
-        <ProductoMenuForm @key="formKey" Editando="editando"
-                          OnGuardado="AlGuardar" OnCancelar="CerrarForm" />
+        <div class="mn-form-shell">
+            <ProductoMenuForm @key="formKey" Editando="editando"
+                              OnGuardado="AlGuardar" OnCancelar="CerrarForm" />
+        </div>
     }
     else
     {
-        <div class="rc-toolbar">
-            <input class="form-control" placeholder="Buscar producto por nombre..." maxlength="75"
-                   @bind="busqueda" @bind:event="oninput" @onkeyup="BuscarConEnter" />
-            <button class="btn btn-outline-secondary" @onclick="Cargar">Buscar</button>
-            <label class="insumos-check">
-                <input type="checkbox" @bind="incluirInactivos" @bind:after="Cargar" />
-                Incluir inactivos
-            </label>
-            @if (productos is not null) { <span class="rc-count">@productos.Count producto(s)</span> }
+        @if (productos is not null)
+        {
+            <div class="mn-stats">
+                <div class="mn-stat">
+                    <span class="mn-stat-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="3" y="4" width="18" height="16" rx="3" />
+                            <path d="M8 9h8M8 13h5" />
+                        </svg>
+                    </span>
+                    <div class="mn-stat-copy">
+                        <small>Productos</small>
+                        <strong>@productos.Count</strong>
+                        <span>en tu carta</span>
+                    </div>
+                </div>
+                <div class="mn-stat">
+                    <span class="mn-stat-icon mn-stat-icon-ok">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="m8 12 3 3 5-6" />
+                        </svg>
+                    </span>
+                    <div class="mn-stat-copy">
+                        <small>Activos</small>
+                        <strong>@Activos</strong>
+                        <span>visibles al público</span>
+                    </div>
+                </div>
+                <div class="mn-stat">
+                    <span class="mn-stat-icon mn-stat-icon-blue">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="3" y="3" width="18" height="18" rx="3" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <path d="m21 15-5-5L5 21" />
+                        </svg>
+                    </span>
+                    <div class="mn-stat-copy">
+                        <small>Con foto</small>
+                        <strong>@ConFoto</strong>
+                        <span>productos ilustrados</span>
+                    </div>
+                </div>
+                <div class="mn-stat">
+                    <span class="mn-stat-icon mn-stat-icon-amber">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M4 19V5M4 19h16" />
+                            <path d="m7 15 4-4 3 3 5-6" />
+                        </svg>
+                    </span>
+                    <div class="mn-stat-copy">
+                        <small>Margen directo</small>
+                        <strong>@(MargenPromedio.HasValue ? $"{MargenPromedio.Value:0.#} %" : "—")</strong>
+                        <span>promedio de la carta</span>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="mn-toolbar">
+            <div class="mn-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-3.5-3.5" />
+                </svg>
+                <input class="form-control" placeholder="Buscar producto por nombre..." maxlength="75"
+                       @bind="busqueda" @bind:event="oninput" @onkeyup="BuscarConEnter" />
+            </div>
+            <div class="mn-toolbar-controls">
+                <div class="mn-segment" role="group" aria-label="Filtrar productos por estado">
+                    <button type="button" class="@(filtroEstado == "todos" ? "active" : "")"
+                            @onclick='() => filtroEstado = "todos"'>Todos</button>
+                    <button type="button" class="@(filtroEstado == "activos" ? "active" : "")"
+                            @onclick='() => filtroEstado = "activos"'>Activos</button>
+                    <button type="button" class="@(filtroEstado == "inactivos" ? "active" : "")"
+                            @onclick='() => filtroEstado = "inactivos"'>Inactivos</button>
+                </div>
+                <button type="button" class="mn-btn mn-btn-small" @onclick="Cargar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7" />
+                        <path d="m20 20-3.5-3.5" />
+                    </svg>
+                    Buscar
+                </button>
+                @if (productos is not null)
+                {
+                    <span class="mn-count">@ProductosVisibles.Count producto(s)</span>
+                }
+            </div>
         </div>
 
         @if (productos is null)
         {
-            <p class="text-muted">Cargando...</p>
+            <div class="mn-grid" aria-hidden="true">
+                @for (var i = 0; i < 3; i++)
+                {
+                    <div class="mn-skeleton">
+                        <div class="mn-skeleton-media"></div>
+                        <div class="mn-skeleton-line"></div>
+                        <div class="mn-skeleton-line short"></div>
+                    </div>
+                }
+            </div>
         }
         else if (productos.Count == 0)
         {
-            <div class="rc-empty">
-                <p>Aún no tienes productos. Crea el primero con “Nuevo producto”.</p>
+            <div class="mn-empty">
+                <span class="mn-empty-icon">🍽️</span>
+                <h2>Tu menú está esperando su primer producto</h2>
+                <p>Crea una ficha, agrégale una foto y empieza a controlar su costo y margen.</p>
+                <button type="button" class="mn-btn mn-btn-primary" @onclick="Nuevo">+ Crear mi primer producto</button>
+            </div>
+        }
+        else if (ProductosVisibles.Count == 0)
+        {
+            <div class="mn-empty mn-empty-small">
+                <span class="mn-empty-icon">🔎</span>
+                <h2>No encontramos productos con ese filtro</h2>
+                <p>Prueba con otra búsqueda o vuelve a ver todos los productos.</p>
+                <button type="button" class="mn-btn mn-btn-ghost" @onclick="LimpiarFiltros">Ver todos</button>
             </div>
         }
         else
         {
-            <div class="rc-card">
-                <div class="table-responsive">
-                    <table class="table cs-table menu-tabla align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th>Producto</th>
-                                <th class="text-end">Precio venta</th>
-                                <th class="text-end">Costo directo</th>
-                                <th class="text-end">Margen directo</th>
-                                <th>Estado</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var p in productos)
+            <div class="mn-grid">
+                @foreach (var p in ProductosVisibles)
+                {
+                    <article class="mn-card @(p.Activo ? "" : "mn-card-inactive")"
+                             @onclick="() => VerDetalle(p.Id)">
+                        <div class="mn-card-media">
+                            @if (!string.IsNullOrWhiteSpace(p.ImagenUrl))
                             {
-                                <tr class="@(p.Activo ? "" : "cs-inactivo")">
-                                    <td>
-                                        <strong>@p.Nombre</strong>
-                                        <br /><small class="text-muted">@p.NumRecetas receta(s)</small>
-                                    </td>
-                                    <td class="text-end">@(p.PrecioVenta.HasValue ? Formato.Moneda(p.PrecioVenta.Value) : "—")</td>
-                                    <td class="text-end">@Formato.Moneda(p.CostoDirecto)</td>
-                                    <td class="text-end">
-                                        @if (p.MargenDirecto.HasValue)
-                                        {
-                                            <span title="Margen sobre el costo directo, sin costos fijos">
-                                                @p.MargenDirecto.Value.ToString("0.##") %
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span>—</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-sm @(p.Activo ? "btn-outline-success" : "btn-outline-secondary")"
-                                                @onclick="() => CambiarEstado(p)" title="Clic para activar/desactivar">
-                                            @(p.Activo ? "Activo" : "Inactivo")
-                                        </button>
-                                    </td>
-                                    <td class="text-end">
-                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => VerDetalle(p.Id)">Detalle</button>
-                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => Editar(p)">Editar</button>
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => PedirEliminar(p)">Eliminar</button>
-                                    </td>
-                                </tr>
+                                <img src="@Api.UrlImagen(p.ImagenUrl)" alt="@p.Nombre" loading="lazy" />
                             }
-                        </tbody>
-                    </table>
-                </div>
+                            else
+                            {
+                                <div class="mn-card-placeholder">
+                                    <span>🍽️</span>
+                                    <small>Sin foto</small>
+                                </div>
+                            }
+                            <div class="mn-card-badges">
+                                <span class="mn-badge @(p.Activo ? "mn-badge-active" : "mn-badge-inactive")">
+                                    @(p.Activo ? "Activo" : "Inactivo")
+                                </span>
+                                <span class="mn-badge mn-badge-id">#@p.Id</span>
+                            </div>
+                            <div class="mn-card-actions">
+                                <button type="button" title="Ver detalle" aria-label="Ver detalle de @p.Nombre"
+                                        @onclick="() => VerDetalle(p.Id)" @onclick:stopPropagation="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                </button>
+                                <button type="button" title="Editar" aria-label="Editar @p.Nombre"
+                                        @onclick="() => Editar(p)" @onclick:stopPropagation="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M12 20h9" />
+                                        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                                    </svg>
+                                </button>
+                                <button type="button" class="danger" title="Eliminar" aria-label="Eliminar @p.Nombre"
+                                        @onclick="() => PedirEliminar(p)" @onclick:stopPropagation="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mn-card-body">
+                            <div class="mn-card-heading">
+                                <h3 title="@p.Nombre">@p.Nombre</h3>
+                                <span>@p.NumRecetas receta(s)</span>
+                            </div>
+                            <div class="mn-card-kpis">
+                                <div>
+                                    <small>Precio venta</small>
+                                    <strong>@(p.PrecioVenta.HasValue ? Formato.Moneda(p.PrecioVenta.Value) : "—")</strong>
+                                </div>
+                                <div>
+                                    <small>Costo directo</small>
+                                    <strong>@Formato.Moneda(p.CostoDirecto)</strong>
+                                </div>
+                                <div>
+                                    <small>Margen</small>
+                                    <strong class="@ClaseMargen(p.MargenDirecto)">
+                                        @(p.MargenDirecto.HasValue ? $"{p.MargenDirecto.Value:0.#} %" : "—")
+                                    </strong>
+                                </div>
+                            </div>
+                            <div class="mn-card-footer">
+                                <button type="button"
+                                        class="mn-status-btn @(p.Activo ? "is-active" : "is-inactive")"
+                                        title="Clic para activar o desactivar"
+                                        @onclick="() => CambiarEstado(p)" @onclick:stopPropagation="true">
+                                    <span></span>
+                                    @(p.Activo ? "Activo" : "Inactivo")
+                                </button>
+                                <button type="button" class="mn-detail-link"
+                                        @onclick="() => VerDetalle(p.Id)" @onclick:stopPropagation="true">
+                                    Ver detalle
+                                    <span aria-hidden="true">→</span>
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+                }
             </div>
-            <p class="text-muted mt-2 mb-0">
-                <small>
-                    El costo directo incluye ingredientes y empaques; es la base del margen y del precio sugerido.
-                    Usa “Actualizar costos” para recalcularlo con los precios actuales de los insumos; el precio de venta no se modifica automáticamente.
-                    Los costos fijos se cubren con el punto de equilibrio y se analizan aparte, sin cargarlos a cada producto.
-                </small>
+
+            <p class="mn-note">
+                <strong>El costo directo</strong> incluye ingredientes y empaques; es la base del margen y del
+                precio sugerido. Usa “Actualizar costos” para recalcularlo con los precios actuales de los insumos;
+                el precio de venta no se modifica automáticamente.
             </p>
         }
     }
@@ -134,15 +294,41 @@
 @code {
     private List<ProductoMenuDto>? productos;
     private ProductoMenuDetalleDto? editando, aEliminar;
-    private bool mostrarForm, mostrarConfirm, incluirInactivos = true, actualizandoCostos;
+    private bool mostrarForm, mostrarConfirm, actualizandoCostos;
     private string? busqueda, error, mensajeOk;
+    private string filtroEstado = "todos";
     private Guid formKey = Guid.NewGuid();
+
+    private int Activos => productos?.Count(p => p.Activo) ?? 0;
+    private int ConFoto => productos?.Count(p => !string.IsNullOrWhiteSpace(p.ImagenUrl)) ?? 0;
+
+    private decimal? MargenPromedio
+    {
+        get
+        {
+            var margenes = productos?
+                .Where(p => p.MargenDirecto.HasValue)
+                .Select(p => p.MargenDirecto!.Value)
+                .ToList();
+            return margenes is { Count: > 0 } ? margenes.Average() : null;
+        }
+    }
+
+    private List<ProductoMenuDto> ProductosVisibles =>
+        productos is null
+            ? new()
+            : productos.Where(p => filtroEstado switch
+            {
+                "activos" => p.Activo,
+                "inactivos" => !p.Activo,
+                _ => true
+            }).ToList();
 
     protected override async Task OnInitializedAsync() => await Cargar();
 
     private async Task Cargar()
     {
-        var res = await Api.ListarAsync(busqueda, incluirInactivos);
+        var res = await Api.ListarAsync(busqueda, incluirInactivos: true);
         if (res.Exito) { productos = res.Datos; error = null; }
         else { productos = new(); error = res.Mensaje; }
     }
@@ -161,9 +347,7 @@
             // precios actuales de los insumos; el precio de venta no se modifica.
             await Cargar();
             if (error is null)
-            {
                 mensajeOk = "Costos y márgenes actualizados. Los precios de venta no se modificaron.";
-            }
         }
         catch
         {
@@ -175,7 +359,17 @@
         }
     }
 
-    private async Task BuscarConEnter(KeyboardEventArgs e) { if (e.Key == "Enter") await Cargar(); }
+    private async Task BuscarConEnter(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await Cargar();
+    }
+
+    private async Task LimpiarFiltros()
+    {
+        busqueda = null;
+        filtroEstado = "todos";
+        await Cargar();
+    }
 
     private void Nuevo() { editando = null; AbrirForm(); }
 
@@ -219,11 +413,12 @@
         // Se elimina con el mismo DTO de detalle para confirmar el nombre.
         aEliminar = new ProductoMenuDetalleDto
         {
-            Id = p.Id, Nombre = p.Nombre, PrecioVenta = p.PrecioVenta,
+            Id = p.Id, Nombre = p.Nombre, ImagenUrl = p.ImagenUrl, PrecioVenta = p.PrecioVenta,
             CostoTotal = p.CostoTotal, Activo = p.Activo
         };
         mostrarConfirm = true;
     }
+
     private void CancelarEliminar() { mostrarConfirm = false; aEliminar = null; }
 
     private async Task ConfirmarEliminar()
@@ -235,4 +430,12 @@
         aEliminar = null;
         await Cargar();
     }
+
+    private static string ClaseMargen(decimal? margen) => margen switch
+    {
+        null => "mn-value-muted",
+        < 0 => "mn-value-danger",
+        < 15 => "mn-value-warning",
+        _ => "mn-value-success"
+    };
 }

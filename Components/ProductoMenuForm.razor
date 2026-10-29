@@ -12,24 +12,32 @@
     <EditForm Model="modelo" OnValidSubmit="Guardar" OnInvalidSubmit="AlInvalido" class="rc-card-body" novalidate>
         <DataAnnotationsValidator />
 
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label class="rc-label">Nombre * <small class="text-muted">(@(modelo.Nombre?.Length ?? 0)/75)</small></label>
-                <InputText class="form-control" @bind-Value="modelo.Nombre" maxlength="75"
-                           placeholder="Ej: Caja Mixta de Panes" />
-                <ValidationMessage For="() => modelo.Nombre" class="rc-error" />
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <label class="rc-label">Foto del producto</label>
+                <ImageCropper @ref="cropper" ImagenActualUrl="@MenuApi.UrlImagen(imagenActual)" />
             </div>
-            <div class="col-md-3">
-                <label class="rc-label">Costo directo</label>
-                <input class="form-control" readonly
-                       value="@(costoPreview is not null ? Formato.Moneda(costoPreview.CostoDirecto) : (calculando ? "Calculando..." : "$ 0"))"
-                       placeholder="$ 0" />
-                <small class="text-muted">Recetas + empaques. Los fijos se muestran aparte.</small>
-            </div>
-            <div class="col-md-3 d-flex align-items-end">
-                <div class="form-check">
-                    <InputCheckbox class="form-check-input" id="pm-activo" @bind-Value="modelo.Activo" />
-                    <label class="form-check-label" for="pm-activo">Activo (vigente en el menú)</label>
+            <div class="col-lg-8">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="rc-label">Nombre * <small class="text-muted">(@(modelo.Nombre?.Length ?? 0)/75)</small></label>
+                        <InputText class="form-control" @bind-Value="modelo.Nombre" maxlength="75"
+                                   placeholder="Ej: Caja Mixta de Panes" />
+                        <ValidationMessage For="() => modelo.Nombre" class="rc-error" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="rc-label">Costo directo</label>
+                        <input class="form-control" readonly
+                               value="@(costoPreview is not null ? Formato.Moneda(costoPreview.CostoDirecto) : (calculando ? "Calculando..." : "$ 0"))"
+                               placeholder="$ 0" />
+                        <small class="text-muted">Recetas + empaques. Los fijos se muestran aparte.</small>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" id="pm-activo" @bind-Value="modelo.Activo" />
+                            <label class="form-check-label" for="pm-activo">Activo (vigente en el menú)</label>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -224,9 +232,10 @@
     private List<RecetaDto> recetasDisponibles = new();
     private List<InsumoOpcionDto> insumosDisponibles = new();
     private bool guardando, calculando, sugiriendo;
-    private string? errorForm, errorRecetas, errorSugerido;
+    private string? errorForm, errorRecetas, errorSugerido, imagenActual;
     private CostoProductoDto? costoPreview;
     private PrecioSugeridoProductoDto? precioSugerido;
+    private ImageCropper? cropper;
     private decimal margenSugerido = 30;
     private bool incluirFijosPrecio;
     private System.Threading.CancellationTokenSource? debounceCts;
@@ -236,6 +245,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        imagenActual = Editando?.ImagenUrl;
+
         var resRec = await RecetaApi.ListarAsync(null);
         if (resRec.Exito && resRec.Datos is not null) recetasDisponibles = resRec.Datos;
         insumosDisponibles = await RecetaApi.ListarInsumosAsync();
@@ -480,9 +491,37 @@
                 InsumosDirectos = empaques
             });
         }
-        guardando = false;
+        if (!res.Exito) { errorForm = res.Mensaje; guardando = false; return; }
 
-        if (!res.Exito) { errorForm = res.Mensaje; return; }
-        await OnGuardado.InvokeAsync(Editando is null ? "Producto creado correctamente." : "Producto actualizado correctamente.");
+        var id = res.Datos!.Id;
+        string? aviso = null;
+
+        if (cropper?.HayImagenNueva == true)
+        {
+            try
+            {
+                var bytes = await cropper.ExportarAsync();
+                if (bytes is not null)
+                {
+                    var img = await MenuApi.SubirImagenAsync(id, bytes, "producto.jpg", "image/jpeg");
+                    if (!img.Exito)
+                        aviso = $"El producto se guardó, pero la imagen no se pudo subir: {img.Mensaje}";
+                }
+            }
+            catch
+            {
+                aviso = "El producto se guardó, pero no se pudo procesar la imagen.";
+            }
+        }
+        else if (cropper?.QuitarImagenActual == true && Editando?.ImagenUrl is not null)
+        {
+            var img = await MenuApi.EliminarImagenAsync(id);
+            if (!img.Exito)
+                aviso = $"El producto se guardó, pero la imagen no se pudo eliminar: {img.Mensaje}";
+        }
+
+        guardando = false;
+        await OnGuardado.InvokeAsync(aviso ??
+            (Editando is null ? "Producto creado correctamente." : "Producto actualizado correctamente."));
     }
 }
