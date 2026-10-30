@@ -9,7 +9,11 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-var apiUrl = builder.Configuration["ApiSettings:BaseUrl"]!;
+var apiUrl = builder.Configuration["ApiSettings:BaseUrl"];
+if (string.IsNullOrWhiteSpace(apiUrl))
+{
+    apiUrl = "https://chefmetrics-backend.onrender.com";
+}
 builder.Services.AddHttpClient<IAuthService, AuthService>(c => c.BaseAddress = new Uri(apiUrl));
 builder.Services.AddScoped<AuthService>(sp => (AuthService)sp.GetRequiredService<IAuthService>());
 builder.Services.AddScoped<PerfilService>();
