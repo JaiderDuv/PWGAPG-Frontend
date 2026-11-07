@@ -19,6 +19,13 @@ namespace PWGAPG_Frontend.Services
         public string DescripcionEmpresa { get; private set; } = string.Empty;
         public string UrlFotoPerfil { get; private set; } = "images/default-avatar.png";
         public string NombreDuenio { get; private set; } = string.Empty;
+        public string Rol { get; private set; } = string.Empty;
+        public string TipoCuenta { get; private set; } = "emprendedor";
+        public int? NegocioId { get; private set; }
+        public bool EsEmprendedor => !string.Equals(TipoCuenta, "empleado", StringComparison.OrdinalIgnoreCase);
+        public bool EsChef => string.Equals(Rol, "Chef", StringComparison.OrdinalIgnoreCase);
+        public bool EsCajero => string.Equals(Rol, "Cajero", StringComparison.OrdinalIgnoreCase);
+        public string RutaInicio => EsEmprendedor ? "dashboard-empresa" : (EsChef ? "recetas" : "menu");
 
         public event Action? OnChange;
 
@@ -58,7 +65,8 @@ namespace PWGAPG_Frontend.Services
                 if (resultado is { Exito: true })
                 {
                     await GuardarSesionAsync(resultado);
-                    await RefrescarDatosPersonalesAsync();
+                    if (EsEmprendedor)
+                        await RefrescarDatosPersonalesAsync();
                     NotifyStateChanged();
                 }
 
@@ -84,12 +92,19 @@ namespace PWGAPG_Frontend.Services
 
             IsAuthenticated = true;
             NombreEmpresa = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "nombreEmpresa") ?? string.Empty;
+            Rol = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "rol") ?? string.Empty;
+            TipoCuenta = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "tipoCuenta") ?? "emprendedor";
+            var negocioGuardado = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "negocioId");
+            NegocioId = int.TryParse(negocioGuardado, out var negocioId) ? negocioId : null;
 
             var onboardingGuardado = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "onboardingCompletado");
             OnboardingCompletado = onboardingGuardado == "True";
 
-            await ActualizarOnboardingCompletadoAsync();
-            await RefrescarDatosPersonalesAsync();
+            if (EsEmprendedor)
+            {
+                await ActualizarOnboardingCompletadoAsync();
+                await RefrescarDatosPersonalesAsync();
+            }
 
             NotifyStateChanged();
         }
@@ -345,10 +360,19 @@ namespace PWGAPG_Frontend.Services
 
             IsAuthenticated = true;
             NombreEmpresa = resultado.NombreEmprendimiento ?? string.Empty;
-            OnboardingCompletado = resultado.OnboardingCompletado;
+            TipoCuenta = string.IsNullOrWhiteSpace(resultado.TipoCuenta) ? "emprendedor" : resultado.TipoCuenta;
+            Rol = string.IsNullOrWhiteSpace(resultado.Rol) ? (EsEmprendedor ? "Emprendedor" : "Empleado") : resultado.Rol;
+            NegocioId = resultado.NegocioId;
+            OnboardingCompletado = !EsEmprendedor || resultado.OnboardingCompletado;
 
             await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", accessToken);
             await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "nombreEmpresa", NombreEmpresa);
+            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "rol", Rol);
+            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "tipoCuenta", TipoCuenta);
+            if (NegocioId.HasValue)
+                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "negocioId", NegocioId.Value.ToString());
+            else
+                await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "negocioId");
             await _jsRuntime.InvokeVoidAsync(
                 "localStorage.setItem", "onboardingCompletado", OnboardingCompletado.ToString());
 
@@ -369,6 +393,9 @@ namespace PWGAPG_Frontend.Services
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "refreshToken");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "nombreEmpresa");
+            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "rol");
+            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "tipoCuenta");
+            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "negocioId");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "onboardingCompletado");
 
             IsAuthenticated = false;
@@ -376,6 +403,9 @@ namespace PWGAPG_Frontend.Services
             DescripcionEmpresa = string.Empty;
             UrlFotoPerfil = "images/default-avatar.png";
             NombreDuenio = string.Empty;
+            Rol = string.Empty;
+            TipoCuenta = "emprendedor";
+            NegocioId = null;
             OnboardingCompletado = false;
 
             NotifyStateChanged();

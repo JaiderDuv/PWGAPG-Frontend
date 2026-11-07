@@ -135,6 +135,36 @@ public sealed class PerfilService
             {
                 return message.GetString();
             }
+
+            if (document.RootElement.TryGetProperty("detail", out var detail) &&
+                detail.ValueKind == JsonValueKind.String)
+            {
+                return detail.GetString();
+            }
+
+            if (document.RootElement.TryGetProperty("errors", out var errors) &&
+                errors.ValueKind == JsonValueKind.Object)
+            {
+                var mensajesValidacion = errors.EnumerateObject()
+                    .SelectMany(error => error.Value.ValueKind == JsonValueKind.Array
+                        ? error.Value.EnumerateArray()
+                            .Where(mensaje => mensaje.ValueKind == JsonValueKind.String)
+                            .Select(mensaje => $"{error.Name}: {mensaje.GetString()}")
+                        : Enumerable.Empty<string>())
+                    .Where(mensaje => !string.IsNullOrWhiteSpace(mensaje))
+                    .Take(3)
+                    .ToList();
+
+                if (mensajesValidacion.Count > 0)
+                {
+                    return string.Join(" ", mensajesValidacion);
+                }
+            }
+
+            if (document.RootElement.TryGetProperty("title", out var title))
+            {
+                return title.GetString();
+            }
         }
         catch (JsonException)
         {

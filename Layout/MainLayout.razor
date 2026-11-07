@@ -17,13 +17,25 @@
 
         @if (AuthService.IsAuthenticated)
         {
-            <NavLink class="nav-link" href="insumos">Insumos</NavLink>
-            <NavLink class="nav-link" href="proveedores">Proveedores</NavLink>
-            <NavLink class="nav-link" href="recetas">Recetas</NavLink>
-            <NavLink class="nav-link" href="menu">Menú</NavLink>
-            <NavLink class="nav-link" href="menu/evaluacion">Márgenes</NavLink>
-            <NavLink class="nav-link" href="costos-fijos">Costos fijos</NavLink>
-            <NavLink class="nav-link" href="simulador">Simulador</NavLink>
+            @if (AuthService.EsEmprendedor)
+            {
+                <NavLink class="nav-link" href="insumos">Insumos</NavLink>
+                <NavLink class="nav-link" href="proveedores">Proveedores</NavLink>
+                <NavLink class="nav-link" href="recetas">Recetas</NavLink>
+                <NavLink class="nav-link" href="menu">Menú</NavLink>
+                <NavLink class="nav-link" href="menu/evaluacion">Márgenes</NavLink>
+                <NavLink class="nav-link" href="costos-fijos">Costos fijos</NavLink>
+                <NavLink class="nav-link" href="simulador">Simulador</NavLink>
+            }
+            else if (AuthService.EsChef)
+            {
+                <NavLink class="nav-link" href="recetas">Recetas</NavLink>
+                <NavLink class="nav-link" href="menu">Menú</NavLink>
+            }
+            else if (AuthService.EsCajero)
+            {
+                <NavLink class="nav-link" href="menu">Menú</NavLink>
+            }
 
             <div class="user-profile-menu">
                 <button type="button" class="avatar-btn" @onclick="ToggleMenu" aria-label="Menú de usuario">
@@ -42,18 +54,16 @@
                     <div class="dropdown-menu-custom shadow-lg">
                         <div class="dropdown-header-custom">
                             <p class="dropdown-user-name">@(string.IsNullOrWhiteSpace(AuthService.NombreDuenio) ? "Usuario" : AuthService.NombreDuenio)</p>
-                            <span class="dropdown-user-role">EMPRENDEDOR</span>
+                            <span class="dropdown-user-role">@AuthService.Rol</span>
                         </div>
 
                         <div class="dropdown-divider"></div>
 
-                        <NavLink class="dropdown-item-custom" href="editar-perfil-usuario" @onclick="() => mostrarMenu = false">
-                            Mi Perfil
-                        </NavLink>
-
-                        <NavLink class="dropdown-item-custom" href="editar-perfil" @onclick="() => mostrarMenu = false">
-                            Mi Emprendimiento
-                        </NavLink>
+                        @if (AuthService.EsEmprendedor)
+                        {
+                            <NavLink class="dropdown-item-custom" href="editar-perfil-usuario" @onclick="() => mostrarMenu = false">Mi Perfil</NavLink>
+                            <NavLink class="dropdown-item-custom" href="editar-perfil" @onclick="() => mostrarMenu = false">Mi Emprendimiento</NavLink>
+                        }
 
                         <div class="dropdown-divider"></div>
 

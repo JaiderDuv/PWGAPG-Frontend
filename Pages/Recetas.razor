@@ -1,10 +1,12 @@
 ﻿@page "/recetas"
+@attribute [Authorize(Roles = "Emprendedor,Chef")]
 @using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Services
 @using PWGAPG_Frontend.Components
 @using System.Net
 @using System.Text
 @inject RecetaApiService Api
+@inject AuthService AuthService
 @inject IJSRuntime JS
 
 <div class="rc-page">
@@ -14,7 +16,7 @@
             <h1 class="rc-title">Mis recetas</h1>
             <p class="rc-subtitle">Estandariza tus recetas y conoce lo que cuesta cada porción.</p>
         </div>
-        @if (!mostrarForm)
+        @if (!mostrarForm && AuthService.EsEmprendedor)
         {
             <div class="d-flex gap-2 flex-wrap">
                 <button class="btn btn-outline-secondary" @onclick="ActualizarCostosAsync"
@@ -36,7 +38,7 @@
         <div class="rc-alert rc-alert-error" role="alert">@error</div>
     }
 
-    @if (mostrarForm)
+    @if (mostrarForm && AuthService.EsEmprendedor)
     {
         <RecetaForm @key="formKey" Editando="editando" Insumos="insumos"
                     OnGuardado="AlGuardar" OnInsumoCreado="AlCrearInsumo" OnCancelar="CerrarForm" />
@@ -50,7 +52,10 @@
         <div class="rc-empty">
             <span>🍽️</span>
             <p>Aún no tienes recetas. Crea la primera.</p>
-            <button class="btn btn-primary btn-sm" @onclick="Nueva">+ Nueva receta</button>
+            @if (AuthService.EsEmprendedor)
+            {
+                <button class="btn btn-primary btn-sm" @onclick="Nueva">+ Nueva receta</button>
+            }
         </div>
     }
     else
@@ -163,7 +168,7 @@
             <div class="rc-grid">
                 @foreach (var r in lista)
                 {
-                    <RecetaCard @key="r.Id" Receta="r" Imagen="@Api.UrlImagen(r.ImagenUrl)"
+                    <RecetaCard @key="r.Id" Receta="r" Imagen="@Api.UrlImagen(r.ImagenUrl)" SoloLectura="@(!AuthService.EsEmprendedor)"
                                 OnAbrir="() => Abrir(r)" OnEditar="() => Editar(r)" OnEliminar="() => PedirEliminar(r)" />
                 }
             </div>
@@ -184,7 +189,7 @@
                         <div id="@rid" class="rc-row-track">
                             @foreach (var r in fila.Items)
                             {
-                                <RecetaCard @key="r.Id" Receta="r" Imagen="@Api.UrlImagen(r.ImagenUrl)"
+                                <RecetaCard @key="r.Id" Receta="r" Imagen="@Api.UrlImagen(r.ImagenUrl)" SoloLectura="@(!AuthService.EsEmprendedor)"
                                             OnAbrir="() => Abrir(r)" OnEditar="() => Editar(r)" OnEliminar="() => PedirEliminar(r)" />
                             }
                         </div>
@@ -200,13 +205,14 @@
 {
     <RecetaDetalle @key="detalle.Id" Receta="detalle" Imagen="@Api.UrlImagen(detalle.ImagenUrl)"
                    RefreshToken="detalleRefreshToken" Actualizando="actualizandoCostos"
+                   SoloLectura="@(!AuthService.EsEmprendedor)"
                    OnActualizar="ActualizarCostosAsync"
                    OnCerrar="CerrarDetalle"
                    OnEditar="() => Editar(detalle!)"
                    OnEliminar="() => PedirEliminar(detalle!)" />
 }
 
-<ConfirmDialog Visible="mostrarConfirm"
+<ConfirmDialog Visible="@(AuthService.EsEmprendedor && mostrarConfirm)"
                Mensaje="@($"¿Eliminar la receta '{aEliminar?.Nombre}' para siempre? Esta acción no se puede deshacer.")"
                OnConfirmar="ConfirmarEliminar"
                OnCancelar="CancelarEliminar" />
@@ -406,8 +412,16 @@
     // ---------- Carga y acciones ----------
     protected override async Task OnInitializedAsync()
     {
-        insumos = await Api.ListarInsumosAsync();
-        await Cargar();
+        if (!AuthService.EsEmprendedor)
+        {
+            await Cargar();
+            return;
+        }
+
+        var cargaInsumos = Api.ListarInsumosAsync();
+        var cargaRecetas = Cargar();
+        await Task.WhenAll(cargaInsumos, cargaRecetas);
+        insumos = await cargaInsumos;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -430,7 +444,7 @@
 
     private async Task ActualizarCostosAsync()
     {
-        if (actualizandoCostos) return;
+        if (!AuthService.EsEmprendedor || actualizandoCostos) return;
 
         actualizandoCostos = true;
         mensajeOk = null;
@@ -440,8 +454,10 @@
         {
             // Los costos dependen de los precios vigentes de los insumos.
             // Se recargan ambos para que la vista y el formulario usen la misma información.
-            insumos = await Api.ListarInsumosAsync();
-            await Cargar();
+            var cargaInsumos = Api.ListarInsumosAsync();
+            var cargaRecetas = Cargar();
+            await Task.WhenAll(cargaInsumos, cargaRecetas);
+            insumos = await cargaInsumos;
 
             if (detalle is not null && recetas is not null)
             {
@@ -467,11 +483,25 @@
     private void Abrir(RecetaDto r) => detalle = r;
     private void CerrarDetalle() => detalle = null;
 
-    private void Nueva() { editando = null; detalle = null; AbrirForm(); }
-    private void Editar(RecetaDto r) { editando = r; detalle = null; AbrirForm(); }
+    private void Nueva()
+    {
+        if (!AuthService.EsEmprendedor) return;
+        editando = null;
+        detalle = null;
+        AbrirForm();
+    }
+
+    private void Editar(RecetaDto r)
+    {
+        if (!AuthService.EsEmprendedor) return;
+        editando = r;
+        detalle = null;
+        AbrirForm();
+    }
 
     private void AbrirForm()
     {
+        if (!AuthService.EsEmprendedor) return;
         mensajeOk = error = null;
         formKey = Guid.NewGuid();
         mostrarForm = true;
@@ -489,17 +519,25 @@
 
     private async Task AlGuardar(string? aviso)
     {
+        if (!AuthService.EsEmprendedor) return;
         mostrarForm = false;
         mensajeOk = aviso ?? (editando is null ? "Receta creada correctamente." : "Receta actualizada correctamente.");
         await Cargar();
     }
 
     // Se cierra el detalle antes de confirmar para que el diálogo quede encima.
-    private void PedirEliminar(RecetaDto r) { aEliminar = r; detalle = null; mostrarConfirm = true; }
+    private void PedirEliminar(RecetaDto r)
+    {
+        if (!AuthService.EsEmprendedor) return;
+        aEliminar = r;
+        detalle = null;
+        mostrarConfirm = true;
+    }
     private void CancelarEliminar() { mostrarConfirm = false; aEliminar = null; }
 
     private async Task ConfirmarEliminar()
     {
+        if (!AuthService.EsEmprendedor) return;
         mostrarConfirm = false;
         var res = await Api.EliminarAsync(aEliminar!.Id);
         if (res.Exito) { mensajeOk = "Receta eliminada correctamente."; error = null; }

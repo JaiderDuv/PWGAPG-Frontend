@@ -146,7 +146,7 @@
     {
         if (AuthService.IsAuthenticated)
         {
-            Navigation.NavigateTo("dashboard-empresa", replace: true);
+                Navigation.NavigateTo(AuthService.RutaInicio, replace: true);
         }
     }
 
@@ -183,9 +183,13 @@
 
             if (resultado is { Exito: true })
             {
-                if (AuthService.OnboardingCompletado)
+                if (!AuthService.EsEmprendedor)
                 {
-                    Navigation.NavigateTo("dashboard-empresa");
+                    Navigation.NavigateTo(AuthService.RutaInicio);
+                }
+                else if (AuthService.OnboardingCompletado)
+                {
+                    Navigation.NavigateTo(AuthService.RutaInicio);
                 }
                 else
                 {

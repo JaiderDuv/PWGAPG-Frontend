@@ -1,9 +1,10 @@
 @page "/menu"
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Emprendedor,Chef,Cajero")]
 @using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Services
 @using PWGAPG_Frontend.Components
 @inject MenuApiService Api
+@inject AuthService AuthService
 @inject NavigationManager Navigation
 
 <div class="mn-page">
@@ -16,7 +17,7 @@
                 lista para compartir con tus clientes.
             </p>
         </div>
-        @if (!mostrarForm)
+        @if (!mostrarForm && AuthService.EsEmprendedor)
         {
             <div class="mn-hero-actions">
                 <button type="button" class="mn-btn mn-btn-ghost" @onclick="ActualizarCostosAsync"
@@ -49,7 +50,7 @@
         <div class="mn-alert mn-alert-error" role="alert">@error</div>
     }
 
-    @if (mostrarForm)
+    @if (mostrarForm && AuthService.EsEmprendedor)
     {
         <div class="mn-form-shell">
             <ProductoMenuForm @key="formKey" Editando="editando"
@@ -172,9 +173,12 @@
         {
             <div class="mn-empty">
                 <span class="mn-empty-icon">🍽️</span>
-                <h2>Tu menú está esperando su primer producto</h2>
-                <p>Crea una ficha, agrégale una foto y empieza a controlar su costo y margen.</p>
-                <button type="button" class="mn-btn mn-btn-primary" @onclick="Nuevo">+ Crear mi primer producto</button>
+                <h2>@(AuthService.EsEmprendedor ? "Tu menú está esperando su primer producto" : "Aún no hay productos en el menú")</h2>
+                @if (AuthService.EsEmprendedor)
+                {
+                    <p>Crea una ficha, agrégale una foto y empieza a controlar su costo y margen.</p>
+                    <button type="button" class="mn-btn mn-btn-primary" @onclick="Nuevo">+ Crear mi primer producto</button>
+                }
             </div>
         }
         else if (ProductosVisibles.Count == 0)
@@ -219,21 +223,24 @@
                                         <circle cx="12" cy="12" r="3" />
                                     </svg>
                                 </button>
-                                <button type="button" title="Editar" aria-label="Editar @p.Nombre"
-                                        @onclick="() => Editar(p)" @onclick:stopPropagation="true">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                        <path d="M12 20h9" />
-                                        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                                    </svg>
-                                </button>
-                                <button type="button" class="danger" title="Eliminar" aria-label="Eliminar @p.Nombre"
-                                        @onclick="() => PedirEliminar(p)" @onclick:stopPropagation="true">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                        <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5" />
-                                    </svg>
-                                </button>
+                                @if (AuthService.EsEmprendedor)
+                                {
+                                    <button type="button" title="Editar" aria-label="Editar @p.Nombre"
+                                            @onclick="() => Editar(p)" @onclick:stopPropagation="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M12 20h9" />
+                                            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="danger" title="Eliminar" aria-label="Eliminar @p.Nombre"
+                                            @onclick="() => PedirEliminar(p)" @onclick:stopPropagation="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5" />
+                                        </svg>
+                                    </button>
+                                }
                             </div>
                         </div>
                         <div class="mn-card-body">
@@ -258,13 +265,23 @@
                                 </div>
                             </div>
                             <div class="mn-card-footer">
-                                <button type="button"
-                                        class="mn-status-btn @(p.Activo ? "is-active" : "is-inactive")"
-                                        title="Clic para activar o desactivar"
-                                        @onclick="() => CambiarEstado(p)" @onclick:stopPropagation="true">
-                                    <span></span>
-                                    @(p.Activo ? "Activo" : "Inactivo")
-                                </button>
+                                @if (AuthService.EsEmprendedor)
+                                {
+                                    <button type="button"
+                                            class="mn-status-btn @(p.Activo ? "is-active" : "is-inactive")"
+                                            title="Clic para activar o desactivar"
+                                            @onclick="() => CambiarEstado(p)" @onclick:stopPropagation="true">
+                                        <span></span>
+                                        @(p.Activo ? "Activo" : "Inactivo")
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="mn-status-btn @(p.Activo ? "is-active" : "is-inactive")" aria-label="Estado: @(p.Activo ? "activo" : "inactivo")">
+                                        <span></span>
+                                        @(p.Activo ? "Activo" : "Inactivo")
+                                    </span>
+                                }
                                 <button type="button" class="mn-detail-link"
                                         @onclick="() => VerDetalle(p.Id)" @onclick:stopPropagation="true">
                                     Ver detalle
@@ -276,16 +293,19 @@
                 }
             </div>
 
-            <p class="mn-note">
-                <strong>El costo directo</strong> incluye ingredientes y empaques; es la base del margen y del
-                precio sugerido. Usa “Actualizar costos” para recalcularlo con los precios actuales de los insumos;
-                el precio de venta no se modifica automáticamente.
-            </p>
+            @if (AuthService.EsEmprendedor)
+            {
+                <p class="mn-note">
+                    <strong>El costo directo</strong> incluye ingredientes y empaques; es la base del margen y del
+                    precio sugerido. Usa “Actualizar costos” para recalcularlo con los precios actuales de los insumos;
+                    el precio de venta no se modifica automáticamente.
+                </p>
+            }
         }
     }
 </div>
 
-<ConfirmDialog Visible="mostrarConfirm"
+<ConfirmDialog Visible="@(AuthService.EsEmprendedor && mostrarConfirm)"
                Mensaje="@($"¿Eliminar el producto '{aEliminar?.Nombre}' para siempre? Esta acción no se puede deshacer.")"
                OnConfirmar="ConfirmarEliminar"
                OnCancelar="CancelarEliminar" />
@@ -334,7 +354,7 @@
 
     private async Task ActualizarCostosAsync()
     {
-        if (actualizandoCostos) return;
+        if (!AuthService.EsEmprendedor || actualizandoCostos) return;
 
         actualizandoCostos = true;
         mensajeOk = null;
@@ -370,10 +390,16 @@
         await Cargar();
     }
 
-    private void Nuevo() { editando = null; AbrirForm(); }
+    private void Nuevo()
+    {
+        if (!AuthService.EsEmprendedor) return;
+        editando = null;
+        AbrirForm();
+    }
 
     private async Task Editar(ProductoMenuDto p)
     {
+        if (!AuthService.EsEmprendedor) return;
         var res = await Api.ObtenerAsync(p.Id);
         if (!res.Exito) { error = res.Mensaje; return; }
         editando = res.Datos;
@@ -382,6 +408,7 @@
 
     private void AbrirForm()
     {
+        if (!AuthService.EsEmprendedor) return;
         mensajeOk = error = null;
         formKey = Guid.NewGuid();
         mostrarForm = true;
@@ -391,6 +418,7 @@
 
     private async Task AlGuardar(string? aviso)
     {
+        if (!AuthService.EsEmprendedor) return;
         mostrarForm = false;
         mensajeOk = aviso ?? "Producto guardado correctamente.";
         await Cargar();
@@ -400,6 +428,7 @@
 
     private async Task CambiarEstado(ProductoMenuDto p)
     {
+        if (!AuthService.EsEmprendedor) return;
         // PATCH con un solo campo: no se pierden los demás datos.
         var res = await Api.ActualizarPatchAsync(p.Id, new PatchProductoMenuDto { Activo = !p.Activo });
         if (!res.Exito) { error = res.Mensaje; return; }
@@ -409,6 +438,7 @@
 
     private void PedirEliminar(ProductoMenuDto p)
     {
+        if (!AuthService.EsEmprendedor) return;
         // Se elimina con el mismo DTO de detalle para confirmar el nombre.
         aEliminar = new ProductoMenuDetalleDto
         {
@@ -422,6 +452,7 @@
 
     private async Task ConfirmarEliminar()
     {
+        if (!AuthService.EsEmprendedor) return;
         mostrarConfirm = false;
         var res = await Api.EliminarAsync(aEliminar!.Id);
         if (res.Exito) { mensajeOk = "Producto eliminado correctamente."; error = null; }

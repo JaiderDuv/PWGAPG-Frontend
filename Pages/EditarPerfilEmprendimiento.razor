@@ -5,6 +5,7 @@
 @using PWGAPG_Frontend.Components
 @using PWGAPG_Frontend.Models
 @inject PWGAPG_Frontend.Services.PerfilService PerfilService
+@inject PWGAPG_Frontend.Services.EmpleadoApiService EmpleadoApi
 @inject PWGAPG_Frontend.Services.AuthService AuthService
 @inject NavigationManager Navigation
 
@@ -261,7 +262,10 @@
                 {
                     <div class="perfil-alerta perfil-alerta-error" role="alert">@rolesError</div>
                 }
-
+                @if (!string.IsNullOrWhiteSpace(mensajeGestionEmpleados))
+                {
+                    <div class="@(eliminacionEmpleadoExitosa ? "perfil-alerta perfil-alerta-exito" : "perfil-alerta perfil-alerta-error")" role="status">@mensajeGestionEmpleados</div>
+                }
                 @if (perfil.Empleados.Count == 0)
                 {
                     <div class="perfil-empty-state">No hay empleados registrados. Invita por correo a quienes trabajan en tu negocio y asígnales un rol.</div>
@@ -274,45 +278,64 @@
                             <div class="perfil-socio-row">
                                 <div>
                                     <strong>@empleado.CorreoInvitado</strong>
-                                    <span>@NombreRol(empleado) · @(string.IsNullOrWhiteSpace(empleado.EstadoInvitacion) ? "pendiente" : empleado.EstadoInvitacion)</span>
+                                    <span>@NombreRol(empleado) · @(string.IsNullOrWhiteSpace(empleado.EstadoInvitacion) ? "pendiente" : empleado.EstadoInvitacion) · @(string.Equals(empleado.EstadoInvitacion, "pendiente", StringComparison.OrdinalIgnoreCase) ? "Acceso pendiente de aceptación" : empleado.Activo ? "Activo" : "Inactivo")</span>
                                 </div>
                                 <div class="perfil-socio-acciones">
-                                    <button type="button" class="btn-texto" @onclick="() => EditarEmpleado(empleado)">Editar</button>
-                                    <button type="button" class="btn-texto btn-texto-peligro" @onclick="() => EliminarEmpleado(empleado)">Eliminar</button>
+                                    <button type="button" class="btn-texto" @onclick="() => IniciarEdicionEmpleado(empleado)" disabled="@(actualizandoEstadoEmpleado || eliminandoEmpleado)">Editar</button>
+                                    <button type="button" class="btn-texto" @onclick="() => CambiarEstadoEmpleado(empleado)" disabled="@(actualizandoEstadoEmpleado || eliminandoEmpleado)">
+                                        @(empleado.Activo ? "Desactivar acceso" : "Activar acceso")
+                                    </button>
+                                    <button type="button" class="btn-texto btn-texto-peligro" @onclick="() => SolicitarEliminarEmpleado(empleado)" disabled="@(actualizandoEstadoEmpleado || eliminandoEmpleado)">Eliminar</button>
                                 </div>
                             </div>
                         }
                     </div>
                 }
 
-                @if (empleadoEnEdicion is not null)
+                @if (mostrarEmpleadoForm)
                 {
                     <div class="perfil-socio-editor">
                         <div class="perfil-socio-editor-heading">
-                            <strong>@(empleadoEditando ? "Editar empleado" : "Nuevo empleado")</strong>
+                            <strong>@(editandoEmpleado ? "Editar empleado" : "Nueva invitación de empleado")</strong>
                             <button type="button" class="btn-texto" @onclick="CancelarEmpleado">Cancelar</button>
                         </div>
                         <div class="perfil-grid">
                             <div class="form-group">
-                                <label class="auth-label">Correo del empleado</label>
-                                <InputText @bind-Value="empleadoEnEdicion.CorreoInvitado" type="email" class="form-control" placeholder="empleado@correo.com" />
+                                <label class="auth-label" for="correo-empleado">Correo del empleado *</label>
+                                <input id="correo-empleado" @bind="CorreoEmpleadoFormulario" @bind:event="oninput" @bind:after="LimpiarErrorCorreoEmpleado" type="email" maxlength="255" required pattern="@PatronCorreoEmpleado" autocomplete="email" class="form-control" placeholder="empleado@correo.com" />
+                                @if (ErrorCorreoEmpleado() is { } correoError) { <div class="text-danger msg-error">@correoError</div> }
+                                @if (editandoEmpleado) { <small class="text-muted">Si cambias el correo, enviaremos una nueva invitación y el acceso quedará pendiente hasta que se acepte.</small> }
                             </div>
                             <div class="form-group">
-                                <label class="auth-label">Rol</label>
-                                <InputSelect @bind-Value="empleadoEnEdicion.RolId" class="form-select">
+                                <label class="auth-label" for="rol-empleado">Rol *</label>
+                                <select id="rol-empleado" @bind="RolEmpleadoFormulario" @bind:after="LimpiarErrorRolEmpleado" class="form-select" required>
                                     <option value="0">Selecciona un rol</option>
                                     @foreach (var rol in roles)
                                     {
                                         <option value="@rol.Id">@rol.Nombre</option>
                                     }
-                                </InputSelect>
+                                </select>
+                                @if (ErrorRolEmpleado() is { } rolError) { <div class="text-danger msg-error">@rolError</div> }
+                            </div>
+                            <div class="form-group">
+                                <label class="auth-label" for="password-empleado">@(editandoEmpleado ? "Nueva contraseña" : "Contraseña *")</label>
+                                <input id="password-empleado" @bind="PasswordEmpleadoFormulario" @bind:event="oninput" @bind:after="LimpiarErroresPasswordEmpleado" type="password" minlength="8" maxlength="72" pattern="@PatronContrasenaEmpleado" autocomplete="new-password" class="form-control" required="@(!editandoEmpleado)" />
+                                @if (ErrorPasswordEmpleado() is { } passwordError) { <div class="text-danger msg-error">@passwordError</div> }
+                                <small class="text-muted">@(editandoEmpleado ? "Déjala vacía para conservar la contraseña actual." : "8–72 caracteres, con mayúscula, minúscula, número y símbolo especial.")</small>
+                            </div>
+                            <div class="form-group">
+                                <label class="auth-label" for="confirmar-password-empleado">@(editandoEmpleado ? "Confirmar nueva contraseña" : "Confirmar contraseña *")</label>
+                                <input id="confirmar-password-empleado" @bind="ConfirmarPasswordEmpleadoFormulario" @bind:event="oninput" @bind:after="LimpiarErrorConfirmacionEmpleado" type="password" minlength="8" maxlength="72" autocomplete="new-password" class="form-control" required="@(!editandoEmpleado)" />
+                                @if (ErrorConfirmarPasswordEmpleado() is { } confirmarError) { <div class="text-danger msg-error">@confirmarError</div> }
                             </div>
                         </div>
                         @if (!string.IsNullOrWhiteSpace(mensajeEmpleado))
                         {
-                            <div class="text-danger msg-error">@mensajeEmpleado</div>
+                            <div class="@(invitacionEnviada ? "perfil-alerta perfil-alerta-exito" : "perfil-alerta perfil-alerta-error")" role="status">@mensajeEmpleado</div>
                         }
-                        <button type="button" class="btn-solid btn-small" @onclick="GuardarEmpleado">Guardar empleado</button>
+                        <button type="button" class="btn-solid btn-small" @onclick="GuardarEmpleado" disabled="@enviandoInvitacion">
+                            @(enviandoInvitacion ? (editandoEmpleado ? "Guardando cambios..." : "Enviando invitación...") : (editandoEmpleado ? "Guardar cambios" : "Enviar invitación"))
+                        </button>
                     </div>
                 }
             </section>
@@ -349,10 +372,36 @@
                 </div>
             </div>
         }
+
+        @if (empleadoPendienteEliminar is not null)
+        {
+            <div class="confirm-overlay">
+                <div class="confirm-box confirm-box-advertencia" role="dialog" aria-modal="true" aria-labelledby="confirmar-eliminar-empleado-titulo">
+                    <div class="confirm-icono-advertencia" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" />
+                        </svg>
+                    </div>
+                    <h3 id="confirmar-eliminar-empleado-titulo" class="confirm-titulo-advertencia">Eliminar empleado</h3>
+                    <p class="confirm-mensaje">¿Eliminar a <strong>@empleadoPendienteEliminar.CorreoInvitado</strong>?</p>
+                    <p class="confirm-mensaje">Se borrarán su acceso y los datos asociados. Esta acción no se puede deshacer.</p>
+                    <div class="confirm-acciones">
+                        <button type="button" class="btn-outline" @onclick="CancelarEliminarEmpleado" disabled="@eliminandoEmpleado">Cancelar</button>
+                        <button type="button" class="btn-solid btn-confirmar-peligro" @onclick="ConfirmarEliminarEmpleado" disabled="@eliminandoEmpleado">
+                            @(eliminandoEmpleado ? "Eliminando..." : "Sí, eliminar")
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+
     }
 </div>
 
 @code {
+    private const string PatronCorreoEmpleado = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
+    private const string PatronContrasenaEmpleado = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,72}$";
+
     private enum FaseEdicion
     {
         ConfirmarIdentidad,
@@ -364,8 +413,15 @@
     private ConfirmarEdicionPerfilDto confirmacion = new();
     private PerfilEmprendedorDto perfil = new();
     private bool formalizadoOriginal;
-    private EmpleadoDto? empleadoEnEdicion;
-    private bool empleadoEditando;
+    private bool mostrarEmpleadoForm;
+    private bool editandoEmpleado;
+    private int? empleadoIdEnEdicion;
+    private InvitarEmpleadoDto empleadoFormulario = new();
+    private ActualizarEmpleadoDto editarEmpleadoFormulario = new();
+    private readonly Dictionary<string, string> erroresEmpleado = new(StringComparer.Ordinal);
+    private bool enviandoInvitacion;
+    private bool invitacionEnviada;
+    private bool actualizandoEstadoEmpleado;
     private List<RolDto> roles = new();
     private bool mostrarPassword;
     private bool procesando;
@@ -376,6 +432,50 @@
     private string? mensajeEmpleado;
     private string? rolesError;
     private bool mostrarConfirmDesformalizar;
+    private EmpleadoDto? empleadoPendienteEliminar;
+    private bool eliminandoEmpleado;
+    private bool eliminacionEmpleadoExitosa;
+    private string? mensajeGestionEmpleados;
+
+    private string CorreoEmpleadoFormulario
+    {
+        get => editandoEmpleado ? editarEmpleadoFormulario.Correo : empleadoFormulario.Correo;
+        set
+        {
+            if (editandoEmpleado) editarEmpleadoFormulario.Correo = value;
+            else empleadoFormulario.Correo = value;
+        }
+    }
+
+    private int RolEmpleadoFormulario
+    {
+        get => editandoEmpleado ? editarEmpleadoFormulario.RolId : empleadoFormulario.RolId;
+        set
+        {
+            if (editandoEmpleado) editarEmpleadoFormulario.RolId = value;
+            else empleadoFormulario.RolId = value;
+        }
+    }
+
+    private string PasswordEmpleadoFormulario
+    {
+        get => editandoEmpleado ? editarEmpleadoFormulario.NuevaPassword ?? string.Empty : empleadoFormulario.Password;
+        set
+        {
+            if (editandoEmpleado) editarEmpleadoFormulario.NuevaPassword = value;
+            else empleadoFormulario.Password = value;
+        }
+    }
+
+    private string ConfirmarPasswordEmpleadoFormulario
+    {
+        get => editandoEmpleado ? editarEmpleadoFormulario.ConfirmarPassword ?? string.Empty : empleadoFormulario.ConfirmarPassword;
+        set
+        {
+            if (editandoEmpleado) editarEmpleadoFormulario.ConfirmarPassword = value;
+            else empleadoFormulario.ConfirmarPassword = value;
+        }
+    }
 
     protected override void OnInitialized()
     {
@@ -563,7 +663,10 @@
             var resultado = await PerfilService.ObtenerRolesAsync();
             if (resultado.Success && resultado.Data is not null)
             {
-                roles = resultado.Data;
+                roles = resultado.Data
+                    .Where(r => string.Equals(r.Nombre, "Chef", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(r.Nombre, "Cajero", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
             }
             else
             {
@@ -592,88 +695,258 @@
 
     private void IniciarNuevoEmpleado()
     {
-        empleadoEditando = false;
-        empleadoEnEdicion = new EmpleadoDto();
+        mostrarEmpleadoForm = true;
+        editandoEmpleado = false;
+        empleadoIdEnEdicion = null;
+        empleadoFormulario = new InvitarEmpleadoDto();
+        editarEmpleadoFormulario = new ActualizarEmpleadoDto();
+        erroresEmpleado.Clear();
         mensajeEmpleado = null;
+        invitacionEnviada = false;
     }
 
-    private void EditarEmpleado(EmpleadoDto empleado)
+    private void IniciarEdicionEmpleado(EmpleadoDto empleado)
     {
-        empleadoEditando = true;
-        empleadoEnEdicion = new EmpleadoDto
+        if (!empleado.Id.HasValue) return;
+        mostrarEmpleadoForm = true;
+        editandoEmpleado = true;
+        empleadoIdEnEdicion = empleado.Id.Value;
+        editarEmpleadoFormulario = new ActualizarEmpleadoDto
         {
-            Id = empleado.Id,
-            CorreoInvitado = empleado.CorreoInvitado,
-            RolId = empleado.RolId,
-            NombreRol = empleado.NombreRol,
-            EstadoInvitacion = empleado.EstadoInvitacion
+            Correo = empleado.CorreoInvitado,
+            RolId = empleado.RolId
         };
+        empleadoFormulario = new InvitarEmpleadoDto();
+        erroresEmpleado.Clear();
         mensajeEmpleado = null;
+        invitacionEnviada = false;
     }
 
-    private void GuardarEmpleado()
+    private string? ErrorEmpleado(string propiedad) =>
+        erroresEmpleado.TryGetValue(propiedad, out var error) ? error : null;
+
+    private string? ErrorCorreoEmpleado() => ErrorEmpleado(editandoEmpleado
+        ? nameof(ActualizarEmpleadoDto.Correo)
+        : nameof(InvitarEmpleadoDto.Correo));
+
+    private string? ErrorRolEmpleado() => ErrorEmpleado(editandoEmpleado
+        ? nameof(ActualizarEmpleadoDto.RolId)
+        : nameof(InvitarEmpleadoDto.RolId));
+
+    private string? ErrorPasswordEmpleado() => ErrorEmpleado(editandoEmpleado
+        ? nameof(ActualizarEmpleadoDto.NuevaPassword)
+        : nameof(InvitarEmpleadoDto.Password));
+
+    private string? ErrorConfirmarPasswordEmpleado() => ErrorEmpleado(editandoEmpleado
+        ? nameof(ActualizarEmpleadoDto.ConfirmarPassword)
+        : nameof(InvitarEmpleadoDto.ConfirmarPassword));
+
+    private void LimpiarErrorEmpleado(string propiedad)
     {
-        if (empleadoEnEdicion is null)
-        {
-            return;
-        }
+        erroresEmpleado.Remove(propiedad);
+    }
 
-        var correo = empleadoEnEdicion.CorreoInvitado.Trim().ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(correo))
-        {
-            mensajeEmpleado = "El correo del empleado es obligatorio.";
-            return;
-        }
+    private void LimpiarErrorCorreoEmpleado() => LimpiarErrorEmpleado(editandoEmpleado
+        ? nameof(ActualizarEmpleadoDto.Correo)
+        : nameof(InvitarEmpleadoDto.Correo));
 
-        if (!new EmailAddressAttribute().IsValid(correo))
-        {
-            mensajeEmpleado = "Ingresa un correo válido para el empleado.";
-            return;
-        }
+    private void LimpiarErrorRolEmpleado() => LimpiarErrorEmpleado(editandoEmpleado
+        ? nameof(ActualizarEmpleadoDto.RolId)
+        : nameof(InvitarEmpleadoDto.RolId));
 
-        if (empleadoEnEdicion.RolId <= 0)
-        {
-            mensajeEmpleado = "Selecciona el rol del empleado.";
-            return;
-        }
+    private void LimpiarErrorConfirmacionEmpleado() => LimpiarErrorEmpleado(editandoEmpleado
+        ? nameof(ActualizarEmpleadoDto.ConfirmarPassword)
+        : nameof(InvitarEmpleadoDto.ConfirmarPassword));
 
-        var repetido = perfil.Empleados.Any(e =>
-            string.Equals(e.CorreoInvitado.Trim(), correo, StringComparison.OrdinalIgnoreCase) &&
-            e.Id != empleadoEnEdicion.Id);
-        if (repetido)
-        {
-            mensajeEmpleado = "Ya invitaste a ese correo en tu negocio.";
-            return;
-        }
+    private void LimpiarErroresPasswordEmpleado()
+    {
+        LimpiarErrorEmpleado(editandoEmpleado
+            ? nameof(ActualizarEmpleadoDto.NuevaPassword)
+            : nameof(InvitarEmpleadoDto.Password));
+        LimpiarErrorConfirmacionEmpleado();
+    }
 
-        empleadoEnEdicion.CorreoInvitado = correo;
+    private bool ValidarModeloEmpleado(object modelo)
+    {
+        var validaciones = new List<ValidationResult>();
+        var contexto = new ValidationContext(modelo);
+        if (Validator.TryValidateObject(modelo, contexto, validaciones, validateAllProperties: true))
+            return true;
 
-        if (empleadoEditando && empleadoEnEdicion.Id.HasValue)
+        foreach (var validacion in validaciones)
+            foreach (var miembro in validacion.MemberNames.DefaultIfEmpty(string.Empty))
+                erroresEmpleado[miembro] = validacion.ErrorMessage ?? "Revisa este campo.";
+        return false;
+    }
+
+    private async Task GuardarEmpleado()
+    {
+        erroresEmpleado.Clear();
+        mensajeEmpleado = null;
+        invitacionEnviada = false;
+
+        CorreoEmpleadoFormulario = CorreoEmpleadoFormulario.Trim().ToLowerInvariant();
+        if (editandoEmpleado)
         {
-            var indice = perfil.Empleados.FindIndex(e => e.Id == empleadoEnEdicion.Id);
-            if (indice >= 0)
+            if (!empleadoIdEnEdicion.HasValue || !ValidarModeloEmpleado(editarEmpleadoFormulario)) return;
+            var repetido = perfil.Empleados.Any(e => e.Id != empleadoIdEnEdicion &&
+                string.Equals(e.CorreoInvitado.Trim(), editarEmpleadoFormulario.Correo, StringComparison.OrdinalIgnoreCase));
+            if (repetido)
             {
-                perfil.Empleados[indice] = empleadoEnEdicion;
+                mensajeEmpleado = "Ese correo ya está asociado a otro empleado de tu negocio.";
+                return;
             }
         }
         else
         {
-            perfil.Empleados.Add(empleadoEnEdicion);
+            if (!ValidarModeloEmpleado(empleadoFormulario)) return;
+            var repetido = perfil.Empleados.Any(e =>
+                string.Equals(e.CorreoInvitado.Trim(), empleadoFormulario.Correo, StringComparison.OrdinalIgnoreCase));
+            if (repetido)
+            {
+                mensajeEmpleado = "Ya invitaste a ese correo en tu negocio.";
+                return;
+            }
         }
 
-        empleadoEnEdicion = null;
-        mensajeEmpleado = null;
+        enviandoInvitacion = true;
+        try
+        {
+            if (editandoEmpleado)
+            {
+                var resultado = await EmpleadoApi.ActualizarAsync(empleadoIdEnEdicion!.Value, editarEmpleadoFormulario);
+                if (!resultado.Exito || resultado.Datos is null)
+                {
+                    mensajeEmpleado = resultado.Mensaje ?? "No se pudieron guardar los cambios del empleado.";
+                    return;
+                }
+
+                var indice = perfil.Empleados.FindIndex(e => e.Id == empleadoIdEnEdicion.Value);
+                if (indice >= 0) perfil.Empleados[indice] = resultado.Datos;
+                invitacionEnviada = true;
+                mensajeEmpleado = resultado.Mensaje ?? "Datos del empleado actualizados.";
+                editarEmpleadoFormulario = new ActualizarEmpleadoDto
+                {
+                    Correo = resultado.Datos.CorreoInvitado,
+                    RolId = resultado.Datos.RolId
+                };
+            }
+            else
+            {
+                var resultado = await EmpleadoApi.InvitarAsync(empleadoFormulario);
+                if (!resultado.Exito || resultado.Datos is null)
+                {
+                    mensajeEmpleado = resultado.Mensaje ?? "No se pudo enviar la invitación.";
+                    return;
+                }
+
+                var empleadoInvitado = resultado.Datos;
+                // Tolera respuestas de servidores antiguos que aún no envían RolId.
+                if (empleadoInvitado.RolId <= 0)
+                {
+                    empleadoInvitado.RolId = empleadoFormulario.RolId;
+                }
+                empleadoInvitado.NombreRol ??= roles.FirstOrDefault(r => r.Id == empleadoInvitado.RolId)?.Nombre;
+                perfil.Empleados.Add(empleadoInvitado);
+                invitacionEnviada = true;
+                mensajeEmpleado = resultado.Mensaje ?? "Invitación enviada correctamente.";
+                empleadoFormulario = new InvitarEmpleadoDto();
+            }
+        }
+        catch (HttpRequestException)
+        {
+            mensajeEmpleado = "No fue posible conectar con el servidor.";
+        }
+        finally
+        {
+            enviandoInvitacion = false;
+        }
     }
 
     private void CancelarEmpleado()
     {
-        empleadoEnEdicion = null;
+        mostrarEmpleadoForm = false;
+        editandoEmpleado = false;
+        empleadoIdEnEdicion = null;
+        empleadoFormulario = new InvitarEmpleadoDto();
+        editarEmpleadoFormulario = new ActualizarEmpleadoDto();
+        erroresEmpleado.Clear();
         mensajeEmpleado = null;
+        invitacionEnviada = false;
     }
 
-    private void EliminarEmpleado(EmpleadoDto empleado)
+    private async Task CambiarEstadoEmpleado(EmpleadoDto empleado)
     {
-        perfil.Empleados.Remove(empleado);
+        if (!empleado.Id.HasValue || actualizandoEstadoEmpleado) return;
+        actualizandoEstadoEmpleado = true;
+        mensajeEmpleado = null;
+        try
+        {
+            var resultado = await EmpleadoApi.CambiarEstadoAsync(empleado.Id.Value, !empleado.Activo);
+            if (!resultado.Exito)
+            {
+                mensajeEmpleado = resultado.Mensaje ?? "No se pudo actualizar el acceso del empleado.";
+                return;
+            }
+            empleado.Activo = !empleado.Activo;
+            mensajeEmpleado = empleado.Activo
+                ? "Acceso activado."
+                : "Acceso desactivado; el empleado ya no puede iniciar sesión.";
+        }
+        catch (HttpRequestException)
+        {
+            mensajeEmpleado = "No fue posible conectar con el servidor.";
+        }
+        finally
+        {
+            actualizandoEstadoEmpleado = false;
+        }
+    }
+
+    private void SolicitarEliminarEmpleado(EmpleadoDto empleado)
+    {
+        if (!empleado.Id.HasValue || eliminandoEmpleado) return;
+        empleadoPendienteEliminar = empleado;
+        mensajeGestionEmpleados = null;
+        eliminacionEmpleadoExitosa = false;
+    }
+
+    private void CancelarEliminarEmpleado()
+    {
+        if (eliminandoEmpleado) return;
+        empleadoPendienteEliminar = null;
+    }
+
+    private async Task ConfirmarEliminarEmpleado()
+    {
+        var empleado = empleadoPendienteEliminar;
+        if (empleado?.Id is not int empleadoId || eliminandoEmpleado) return;
+
+        eliminandoEmpleado = true;
+        mensajeGestionEmpleados = null;
+        eliminacionEmpleadoExitosa = false;
+        try
+        {
+            var resultado = await EmpleadoApi.EliminarAsync(empleadoId);
+            if (!resultado.Exito)
+            {
+                mensajeGestionEmpleados = resultado.Mensaje ?? "No se pudo eliminar el empleado.";
+                return;
+            }
+
+            perfil.Empleados.Remove(empleado);
+            empleadoPendienteEliminar = null;
+            eliminacionEmpleadoExitosa = true;
+            mensajeGestionEmpleados = "Empleado y datos asociados eliminados correctamente.";
+        }
+        catch (HttpRequestException)
+        {
+            mensajeGestionEmpleados = "No fue posible conectar con el servidor.";
+        }
+        finally
+        {
+            eliminandoEmpleado = false;
+        }
     }
 
     private void VolverAlDashboard()

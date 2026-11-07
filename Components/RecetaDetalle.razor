@@ -54,58 +54,65 @@
                 }
             </div>
 
-            <div class="rc-analysis">
-                <span class="rc-analysis-label">Análisis de costos</span>
-                <div class="rc-analysis-btns">
-                    <button type="button" class="btn btn-sm @(verCostos ? "btn-primary" : "btn-outline-secondary")"
-                            aria-pressed="@verCostos" @onclick="() => verCostos = !verCostos">
-                        @(verCostos ? "Ocultar costos fijos" : "Ver costos fijos")
-                    </button>
-                    <button type="button" class="btn btn-sm @(verPrecio ? "btn-primary" : "btn-outline-secondary")"
-                            aria-pressed="@verPrecio" @onclick="() => verPrecio = !verPrecio">
-                        @(verPrecio ? "Ocultar precio sugerido" : "Ver precio sugerido")
-                    </button>
-                    <button type="button" class="btn btn-sm @(verEscalado ? "btn-primary" : "btn-outline-secondary")"
-                            aria-pressed="@verEscalado" @onclick="() => verEscalado = !verEscalado">
-                        @(verEscalado ? "Ocultar escalado" : "Escalar porciones")
-                    </button>
-                </div>
-            </div>
-
-            @if (verCostos || verPrecio || verEscalado)
+            @if (!SoloLectura)
             {
-                <div class="rc-panel-zone">
-                    @if (verCostos)
-                    {
-                        <CostoRecetaPanel @key="@($"{Receta.Id}-{RefreshToken}")" RecetaId="Receta.Id" />
-                    }
-                    @if (verPrecio)
-                    {
-                        <SugerenciaPrecioVenta @key="@($"{Receta.Id}-{RefreshToken}")" RecetaId="Receta.Id" />
-                    }
-                    @if (verEscalado)
-                    {
-                        <EscaladoPorcionesPanel @key="@($"{Receta.Id}-{RefreshToken}")" RecetaId="Receta.Id" PorcionesBase="Receta.PorcionesBase" />
-                    }
+                <div class="rc-analysis">
+                    <span class="rc-analysis-label">Análisis de costos</span>
+                    <div class="rc-analysis-btns">
+                        <button type="button" class="btn btn-sm @(verCostos ? "btn-primary" : "btn-outline-secondary")"
+                                aria-pressed="@verCostos" @onclick="() => verCostos = !verCostos">
+                            @(verCostos ? "Ocultar costos fijos" : "Ver costos fijos")
+                        </button>
+                        <button type="button" class="btn btn-sm @(verPrecio ? "btn-primary" : "btn-outline-secondary")"
+                                aria-pressed="@verPrecio" @onclick="() => verPrecio = !verPrecio">
+                            @(verPrecio ? "Ocultar precio sugerido" : "Ver precio sugerido")
+                        </button>
+                        <button type="button" class="btn btn-sm @(verEscalado ? "btn-primary" : "btn-outline-secondary")"
+                                aria-pressed="@verEscalado" @onclick="() => verEscalado = !verEscalado">
+                            @(verEscalado ? "Ocultar escalado" : "Escalar porciones")
+                        </button>
+                    </div>
                 </div>
+
+                @if (verCostos || verPrecio || verEscalado)
+                {
+                    <div class="rc-panel-zone">
+                        @if (verCostos)
+                        {
+                            <CostoRecetaPanel @key="@($"{Receta.Id}-{RefreshToken}")" RecetaId="Receta.Id" />
+                        }
+                        @if (verPrecio)
+                        {
+                            <SugerenciaPrecioVenta @key="@($"{Receta.Id}-{RefreshToken}")" RecetaId="Receta.Id" />
+                        }
+                        @if (verEscalado)
+                        {
+                            <EscaladoPorcionesPanel @key="@($"{Receta.Id}-{RefreshToken}")" RecetaId="Receta.Id" PorcionesBase="Receta.PorcionesBase" />
+                        }
+                    </div>
+                }
             }
         </div>
 
-        <div class="rc-modal-actions">
-            <button type="button" class="btn btn-outline-secondary" @onclick="OnActualizar"
-                    disabled="@Actualizando"
-                    title="Recalcula los costos con los precios actuales de los insumos. No modifica precios de venta.">
-                @(Actualizando ? "Actualizando..." : "Actualizar costos")
-            </button>
-            <button type="button" class="btn btn-outline-secondary" @onclick="OnEditar">Editar</button>
-            <button type="button" class="btn btn-outline-danger" @onclick="OnEliminar">Eliminar</button>
-        </div>
+        @if (!SoloLectura)
+        {
+            <div class="rc-modal-actions">
+                <button type="button" class="btn btn-outline-secondary" @onclick="OnActualizar"
+                        disabled="@Actualizando"
+                        title="Recalcula los costos con los precios actuales de los insumos. No modifica precios de venta.">
+                    @(Actualizando ? "Actualizando..." : "Actualizar costos")
+                </button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="OnEditar">Editar</button>
+                <button type="button" class="btn btn-outline-danger" @onclick="OnEliminar">Eliminar</button>
+            </div>
+        }
     </div>
 </div>
 
 @code {
     [Parameter, EditorRequired] public RecetaDto Receta { get; set; } = default!;
     [Parameter] public string? Imagen { get; set; }
+    [Parameter] public bool SoloLectura { get; set; }
     [Parameter] public int RefreshToken { get; set; }
     [Parameter] public bool Actualizando { get; set; }
     [Parameter] public EventCallback OnActualizar { get; set; }

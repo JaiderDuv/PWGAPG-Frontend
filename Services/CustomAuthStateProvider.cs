@@ -15,8 +15,18 @@ namespace PWGAPG_Frontend.Services
 
         public override Task<AuthenticationState> GetAuthenticationStateAsync()
         {
+            var claims = new List<Claim>();
+            if (_authService.IsAuthenticated)
+            {
+                claims.Add(new Claim(ClaimTypes.Name, _authService.NombreEmpresa));
+                if (!string.IsNullOrWhiteSpace(_authService.Rol))
+                    claims.Add(new Claim(ClaimTypes.Role, _authService.Rol));
+                claims.Add(new Claim("tipoCuenta", _authService.TipoCuenta));
+                if (_authService.NegocioId.HasValue)
+                    claims.Add(new Claim("negocioId", _authService.NegocioId.Value.ToString()));
+            }
             var identity = _authService.IsAuthenticated
-                ? new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, _authService.NombreEmpresa) }, "apiauth")
+                ? new ClaimsIdentity(claims, "apiauth")
                 : new ClaimsIdentity();
 
             return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));

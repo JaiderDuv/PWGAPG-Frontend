@@ -1,0 +1,78 @@
+@page "/aceptar-invitacion"
+@attribute [AllowAnonymous]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components
+@using PWGAPG_Frontend.Services
+@inject EmpleadoApiService EmpleadoApi
+
+<PageTitle>Aceptar invitación | Chef Metrics</PageTitle>
+
+<div class="auth-card-login">
+    @if (procesando)
+    {
+        <h2 class="auth-titulo">Validando invitación</h2>
+        <p class="auth-subtitulo">Estamos preparando tus datos de acceso.</p>
+    }
+    else if (credenciales is not null)
+    {
+        <h2 class="auth-titulo">¡Invitación aceptada!</h2>
+        <p class="auth-subtitulo">@credenciales.Mensaje</p>
+        <div class="form-group">
+            <label class="auth-label" for="correo-invitado">Correo de acceso</label>
+            <input id="correo-invitado" class="form-control" value="@credenciales.Correo" readonly />
+        </div>
+        @if (!string.IsNullOrWhiteSpace(credenciales.Password))
+        {
+            <div class="form-group">
+                <label class="auth-label" for="password-invitado">Contraseña de acceso</label>
+                <input id="password-invitado" class="form-control" value="@credenciales.Password" readonly />
+            </div>
+        }
+        <a class="btn-solid btn-full" href="login">Ir a iniciar sesión</a>
+    }
+    else
+    {
+        <h2 class="auth-titulo">No se pudo aceptar la invitación</h2>
+        <p class="alerta-box alerta-error">@mensajeError</p>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "token")]
+    public string? Token { get; set; }
+
+    private bool procesando = true;
+    private string? mensajeError;
+    private AceptarInvitacionRespuestaDto? credenciales;
+    private string? tokenProcesado;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Token))
+        {
+            procesando = false;
+            mensajeError = "El enlace no contiene un token válido.";
+            return;
+        }
+        if (tokenProcesado == Token) return;
+
+        tokenProcesado = Token;
+        procesando = true;
+        try
+        {
+            var result = await EmpleadoApi.AceptarInvitacionAsync(Token);
+            if (result.Exito && result.Datos is not null)
+                credenciales = result.Datos;
+            else
+                mensajeError = result.Mensaje ?? "El enlace expiró o ya fue utilizado.";
+        }
+        catch (HttpRequestException)
+        {
+            mensajeError = "No fue posible conectar con el servidor. Intenta de nuevo.";
+        }
+        finally
+        {
+            procesando = false;
+        }
+    }
+}

@@ -13,12 +13,15 @@
             <span class="rc-mini-placeholder">🍽️</span>
         }
         <span class="rc-cat">@CategoriasReceta.Etiqueta(Receta.Categoria)</span>
-        <div class="rc-mini-actions">
-            <button type="button" title="Editar" aria-label="Editar @Receta.Nombre"
-                    @onclick="OnEditar" @onclick:stopPropagation="true">✏️</button>
-            <button type="button" title="Eliminar" aria-label="Eliminar @Receta.Nombre"
-                    @onclick="OnEliminar" @onclick:stopPropagation="true">🗑️</button>
-        </div>
+        @if (!SoloLectura)
+        {
+            <div class="rc-mini-actions">
+                <button type="button" title="Editar" aria-label="Editar @Receta.Nombre"
+                        @onclick="OnEditar" @onclick:stopPropagation="true">✏️</button>
+                <button type="button" title="Eliminar" aria-label="Eliminar @Receta.Nombre"
+                        @onclick="OnEliminar" @onclick:stopPropagation="true">🗑️</button>
+            </div>
+        }
     </div>
     <div class="rc-mini-body">
         <h6 title="@Receta.Nombre">@Receta.Nombre</h6>
@@ -42,6 +45,7 @@
 @code {
     [Parameter, EditorRequired] public RecetaDto Receta { get; set; } = default!;
     [Parameter] public string? Imagen { get; set; }
+    [Parameter] public bool SoloLectura { get; set; }
     [Parameter] public EventCallback OnAbrir { get; set; }
     [Parameter] public EventCallback OnEditar { get; set; }
     [Parameter] public EventCallback OnEliminar { get; set; }
