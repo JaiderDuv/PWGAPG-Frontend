@@ -1,6 +1,5 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text.Json;
 using PWGAPG_Frontend.Models;
 
 namespace PWGAPG_Frontend.Services;
@@ -55,7 +54,7 @@ public class MenuApiService
         var res = await _http.DeleteAsync($"api/productos-menu/{id}");
         return res.IsSuccessStatusCode
             ? new(true, true, null)
-            : new(false, false, await LeerError(res));
+            : new(false, false, await ErrorRespuestaApi.LeerAsync(res));
     }
 
     public async Task<ApiResultado<CostoProductoDto>> ObtenerCostoAsync(int id) =>
@@ -84,25 +83,7 @@ public class MenuApiService
 
     private static async Task<ApiResultado<T>> Leer<T>(HttpResponseMessage res)
     {
-        if (!res.IsSuccessStatusCode) return new(false, default, await LeerError(res));
+        if (!res.IsSuccessStatusCode) return new(false, default, await ErrorRespuestaApi.LeerAsync(res));
         return new(true, await res.Content.ReadFromJsonAsync<T>(), null);
-    }
-
-    private static async Task<string> LeerError(HttpResponseMessage res)
-    {
-        if (res.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-            return "Tu sesión expiró. Inicia sesión de nuevo.";
-        try
-        {
-            using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
-            var root = doc.RootElement;
-            if (root.TryGetProperty("mensaje", out var m)) return m.GetString() ?? "Error.";
-            if (root.TryGetProperty("errors", out var errs))
-                foreach (var campo in errs.EnumerateObject())
-                    foreach (var msg in campo.Value.EnumerateArray())
-                        return msg.GetString() ?? "Datos no válidos.";
-        }
-        catch { }
-        return "Ocurrió un error inesperado.";
     }
 }

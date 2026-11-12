@@ -36,6 +36,7 @@
 
     private string? mensajeError;
     private Guid inputKey = Guid.NewGuid();
+    private const long MaxImagenBytes = 2 * 1024 * 1024;
     private static readonly string[] ExtensionesPermitidas = { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp" };
 
     private async Task CargarImagen(InputFileChangeEventArgs e)
@@ -50,19 +51,37 @@
 
         if (!esImagenPorTipo || !esImagenPorExtension)
         {
-            mensajeError = "No es una imagen";
-            // Dejar el campo vacío: limpiar cualquier previsualización previa.
+            MostrarErrorImagen("No es una imagen.");
             await ImagenBase64Changed.InvokeAsync(string.Empty);
-            // Reiniciar el input para permitir reintentar con otro archivo.
-            inputKey = Guid.NewGuid();
             return;
         }
 
-        using var stream = archivo.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
-        using var ms = new MemoryStream();
-        await stream.CopyToAsync(ms);
-        var base64 = Convert.ToBase64String(ms.ToArray());
-        var resultado = $"data:{archivo.ContentType};base64,{base64}";
-        await ImagenBase64Changed.InvokeAsync(resultado);
+        if (archivo.Size > MaxImagenBytes)
+        {
+            MostrarErrorImagen("La imagen no puede superar los 2 MB.");
+            return;
+        }
+
+        string base64;
+        try
+        {
+            using var stream = archivo.OpenReadStream(maxAllowedSize: MaxImagenBytes);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            base64 = Convert.ToBase64String(ms.ToArray());
+        }
+        catch (IOException)
+        {
+            MostrarErrorImagen("No se pudo leer la imagen.");
+            return;
+        }
+
+        await ImagenBase64Changed.InvokeAsync($"data:{archivo.ContentType};base64,{base64}");
+    }
+
+    private void MostrarErrorImagen(string mensaje)
+    {
+        mensajeError = mensaje;
+        inputKey = Guid.NewGuid();
     }
 }

@@ -53,7 +53,7 @@
                     s.img = img; s.zoom = 1; centrar(s);
                     ok(true);
                 };
-                img.onerror = () => fail('No se pudo leer la imagen');
+                img.onerror = () => fail(new Error('No se pudo leer la imagen'));
                 img.src = dataUrl;
             });
         },
@@ -124,7 +124,7 @@
 
             if (slider) {
                 slider.addEventListener('input', () => {
-                    zoomEn(s, parseFloat(slider.value), W / 2, H / 2);
+                    zoomEn(s, Number.parseFloat(slider.value), W / 2, H / 2);
                     refrescar(false);
                 }, opt);
             }

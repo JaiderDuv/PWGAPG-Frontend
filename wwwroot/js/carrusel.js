@@ -7,7 +7,7 @@
         if (!tarjeta) return Math.max(200, track.clientWidth * 0.8);
 
         const estilos = getComputedStyle(track);
-        const gap = parseFloat(estilos.columnGap || estilos.gap || '16') || 16;
+        const gap = Number.parseFloat(estilos.columnGap || estilos.gap || '16') || 16;
         const ancho = tarjeta.getBoundingClientRect().width;
         const porVista = Math.max(1, Math.floor((track.clientWidth + gap) / (ancho + gap)));
         return (ancho + gap) * porVista;

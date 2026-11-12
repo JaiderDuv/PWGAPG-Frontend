@@ -1,7 +1,7 @@
 @using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Services
 @inject CosteoApiService Api
-@implements IDisposable
+@implements IAsyncDisposable
 
 <div class="cs-panel">
     <div class="d-flex align-items-end gap-2 flex-wrap mb-2">
@@ -132,7 +132,7 @@
     private bool cargando;
     private string porcionesTexto = "";
     private int idCargado;
-    private CancellationTokenSource? debounceCts;
+    private readonly OperacionCancelable debounce = new();
 
     // Selección de costos fijos: por defecto no se marca ninguno.
     // El usuario los agrega solo si quiere analizar el costo completo.
@@ -158,14 +158,11 @@
     {
         porcionesTexto = e.Value?.ToString() ?? "";
         errorValidacion = null;
-        debounceCts?.Cancel();
-        debounceCts?.Dispose();
-        debounceCts = new CancellationTokenSource();
-        var token = debounceCts.Token;
+        var token = await debounce.ReiniciarAsync();
         try { await Task.Delay(300, token); }
         catch (TaskCanceledException) { return; }
+        if (token.IsCancellationRequested) return;
         await Cargar();
-        StateHasChanged();
     }
 
     private async Task Cargar()
@@ -227,9 +224,5 @@
         await Cargar();
     }
 
-    public void Dispose()
-    {
-        debounceCts?.Cancel();
-        debounceCts?.Dispose();
-    }
+    public ValueTask DisposeAsync() => debounce.DisposeAsync();
 }

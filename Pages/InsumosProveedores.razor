@@ -4,7 +4,7 @@
 @using System.Net.Http.Json
 @using System.Globalization
 @using System.Text
-@implements IDisposable
+@implements IAsyncDisposable
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @using PWGAPG_Frontend.Components
@@ -153,7 +153,7 @@
     private decimal? costoMax;
 
     private List<InsumoApiDto> insumos = new();
-    private CancellationTokenSource? debounceCts;
+    private readonly OperacionCancelable debounce = new();
 
     private List<InsumoApiDto> insumosFiltrados
     {
@@ -187,10 +187,7 @@
 
     private async Task ReiniciarDebounceAsync()
     {
-        debounceCts?.Cancel();
-        debounceCts?.Dispose();
-        debounceCts = new CancellationTokenSource();
-        var token = debounceCts.Token;
+        var token = await debounce.ReiniciarAsync();
 
         try
         {
@@ -200,6 +197,8 @@
         {
             return;
         }
+
+        if (token.IsCancellationRequested) return;
 
         await Buscar();
         StateHasChanged();
@@ -275,9 +274,5 @@
         return sb.ToString().Normalize(NormalizationForm.FormC).ToLowerInvariant();
     }
 
-    public void Dispose()
-    {
-        debounceCts?.Cancel();
-        debounceCts?.Dispose();
-    }
+    public ValueTask DisposeAsync() => debounce.DisposeAsync();
 }

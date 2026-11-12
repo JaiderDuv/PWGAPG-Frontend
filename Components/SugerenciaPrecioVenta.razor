@@ -1,7 +1,7 @@
 ﻿@using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Services
 @using System.Net.Http.Json
-@implements IDisposable
+@implements IAsyncDisposable
 @inject HttpClient Http
 @inject CosteoApiService Api
 
@@ -117,7 +117,7 @@
     private PrecioSugeridoDTO? resultado;
     private bool cargando;
     private string? mensajeError;
-    private CancellationTokenSource? debounceCts;
+    private readonly OperacionCancelable debounce = new();
 
     // Selección de costos fijos: por defecto NO se marca ninguno.
     // El precio se calcula con el costo directo; el usuario activa
@@ -151,10 +151,7 @@
 
     private async Task OnMargenCambiado()
     {
-        debounceCts?.Cancel();
-        debounceCts?.Dispose();
-        debounceCts = new CancellationTokenSource();
-        var token = debounceCts.Token;
+        var token = await debounce.ReiniciarAsync();
 
         try
         {
@@ -165,7 +162,8 @@
             return;
         }
 
-        await CalcularAsync();
+        if (!token.IsCancellationRequested)
+            await CalcularAsync();
     }
 
     private async Task CalcularAsync()
@@ -232,9 +230,5 @@
         await CalcularAsync();
     }
 
-    public void Dispose()
-    {
-        debounceCts?.Cancel();
-        debounceCts?.Dispose();
-    }
+    public ValueTask DisposeAsync() => debounce.DisposeAsync();
 }

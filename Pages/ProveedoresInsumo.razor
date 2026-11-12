@@ -774,7 +774,8 @@
     private static string? MsgTelefono(string? v)
     {
         if (string.IsNullOrWhiteSpace(v)) return null; // opcional
-        return System.Text.RegularExpressions.Regex.IsMatch(v.Trim(), @"^3\d{9}$")
+        var telefono = v.Trim();
+        return telefono.Length == 10 && telefono[0] == '3' && telefono.All(char.IsDigit)
             ? null
             : "El teléfono debe tener 10 dígitos y empezar por 3.";
     }
@@ -782,7 +783,10 @@
     private static string? MsgCorreo(string? v)
     {
         if (string.IsNullOrWhiteSpace(v)) return null; // opcional
-        return System.Text.RegularExpressions.Regex.IsMatch(v.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+        var correo = v.Trim();
+        return correo.Length <= 255 && System.Text.RegularExpressions.Regex.IsMatch(
+            correo, @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+            System.Text.RegularExpressions.RegexOptions.NonBacktracking, TimeSpan.FromMilliseconds(100))
             ? null
             : "Ingresa un correo electrónico válido.";
     }

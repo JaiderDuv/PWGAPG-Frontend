@@ -5,7 +5,7 @@
 @inject PWGAPG_Frontend.Services.InsumoService InsumoService
 @inject NavigationManager Navigation
 @inject Microsoft.JSInterop.IJSRuntime JS
-@implements IDisposable
+@implements IAsyncDisposable
 
 <PageTitle>Mis insumos | Chef Metrics</PageTitle>
 
@@ -482,7 +482,7 @@
     private List<InsumoProveedorDTO> proveedoresEdicionRapida = new();
     private bool cargandoProveedoresRapida;
 
-    private CancellationTokenSource? debounceCts;
+    private readonly OperacionCancelable debounceBusqueda = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -531,10 +531,10 @@
     
     private List<ProveedorDTO> sugerenciasActuales = new();
     private bool buscandoProveedores;
-    private CancellationTokenSource? proveedorBusquedaCts;
+    private readonly OperacionCancelable busquedaProveedor = new();
 
     private bool avisoProveedorVisible;
-    private CancellationTokenSource? avisoProveedorCts;
+    private readonly OperacionCancelable ocultarAvisoProveedor = new();
 
     private string? terminoExactoDb;
 
@@ -585,13 +585,13 @@
         return prefijos;
     }
 
-    private void MostrarSugerenciasProveedor()
+    private async Task MostrarSugerenciasProveedor()
     {
-        avisoProveedorCts?.Cancel();
         avisoProveedorVisible = false;
         mostrarSugerenciasProveedor = true;
         sugerenciasActuales = FiltrarProveedores(listaProveedores, form.Proveedor);
-        _ = BuscarSugerenciasEnBdAsync(form.Proveedor);
+        await ocultarAvisoProveedor.CancelarAsync();
+        await BuscarSugerenciasEnBdAsync(form.Proveedor);
     }
 
     private async Task OcultarSugerenciasProveedor()
@@ -608,43 +608,41 @@
 
     private async Task ProgramarOcultadoAvisoAsync()
     {
-        avisoProveedorCts?.Cancel();
-        avisoProveedorCts?.Dispose();
-        avisoProveedorCts = new CancellationTokenSource();
+        var token = await ocultarAvisoProveedor.ReiniciarAsync();
         try
         {
-            await Task.Delay(5000, avisoProveedorCts.Token);
+            await Task.Delay(5000, token);
         }
         catch (TaskCanceledException)
         {
             return;
         }
+        if (token.IsCancellationRequested) return;
         avisoProveedorVisible = false;
         StateHasChanged();
     }
 
-    private void OnProveedorOnInput(ChangeEventArgs e)
+    private async Task OnProveedorOnInput(ChangeEventArgs e)
     {
         form.Proveedor = e.Value?.ToString() ?? string.Empty;
         errores.Remove(nameof(form.Proveedor));
         errores.Remove(nameof(form.CostoUnitario));
         errores.Remove(nameof(form.Cantidad));
         errores.Remove(nameof(form.UnidadMedida));
-        avisoProveedorCts?.Cancel();
         avisoProveedorVisible = false;
         mostrarSugerenciasProveedor = true;
         sugerenciasActuales = FiltrarProveedores(listaProveedores, form.Proveedor);
         AutocompletarDesdeProveedor();
         ActualizarValidacionFormulario();
-        _ = BuscarSugerenciasEnBdAsync(form.Proveedor);
+        await ocultarAvisoProveedor.CancelarAsync();
+        await BuscarSugerenciasEnBdAsync(form.Proveedor);
     }
 
     private async Task BuscarSugerenciasEnBdAsync(string? texto)
     {
-        proveedorBusquedaCts?.Cancel();
-        proveedorBusquedaCts?.Dispose();
-        proveedorBusquedaCts = new CancellationTokenSource();
-        var token = proveedorBusquedaCts.Token;
+        if (!mostrarModal) return;
+        var token = await busquedaProveedor.ReiniciarAsync();
+        if (token.IsCancellationRequested) return;
 
         var termino = texto?.Trim() ?? string.Empty;
         if (termino.Length == 0)
@@ -663,6 +661,7 @@
             return;
         }
 
+        if (token.IsCancellationRequested) return;
         buscandoProveedores = true;
         StateHasChanged();
         try
@@ -678,8 +677,8 @@
                 sugerenciasActuales = FiltrarProveedores(resultado.Data, termino, 8);
                 if (HayCoincidenciaProveedor())
                 {
-                    avisoProveedorCts?.Cancel();
                     avisoProveedorVisible = false;
+                    await ocultarAvisoProveedor.CancelarAsync();
                 }
             }
         }
@@ -688,8 +687,11 @@
         }
         finally
         {
-            buscandoProveedores = false;
-            StateHasChanged();
+            if (!token.IsCancellationRequested)
+            {
+                buscandoProveedores = false;
+                StateHasChanged();
+            }
         }
     }
 
@@ -942,10 +944,7 @@
     {
         textoBusqueda = e.Value?.ToString() ?? string.Empty;
 
-        debounceCts?.Cancel();
-        debounceCts?.Dispose();
-        debounceCts = new CancellationTokenSource();
-        var token = debounceCts.Token;
+        var token = await debounceBusqueda.ReiniciarAsync();
 
         try
         {
@@ -956,6 +955,7 @@
             return;
         }
 
+        if (token.IsCancellationRequested) return;
         pagina = 1;
         await CargarAsync();
         StateHasChanged();
@@ -1024,7 +1024,7 @@
         mostrarSugerenciasProveedor = false;
         sugerenciasActuales.Clear();
         buscandoProveedores = false;
-        avisoProveedorCts?.Cancel();
+        await ocultarAvisoProveedor.CancelarAsync();
         avisoProveedorVisible = false;
         terminoExactoDb = null;
         proveedoresDelInsumo.Clear();
@@ -1058,7 +1058,7 @@
         mostrarSugerenciasProveedor = false;
         sugerenciasActuales.Clear();
         buscandoProveedores = false;
-        avisoProveedorCts?.Cancel();
+        await ocultarAvisoProveedor.CancelarAsync();
         avisoProveedorVisible = false;
         terminoExactoDb = null;
         proveedoresDelInsumo.Clear();
@@ -1079,19 +1079,20 @@
         mostrarModal = true;
     }
 
-    private void CerrarModal()
+    private async Task CerrarModal()
     {
         mostrarModal = false;
         insumoEditando = null;
         mostrarSugerenciasProveedor = false;
         sugerenciasActuales.Clear();
         buscandoProveedores = false;
-        avisoProveedorCts?.Cancel();
         avisoProveedorVisible = false;
         terminoExactoDb = null;
         proveedoresDelInsumo.Clear();
         proveedorAutocompletado = null;
         camposVaciadosParaProveedorNuevo = false;
+        await busquedaProveedor.CancelarAsync();
+        await ocultarAvisoProveedor.CancelarAsync();
     }
 
     private static readonly HashSet<string> CategoriasValidas = new(StringComparer.OrdinalIgnoreCase)
@@ -1335,7 +1336,7 @@
             }
         }
 
-        CerrarModal();
+        await CerrarModal();
         mensajeExito = $"El insumo «{creado.Nombre}» fue guardado correctamente.";
     }
 
@@ -1390,7 +1391,7 @@
             request.DensidadGPorMl is null &&
             request.Proveedor is null && request.Activo is null)
         {
-            CerrarModal();
+            await CerrarModal();
             mensajeExito = "No has editado ningún campo.";
             return;
         }
@@ -1400,7 +1401,7 @@
         {
             if (EsMensajeSinCambios(resultado.Message))
             {
-                CerrarModal();
+                await CerrarModal();
                 mensajeExito = "No has editado ningún campo.";
                 return;
             }
@@ -1423,7 +1424,7 @@
             }
         }
 
-        CerrarModal();
+        await CerrarModal();
         mensajeExito = $"El insumo «{actualizado.Nombre}» fue actualizado correctamente.";
     }
 
@@ -1917,14 +1918,11 @@
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        debounceCts?.Cancel();
-        debounceCts?.Dispose();
-        proveedorBusquedaCts?.Cancel();
-        proveedorBusquedaCts?.Dispose();
-        avisoProveedorCts?.Cancel();
-        avisoProveedorCts?.Dispose();
+        await debounceBusqueda.DisposeAsync();
+        await busquedaProveedor.DisposeAsync();
+        await ocultarAvisoProveedor.DisposeAsync();
     }
 
     private sealed record BloqueoEliminar(InsumoApiDto Insumo, string Mensaje, int NumeroRecetas);

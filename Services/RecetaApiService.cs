@@ -1,6 +1,5 @@
 ﻿using PWGAPG_Frontend.Models;
 using System.Net.Http.Json;
-using System.Text.Json;
 using System.Net.Http.Headers;
 
 namespace PWGAPG_Frontend.Services;
@@ -34,7 +33,7 @@ public class RecetaApiService
             : $"api/recetas?busqueda={Uri.EscapeDataString(busqueda)}";
         var res = await _http.GetAsync(url);
         if (!res.IsSuccessStatusCode)
-            return new(false, null, await LeerError(res));
+            return new(false, null, await ErrorRespuestaApi.LeerAsync(res));
         return new(true, await res.Content.ReadFromJsonAsync<List<RecetaDto>>(), null);
     }
 
@@ -56,33 +55,14 @@ public class RecetaApiService
         var res = await _http.DeleteAsync($"api/recetas/{id}");
         return res.IsSuccessStatusCode
             ? new(true, true, null)
-            : new(false, false, await LeerError(res));
+            : new(false, false, await ErrorRespuestaApi.LeerAsync(res));
     }
 
     private static async Task<ApiResultado<RecetaDto>> Enviar(Func<Task<HttpResponseMessage>> accion)
     {
         var res = await accion();
         if (!res.IsSuccessStatusCode)
-            return new(false, null, await LeerError(res));
+            return new(false, null, await ErrorRespuestaApi.LeerAsync(res));
         return new(true, await res.Content.ReadFromJsonAsync<RecetaDto>(), null);
-    }
-
-    // Lee { mensaje } de tu backend o los errores de validación de ModelState.
-    private static async Task<string> LeerError(HttpResponseMessage res)
-    {
-        if (res.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-            return "Tu sesión expiró. Inicia sesión de nuevo.";
-        try
-        {
-            using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
-            var root = doc.RootElement;
-            if (root.TryGetProperty("mensaje", out var m)) return m.GetString() ?? "Error.";
-            if (root.TryGetProperty("errors", out var errs))
-                foreach (var campo in errs.EnumerateObject())
-                    foreach (var msg in campo.Value.EnumerateArray())
-                        return msg.GetString() ?? "Datos no válidos.";
-        }
-        catch { }
-        return "Ocurrió un error inesperado.";
     }
 }

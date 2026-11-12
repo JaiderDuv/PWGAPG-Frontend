@@ -1,6 +1,7 @@
 @using System.ComponentModel.DataAnnotations
 @using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Services
+@implements IAsyncDisposable
 @inject MenuApiService MenuApi
 @inject RecetaApiService RecetaApi
 
@@ -242,7 +243,7 @@
     private ImageCropper? cropper;
     private decimal margenSugerido = 30;
     private bool incluirFijosPrecio;
-    private System.Threading.CancellationTokenSource? debounceCts;
+    private readonly OperacionCancelable debounce = new();
     private bool mostrarAvisoMargen;
     private string mensajeAvisoMargen = "";
     private bool margenConfirmado;
@@ -309,17 +310,22 @@
 
     private async Task ActualizarPreview()
     {
-        debounceCts?.Cancel();
-        debounceCts = new System.Threading.CancellationTokenSource();
-        var token = debounceCts.Token;
+        var token = await debounce.ReiniciarAsync();
         try { await Task.Delay(200, token); }
         catch (TaskCanceledException) { return; }
+        if (token.IsCancellationRequested) return;
 
         var recetas = modelo.FilasReceta
             .Where(f => f.RecetaId > 0 && f.Cantidad > 0)
             .Select(f => new RecetaEnProductoDto { RecetaId = f.RecetaId, Cantidad = f.Cantidad })
             .ToList();
-        if (recetas.Count == 0) { costoPreview = null; StateHasChanged(); return; }
+        if (recetas.Count == 0)
+        {
+            costoPreview = null;
+            calculando = false;
+            StateHasChanged();
+            return;
+        }
 
         calculando = true; StateHasChanged();
         var empaques = modelo.FilasEmpaque
@@ -334,6 +340,8 @@
             StateHasChanged();
         }
     }
+
+    public ValueTask DisposeAsync() => debounce.DisposeAsync();
 
     private async Task SugerirPrecio()
     {
