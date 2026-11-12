@@ -1,8 +1,12 @@
 ﻿@using PWGAPG_Frontend.Models
 
-<div class="rc-modal-backdrop" @onclick="OnCerrar">
-    <div class="rc-modal" role="dialog" aria-modal="true" aria-label="@Receta.Nombre" @onclick:stopPropagation="true">
-        <button type="button" class="rc-modal-close" aria-label="Cerrar" @onclick="OnCerrar">✕</button>
+<AccessibleDialog Class="rc-modal" LabelledBy="receta-detalle-titulo" OnCancel="OnCerrar" CloseOnBackdrop="true">
+        <button type="button" class="rc-modal-close" aria-label="Cerrar" @onclick="OnCerrar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
+        </button>
 
         <div class="rc-modal-hero">
             @if (!string.IsNullOrEmpty(Imagen))
@@ -14,7 +18,7 @@
                 <span>🍽️</span>
             }
             <div class="rc-modal-title">
-                <h3>@Receta.Nombre</h3>
+                <h2 id="receta-detalle-titulo">@Receta.Nombre</h2>
                 <span>#@Receta.Id · @CategoriasReceta.Etiqueta(Receta.Categoria) · @Receta.PorcionesBase porción(es)</span>
             </div>
         </div>
@@ -37,7 +41,7 @@
 
             <div class="rc-modal-columns">
                 <div>
-                    <h6>Ingredientes</h6>
+                    <h3>Ingredientes</h3>
                     <ul class="rc-ingredients">
                         @foreach (var i in Receta.Insumos)
                         {
@@ -48,7 +52,7 @@
                 @if (!string.IsNullOrWhiteSpace(Receta.Instrucciones))
                 {
                     <div>
-                        <h6>Instrucciones</h6>
+                        <h3>Instrucciones</h3>
                         <p class="rc-instr">@Receta.Instrucciones</p>
                     </div>
                 }
@@ -60,15 +64,15 @@
                     <span class="rc-analysis-label">Análisis de costos</span>
                     <div class="rc-analysis-btns">
                         <button type="button" class="btn btn-sm @(verCostos ? "btn-primary" : "btn-outline-secondary")"
-                                aria-pressed="@verCostos" @onclick="() => verCostos = !verCostos">
+                                aria-expanded="@(verCostos ? "true" : "false")" @onclick="() => verCostos = !verCostos">
                             @(verCostos ? "Ocultar costos fijos" : "Ver costos fijos")
                         </button>
                         <button type="button" class="btn btn-sm @(verPrecio ? "btn-primary" : "btn-outline-secondary")"
-                                aria-pressed="@verPrecio" @onclick="() => verPrecio = !verPrecio">
+                                aria-expanded="@(verPrecio ? "true" : "false")" @onclick="() => verPrecio = !verPrecio">
                             @(verPrecio ? "Ocultar precio sugerido" : "Ver precio sugerido")
                         </button>
                         <button type="button" class="btn btn-sm @(verEscalado ? "btn-primary" : "btn-outline-secondary")"
-                                aria-pressed="@verEscalado" @onclick="() => verEscalado = !verEscalado">
+                                aria-expanded="@(verEscalado ? "true" : "false")" @onclick="() => verEscalado = !verEscalado">
                             @(verEscalado ? "Ocultar escalado" : "Escalar porciones")
                         </button>
                     </div>
@@ -79,15 +83,15 @@
                     <div class="rc-panel-zone">
                         @if (verCostos)
                         {
-                            <CostoRecetaPanel @key="@($"{Receta.Id}-{RefreshToken}")" RecetaId="Receta.Id" />
+                            <CostoRecetaPanel @key="(nameof(CostoRecetaPanel), Receta.Id, RefreshToken)" RecetaId="Receta.Id" />
                         }
                         @if (verPrecio)
                         {
-                            <SugerenciaPrecioVenta @key="@($"{Receta.Id}-{RefreshToken}")" RecetaId="Receta.Id" />
+                            <SugerenciaPrecioVenta @key="(nameof(SugerenciaPrecioVenta), Receta.Id, RefreshToken)" RecetaId="Receta.Id" />
                         }
                         @if (verEscalado)
                         {
-                            <EscaladoPorcionesPanel @key="@($"{Receta.Id}-{RefreshToken}")" RecetaId="Receta.Id" PorcionesBase="Receta.PorcionesBase" />
+                            <EscaladoPorcionesPanel @key="(nameof(EscaladoPorcionesPanel), Receta.Id, RefreshToken)" RecetaId="Receta.Id" PorcionesBase="Receta.PorcionesBase" />
                         }
                     </div>
                 }
@@ -106,8 +110,7 @@
                 <button type="button" class="btn btn-outline-danger" @onclick="OnEliminar">Eliminar</button>
             </div>
         }
-    </div>
-</div>
+</AccessibleDialog>
 
 @code {
     [Parameter, EditorRequired] public RecetaDto Receta { get; set; } = default!;

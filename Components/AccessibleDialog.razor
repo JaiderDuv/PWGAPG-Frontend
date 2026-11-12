@@ -1,0 +1,48 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<dialog @ref="dialog" class="accessible-dialog @Class" aria-label="@Label"
+        aria-labelledby="@LabelledBy" aria-describedby="@DescribedBy" aria-modal="true">
+    @ChildContent
+</dialog>
+
+@code {
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? LabelledBy { get; set; }
+    [Parameter] public string? DescribedBy { get; set; }
+    [Parameter] public bool CloseOnBackdrop { get; set; }
+    [Parameter, EditorRequired] public EventCallback OnCancel { get; set; }
+    [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
+
+    private ElementReference dialog;
+    private IJSObjectReference? module;
+    private DotNetObjectReference<AccessibleDialog>? self;
+    private bool disposed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var dialogModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/accessible-dialog.js");
+        if (disposed)
+        {
+            await dialogModule.DisposeAsync();
+            return;
+        }
+
+        module = dialogModule;
+        self = DotNetObjectReference.Create(this);
+        await module.InvokeVoidAsync("show", dialog, self, CloseOnBackdrop);
+    }
+
+    [JSInvokable]
+    public Task CancelFromBrowser() => OnCancel.InvokeAsync();
+
+    public async ValueTask DisposeAsync()
+    {
+        disposed = true;
+        self?.Dispose();
+        if (module is not null) await module.DisposeAsync();
+    }
+}

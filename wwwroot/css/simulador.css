@@ -36,7 +36,7 @@
     padding: 1rem 1.15rem;
     border: 1px solid #f0d9b5;
     border-radius: 16px;
-    background: linear-gradient(135deg, #fffdf9 0%, #fdf3e4 100%);
+    background: #FDF3E4;
 }
 
     .sim-intro strong {
@@ -121,7 +121,7 @@
     }
 
 .sim-fila-no-disponible {
-    opacity: .55;
+    background: #F7F5F2;
 }
 
 .sim-cantidad-celda {

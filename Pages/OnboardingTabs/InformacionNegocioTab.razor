@@ -6,20 +6,19 @@
 <EditForm Model="@negocio" OnValidSubmit="@GuardarYContinuar">
     <DataAnnotationsValidator />
 
-    <h3 class="onboarding-subtitulo">Información del negocio</h3>
-
-    <ImageUpload @bind-ImagenBase64="negocio.LogoBase64" Forma="cuadrado" Texto="Logo de la empresa (opcional)" InputId="logoEmpresa" />
+    <ImageUpload @bind-ImagenBase64="negocio.LogoBase64" Forma="cuadrado" Texto="Logo de la empresa (opcional)"
+                 DescripcionImagen="Vista previa del logo de la empresa" InputId="logoEmpresa" />
 
     <div class="onb-grid">
         <div class="form-group-sm">
-            <label class="auth-label">Nombre de la Empresa *</label>
-            <InputText @bind-Value="negocio.NombreEmpresa" class="form-control" />
-            <ValidationMessage For="@(() => negocio.NombreEmpresa)" class="text-danger msg-error" />
+            <label class="auth-label" for="onboarding-empresa">Nombre de la Empresa *</label>
+            <InputText id="onboarding-empresa" @bind-Value="negocio.NombreEmpresa" class="form-control" autocomplete="organization" aria-required="true" aria-describedby="onboarding-empresa-error" />
+            <div id="onboarding-empresa-error"><ValidationMessage For="@(() => negocio.NombreEmpresa)" class="text-danger msg-error" /></div>
         </div>
 
         <div class="form-group-sm">
-            <label class="auth-label">¿Tu emprendimiento está formalizado? *</label>
-            <InputSelect @bind-Value="negocio.Formalizado" class="form-select" TValue="bool">
+            <label class="auth-label" for="onboarding-formalizado">¿Tu emprendimiento está formalizado? *</label>
+            <InputSelect id="onboarding-formalizado" @bind-Value="negocio.Formalizado" class="form-select" TValue="bool">
                 <option value="false">No</option>
                 <option value="true">Sí</option>
             </InputSelect>
@@ -28,41 +27,40 @@
         @if (negocio.Formalizado)
         {
             <div class="form-group-sm">
-                <label class="auth-label">NIT</label>
-                <InputText @bind-Value="negocio.Nit" class="form-control" placeholder="Si aplica" />
+                <label class="auth-label" for="onboarding-nit">NIT</label>
+                <InputText id="onboarding-nit" @bind-Value="negocio.Nit" class="form-control" placeholder="Si aplica" />
             </div>
 
             <div class="form-group-sm">
-                <label class="auth-label">Razón Social</label>
-                <InputText @bind-Value="negocio.RazonSocial" class="form-control" placeholder="Si aplica" />
+                <label class="auth-label" for="onboarding-razon-social">Razón Social</label>
+                <InputText id="onboarding-razon-social" @bind-Value="negocio.RazonSocial" class="form-control" placeholder="Si aplica" />
             </div>
 
             <div class="form-group-sm">
-                <label class="auth-label">RUES *</label>
-                <InputText @bind-Value="negocio.Rues" class="form-control" placeholder="Número de registro RUES" />
-                <ValidationMessage For="@(() => negocio.Rues)" class="text-danger msg-error" />
-                @if (mensajeErrorRues != null)
-                {
-                    <span class="text-danger msg-error">@mensajeErrorRues</span>
-                }
+                <label class="auth-label" for="onboarding-rues">RUES *</label>
+                <InputText id="onboarding-rues" @bind-Value="negocio.Rues" class="form-control" aria-required="true" aria-describedby="onboarding-rues-error" />
+                <div id="onboarding-rues-error" role="status" class="text-danger msg-error">
+                    <ValidationMessage For="@(() => negocio.Rues)" />
+                    @mensajeErrorRues
+                </div>
             </div>
         }
 
         <div class="form-group-sm">
-            <label class="auth-label">Correo Electrónico de la Empresa *</label>
-            <InputText @bind-Value="negocio.CorreoEmpresa" class="form-control" type="email" />
-            <ValidationMessage For="@(() => negocio.CorreoEmpresa)" class="text-danger msg-error" />
+            <label class="auth-label" for="onboarding-correo-empresa">Correo Electrónico de la Empresa *</label>
+            <InputText id="onboarding-correo-empresa" @bind-Value="negocio.CorreoEmpresa" class="form-control" type="email" autocomplete="section-empresa email" aria-required="true" aria-describedby="onboarding-correo-empresa-error" />
+            <div id="onboarding-correo-empresa-error"><ValidationMessage For="@(() => negocio.CorreoEmpresa)" class="text-danger msg-error" /></div>
         </div>
 
         <div class="form-group-sm">
-            <label class="auth-label">Teléfono de la Empresa *</label>
-            <InputText @bind-Value="negocio.TelefonoEmpresa" class="form-control" />
-            <ValidationMessage For="@(() => negocio.TelefonoEmpresa)" class="text-danger msg-error" />
+            <label class="auth-label" for="onboarding-telefono-empresa">Teléfono de la Empresa *</label>
+            <InputText id="onboarding-telefono-empresa" @bind-Value="negocio.TelefonoEmpresa" class="form-control" type="tel" autocomplete="section-empresa tel" aria-required="true" aria-describedby="onboarding-telefono-empresa-error" />
+            <div id="onboarding-telefono-empresa-error"><ValidationMessage For="@(() => negocio.TelefonoEmpresa)" class="text-danger msg-error" /></div>
         </div>
 
         <div class="form-group-sm">
-            <label class="auth-label">¿Tiene sitio físico? *</label>
-            <InputSelect @bind-Value="negocio.TieneSitioFisico" class="form-select" TValue="bool">
+            <label class="auth-label" for="onboarding-sitio-fisico">¿Tiene sitio físico? *</label>
+            <InputSelect id="onboarding-sitio-fisico" @bind-Value="negocio.TieneSitioFisico" class="form-select" TValue="bool">
                 <option value="false">No</option>
                 <option value="true">Sí</option>
             </InputSelect>
@@ -71,20 +69,14 @@
         @if (negocio.TieneSitioFisico)
         {
             <div class="form-group-sm">
-                <label class="auth-label">Dirección *</label>
-                <InputText @bind-Value="negocio.Direccion" class="form-control" placeholder="Dirección del local" />
-                @if (mensajeErrorDireccion != null)
-                {
-                    <span class="text-danger msg-error">@mensajeErrorDireccion</span>
-                }
+                <label class="auth-label" for="onboarding-direccion">Dirección *</label>
+                <InputText id="onboarding-direccion" @bind-Value="negocio.Direccion" class="form-control" autocomplete="section-empresa street-address" aria-required="true" aria-describedby="onboarding-direccion-error" />
+                <div id="onboarding-direccion-error" class="text-danger msg-error" role="status">@mensajeErrorDireccion</div>
             </div>
         }
     </div>
 
-    @if (mensajeErrorGeneral != null)
-    {
-        <div class="text-danger msg-error">@mensajeErrorGeneral</div>
-    }
+    <div class="text-danger msg-error" role="status">@mensajeErrorGeneral</div>
 
     <div class="onboarding-acciones">
         <button type="submit" class="btn-solid btn-full">Finalizar configuración</button>

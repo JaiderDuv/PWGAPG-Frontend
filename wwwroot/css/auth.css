@@ -60,12 +60,12 @@
 }
 
 .input-password {
-    padding-right: 40px;
+    padding-right: 44px;
 }
 
 .btn-ojo-password {
     position: absolute;
-    right: 10px;
+    right: 5px;
     top: 50%;
     transform: translateY(-50%);
     background: none;
@@ -73,6 +73,11 @@
     cursor: pointer;
     color: #6B7280;
     padding: 0;
+    min-width: 32px;
+    min-height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 4px;
 }
 
 .msg-error {
@@ -86,10 +91,12 @@
 }
 
 .link-recuperar {
-    color: #D97706;
+    color: #8f4a12;
     font-size: 0.85rem;
-    text-decoration: none;
     font-weight: 600;
+    display: inline-flex;
+    min-height: 24px;
+    align-items: center;
 }
 
 .divider {
@@ -109,9 +116,33 @@
 }
 
 .link-destacado {
-    color: #D97706;
+    color: #8f4a12;
     font-weight: bold;
-    text-decoration: none;
+}
+
+.link-recuperar,
+.link-destacado {
+    text-decoration: underline !important;
+    text-underline-offset: 0.15em;
+}
+
+.link-recuperar:hover,
+.link-recuperar:focus-visible,
+.link-destacado:hover,
+.link-destacado:focus-visible {
+    color: #76390d;
+}
+
+.btn-link-reenvio {
+    background: none;
+    border: none;
+    color: #8f4a12;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 2px 0;
+    min-height: 24px;
+    text-align: left;
+    font-size: 0.9rem;
 }
 
 .btn-full {

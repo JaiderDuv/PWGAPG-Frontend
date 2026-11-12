@@ -1,14 +1,12 @@
 ﻿@if (Visible)
 {
-    <div class="confirm-overlay">
-        <div class="confirm-box">
-            <p class="confirm-mensaje">@Mensaje</p>
-            <div class="confirm-acciones">
-                <button type="button" class="btn-outline" @onclick="Cancelar">Cancelar</button>
-                <button type="button" class="btn-solid btn-confirmar-peligro" @onclick="Confirmar">Sí, continuar</button>
-            </div>
+    <AccessibleDialog Class="confirm-box" Label="Confirmar acción" DescribedBy="@mensajeId" OnCancel="Cancelar">
+        <p id="@mensajeId" class="confirm-mensaje">@Mensaje</p>
+        <div class="confirm-acciones">
+            <button type="button" class="btn-outline" @onclick="Cancelar" autofocus>Cancelar</button>
+            <button type="button" class="btn-solid btn-confirmar-peligro" @onclick="Confirmar">Sí, continuar</button>
         </div>
-    </div>
+    </AccessibleDialog>
 }
 
 @code {
@@ -16,6 +14,8 @@
     [Parameter] public string Mensaje { get; set; } = "¿Estás seguro de realizar esta acción?";
     [Parameter] public EventCallback OnConfirmar { get; set; }
     [Parameter] public EventCallback OnCancelar { get; set; }
+
+    private readonly string mensajeId = $"confirmacion-{Guid.NewGuid():N}";
 
     private async Task Confirmar() => await OnConfirmar.InvokeAsync();
     private async Task Cancelar() => await OnCancelar.InvokeAsync();

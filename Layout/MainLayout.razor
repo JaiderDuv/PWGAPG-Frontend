@@ -4,44 +4,54 @@
 @inject NavigationManager Navigation
 @implements IDisposable
 
-<header class="navbar">
+<a class="skip-link" href="@($"{Navigation.Uri.Split('#')[0]}#contenido-principal")" @onclick="SaltarAlContenido" @onclick:preventDefault>
+    Saltar al contenido principal
+</a>
+
+<header class="navbar" @onkeydown="CerrarNavegacionConEscape">
     <div class="logo-container">
-        <NavLink href="" Match="NavLinkMatch.All" style="text-decoration: none; display: flex; align-items: center; gap: 12px;">
-            <img src="assets/Logo.png" alt="Logo" class="logo-img" id="appLogo" />
+        <a href="/" aria-label="Chef Metrics, inicio">
+            <img src="assets/Logo.png" alt="" class="logo-img" id="appLogo" />
             <span class="brand-title" id="appTitle">CHEF METRICS</span>
-        </NavLink>
+        </a>
     </div>
 
-    <nav class="nav-links">
+    <button type="button" class="nav-toggle btn-outline" @ref="botonNavegacion" @onclick="AlternarNavegacion"
+            aria-controls="navegacion-principal" aria-expanded="@(mostrarNavegacion ? "true" : "false")">
+        Navegación
+    </button>
+
+    <nav id="navegacion-principal" class="nav-links @(mostrarNavegacion ? "nav-expanded" : "")" aria-label="Navegación principal">
         <NavLink class="nav-link" href="" Match="NavLinkMatch.All">Inicio</NavLink>
 
         @if (AuthService.IsAuthenticated)
         {
             @if (AuthService.EsEmprendedor)
             {
-                <NavLink class="nav-link" href="insumos">Insumos</NavLink>
-                <NavLink class="nav-link" href="proveedores">Proveedores</NavLink>
-                <NavLink class="nav-link" href="recetas">Recetas</NavLink>
-                <NavLink class="nav-link" href="menu">Menú</NavLink>
-                <NavLink class="nav-link" href="menu/evaluacion">Márgenes</NavLink>
-                <NavLink class="nav-link" href="costos-fijos">Costos fijos</NavLink>
-                <NavLink class="nav-link" href="simulador">Simulador</NavLink>
+                <NavLink class="nav-link" href="insumos" Match="NavLinkMatch.All">Insumos</NavLink>
+                <NavLink class="nav-link" href="proveedores" Match="NavLinkMatch.All">Proveedores</NavLink>
+                <NavLink class="nav-link" href="recetas" Match="NavLinkMatch.All">Recetas</NavLink>
+                <NavLink class="nav-link" href="menu" Match="NavLinkMatch.All">Menú</NavLink>
+                <NavLink class="nav-link" href="menu/evaluacion" Match="NavLinkMatch.All">Márgenes</NavLink>
+                <NavLink class="nav-link" href="costos-fijos" Match="NavLinkMatch.All">Costos fijos</NavLink>
+                <NavLink class="nav-link" href="simulador" Match="NavLinkMatch.All">Simulador</NavLink>
             }
             else if (AuthService.EsChef)
             {
-                <NavLink class="nav-link" href="recetas">Recetas</NavLink>
-                <NavLink class="nav-link" href="menu">Menú</NavLink>
+                <NavLink class="nav-link" href="recetas" Match="NavLinkMatch.All">Recetas</NavLink>
+                <NavLink class="nav-link" href="menu" Match="NavLinkMatch.All">Menú</NavLink>
             }
             else if (AuthService.EsCajero)
             {
-                <NavLink class="nav-link" href="menu">Menú</NavLink>
+                <NavLink class="nav-link" href="menu" Match="NavLinkMatch.All">Menú</NavLink>
             }
 
-            <div class="user-profile-menu">
-                <button type="button" class="avatar-btn" @onclick="ToggleMenu" aria-label="Menú de usuario">
+            <div class="user-profile-menu" @onkeydown="CerrarMenuConEscape" @onkeydown:stopPropagation="mostrarMenu">
+                <button type="button" class="avatar-btn" @ref="botonUsuario" @onclick="ToggleMenu" aria-label="Menú de usuario"
+                        aria-expanded="@(mostrarMenu ? "true" : "false")" aria-controls="@(mostrarMenu ? "opciones-usuario" : null)">
                     @if (!string.IsNullOrEmpty(AuthService.UrlFotoPerfil) && AuthService.UrlFotoPerfil != "images/default-avatar.png")
                     {
-                        <img src="@AuthService.UrlFotoPerfil" alt="Foto perfil" class="avatar-img" />
+                        <img src="@AuthService.UrlFotoPerfil" alt="" class="avatar-img" />
                     }
                     else
                     {
@@ -51,7 +61,7 @@
 
                 @if (mostrarMenu)
                 {
-                    <div class="dropdown-menu-custom shadow-lg">
+                    <div id="opciones-usuario" class="dropdown-menu-custom shadow-lg">
                         <div class="dropdown-header-custom">
                             <p class="dropdown-user-name">@(string.IsNullOrWhiteSpace(AuthService.NombreDuenio) ? "Usuario" : AuthService.NombreDuenio)</p>
                             <span class="dropdown-user-role">@AuthService.Rol</span>
@@ -84,12 +94,16 @@
     </nav>
 </header>
 
-<main class="main-container">
+<main id="contenido-principal" class="main-container" tabindex="-1" @ref="contenidoPrincipal">
     @Body
 </main>
 
 @code {
     private bool mostrarMenu = false;
+    private bool mostrarNavegacion;
+    private ElementReference botonNavegacion;
+    private ElementReference botonUsuario;
+    private ElementReference contenidoPrincipal;
 
     protected override void OnInitialized()
     {
@@ -100,6 +114,8 @@
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
+        mostrarMenu = false;
+        mostrarNavegacion = false;
         VerificarOnboardingPendiente();
     }
 
@@ -116,6 +132,28 @@
     private void ToggleMenu()
     {
         mostrarMenu = !mostrarMenu;
+    }
+
+    private void AlternarNavegacion()
+    {
+        mostrarNavegacion = !mostrarNavegacion;
+        if (!mostrarNavegacion) mostrarMenu = false;
+    }
+
+    private async Task SaltarAlContenido() => await contenidoPrincipal.FocusAsync();
+
+    private async Task CerrarMenuConEscape(KeyboardEventArgs e)
+    {
+        if (e.Key != "Escape" || !mostrarMenu) return;
+        mostrarMenu = false;
+        await botonUsuario.FocusAsync();
+    }
+
+    private async Task CerrarNavegacionConEscape(KeyboardEventArgs e)
+    {
+        if (e.Key != "Escape" || !mostrarNavegacion) return;
+        mostrarNavegacion = false;
+        await botonNavegacion.FocusAsync();
     }
 
     private async Task CerrarSesion()

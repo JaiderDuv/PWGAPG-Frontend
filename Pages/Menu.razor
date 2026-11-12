@@ -7,6 +7,8 @@
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 
+<PageTitle>Menú | Chef Metrics</PageTitle>
+
 <div class="mn-page">
     <section class="mn-hero">
         <div class="mn-hero-copy">
@@ -129,17 +131,17 @@
                     <circle cx="11" cy="11" r="7" />
                     <path d="m20 20-3.5-3.5" />
                 </svg>
-                <input class="form-control" placeholder="Buscar producto por nombre..." maxlength="75"
+                <input class="form-control" aria-label="Buscar producto por nombre" placeholder="Buscar producto por nombre..." maxlength="75"
                        @bind="busqueda" @bind:event="oninput" @onkeyup="BuscarConEnter" />
             </div>
             <div class="mn-toolbar-controls">
                 <div class="mn-segment" role="group" aria-label="Filtrar productos por estado">
                     <button type="button" class="@(filtroEstado == "todos" ? "active" : "")"
-                            @onclick='() => filtroEstado = "todos"'>Todos</button>
+                            aria-pressed="@(filtroEstado == "todos" ? "true" : "false")" @onclick='() => filtroEstado = "todos"'>Todos</button>
                     <button type="button" class="@(filtroEstado == "activos" ? "active" : "")"
-                            @onclick='() => filtroEstado = "activos"'>Activos</button>
+                            aria-pressed="@(filtroEstado == "activos" ? "true" : "false")" @onclick='() => filtroEstado = "activos"'>Activos</button>
                     <button type="button" class="@(filtroEstado == "inactivos" ? "active" : "")"
-                            @onclick='() => filtroEstado = "inactivos"'>Inactivos</button>
+                            aria-pressed="@(filtroEstado == "inactivos" ? "true" : "false")" @onclick='() => filtroEstado = "inactivos"'>Inactivos</button>
                 </div>
                 <button type="button" class="mn-btn mn-btn-small" @onclick="Cargar">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -195,8 +197,7 @@
             <div class="mn-grid">
                 @foreach (var p in ProductosVisibles)
                 {
-                    <article class="mn-card @(p.Activo ? "" : "mn-card-inactive")"
-                             @onclick="() => VerDetalle(p.Id)">
+                    <article class="mn-card @(p.Activo ? "" : "mn-card-inactive")">
                         <div class="mn-card-media">
                             @if (!string.IsNullOrWhiteSpace(p.ImagenUrl))
                             {
@@ -205,7 +206,7 @@
                             else
                             {
                                 <div class="mn-card-placeholder">
-                                    <span>🍽️</span>
+                                    <span aria-hidden="true">🍽️</span>
                                     <small>Sin foto</small>
                                 </div>
                             }
@@ -215,18 +216,10 @@
                                 </span>
                             </div>
                             <div class="mn-card-actions">
-                                <button type="button" title="Ver detalle" aria-label="Ver detalle de @p.Nombre"
-                                        @onclick="() => VerDetalle(p.Id)" @onclick:stopPropagation="true">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
-                                        <circle cx="12" cy="12" r="3" />
-                                    </svg>
-                                </button>
                                 @if (AuthService.EsEmprendedor)
                                 {
                                     <button type="button" title="Editar" aria-label="Editar @p.Nombre"
-                                            @onclick="() => Editar(p)" @onclick:stopPropagation="true">
+                                            @onclick="() => Editar(p)">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                             <path d="M12 20h9" />
@@ -234,7 +227,7 @@
                                         </svg>
                                     </button>
                                     <button type="button" class="danger" title="Eliminar" aria-label="Eliminar @p.Nombre"
-                                            @onclick="() => PedirEliminar(p)" @onclick:stopPropagation="true">
+                                            @onclick="() => PedirEliminar(p)">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                             <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5" />
@@ -245,7 +238,7 @@
                         </div>
                         <div class="mn-card-body">
                             <div class="mn-card-heading">
-                                <h3 title="@p.Nombre">@p.Nombre</h3>
+                                <h2 title="@p.Nombre">@p.Nombre</h2>
                                 <span>@p.NumRecetas receta(s)</span>
                             </div>
                             <div class="mn-card-kpis">
@@ -269,24 +262,26 @@
                                 {
                                     <button type="button"
                                             class="mn-status-btn @(p.Activo ? "is-active" : "is-inactive")"
-                                            title="Clic para activar o desactivar"
-                                            @onclick="() => CambiarEstado(p)" @onclick:stopPropagation="true">
+                                            aria-label="@(p.Activo ? $"Activo, desactivar {p.Nombre}" : $"Inactivo, activar {p.Nombre}")"
+                                            @onclick="() => CambiarEstado(p)">
                                         <span></span>
                                         @(p.Activo ? "Activo" : "Inactivo")
                                     </button>
                                 }
                                 else
                                 {
-                                    <span class="mn-status-btn @(p.Activo ? "is-active" : "is-inactive")" aria-label="Estado: @(p.Activo ? "activo" : "inactivo")">
+                                    <span class="mn-status-btn @(p.Activo ? "is-active" : "is-inactive")">
                                         <span></span>
                                         @(p.Activo ? "Activo" : "Inactivo")
                                     </span>
                                 }
-                                <button type="button" class="mn-detail-link"
-                                        @onclick="() => VerDetalle(p.Id)" @onclick:stopPropagation="true">
+                                <a class="mn-detail-link stretched-link" href="@($"menu/{p.Id}")" aria-label="Ver detalle de @p.Nombre">
                                     Ver detalle
-                                    <span aria-hidden="true">→</span>
-                                </button>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M5 12h14m-7-7 7 7-7 7" />
+                                    </svg>
+                                </a>
                             </div>
                         </div>
                     </article>
@@ -424,7 +419,6 @@
         await Cargar();
     }
 
-    private void VerDetalle(int id) => Navigation.NavigateTo($"menu/{id}");
 
     private async Task CambiarEstado(ProductoMenuDto p)
     {

@@ -6,15 +6,17 @@
                     <RedirigirALogin />
                 </NotAuthorized>
                 <Authorizing>
-                    <p>Verificando sesión...</p>
+                    <p role="status">Verificando sesión...</p>
                 </Authorizing>
             </AuthorizeRouteView>
-            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+            <FocusOnNavigate RouteData="@routeData" Selector="#contenido-principal" />
         </Found>
         <NotFound>
             <PageTitle>No encontrado</PageTitle>
             <LayoutView Layout="@typeof(Layout.MainLayout)">
-                <p role="alert">Lo sentimos, no hay nada en esta dirección.</p>
+                <h1>Página no encontrada</h1>
+                <p>Lo sentimos, no hay nada en esta dirección.</p>
+                <a href="/" class="btn-solid">Volver a Inicio</a>
             </LayoutView>
         </NotFound>
     </Router>

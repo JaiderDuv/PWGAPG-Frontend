@@ -9,6 +9,8 @@
 @inject AuthService AuthService
 @inject IJSRuntime JS
 
+<PageTitle>Mis recetas | Chef Metrics</PageTitle>
+
 <div class="rc-page">
     <div class="rc-header">
         <div>
@@ -61,6 +63,7 @@
     else
     {
         var sugerencias = Sugerencias();
+        var mostrarSugerencias = abierto && sugerencias.Count > 0;
         var lista = Filtradas.ToList();
         var filas = Filas(lista);
 
@@ -70,26 +73,28 @@
                     <label for="rc-buscar">Buscar</label>
                     <div class="rc-search-box">
                         <input id="rc-buscar" class="form-control" placeholder="Receta, ingrediente o categoría..." maxlength="100"
-                               autocomplete="off" value="@busqueda"
-                               @oninput="AlEscribir" @onfocus="() => abierto = true" @onkeydown="AlTecla" />
+                               autocomplete="off" value="@busqueda" role="combobox" aria-autocomplete="list"
+                               aria-expanded="@(mostrarSugerencias ? "true" : "false")"
+                               aria-controls="@(mostrarSugerencias ? "rc-sugerencias" : null)"
+                               aria-activedescendant="@(mostrarSugerencias && seleccion >= 0 && seleccion < sugerencias.Count ? $"rc-sugerencia-{seleccion}" : null)"
+                               @oninput="AlEscribir" @onfocus="() => abierto = true" @onblur="CerrarSugerencias" @onkeydown="AlTecla" />
                         @if (busqueda.Length > 0)
                         {
                             <button type="button" class="rc-search-clear" aria-label="Borrar búsqueda" @onclick="LimpiarBusqueda">✕</button>
                         }
-                        @if (abierto && sugerencias.Count > 0)
+                        @if (mostrarSugerencias)
                         {
-                            <div class="rc-overlay" @onclick="() => abierto = false"></div>
-                            <ul class="rc-suggest">
+                            <ul class="rc-suggest" id="rc-sugerencias" role="listbox" aria-label="Sugerencias de búsqueda">
                                 @for (var si = 0; si < sugerencias.Count; si++)
                                 {
                                     var s = sugerencias[si];
                                     var idx = si;
-                                    <li class="@(idx == seleccion ? "active" : "")">
-                                        <button type="button" @onclick="() => Elegir(s)" @onmouseover="() => seleccion = idx">
-                                            <span>@IconoTipo(s.Tipo)</span>
-                                            <span class="rc-sg-text">@Resaltar(s.Texto)</span>
-                                            <small>@EtiquetaTipo(s.Tipo)</small>
-                                        </button>
+                                    <li id="@($"rc-sugerencia-{idx}")" role="option" class="@(idx == seleccion ? "active" : "")"
+                                        aria-selected="@(idx == seleccion ? "true" : "false")"
+                                        @onmousedown:preventDefault="true" @onclick="() => Elegir(s)" @onmouseover="() => seleccion = idx">
+                                        <span aria-hidden="true">@IconoTipo(s.Tipo)</span>
+                                        <span class="rc-sg-text">@Resaltar(s.Texto)</span>
+                                        <small>@EtiquetaTipo(s.Tipo)</small>
                                     </li>
                                 }
                             </ul>
@@ -118,21 +123,21 @@
                 </div>
             </div>
 
-            <div class="rc-chips">
-                <button type="button" class="rc-chip @(categoriaSel == "" ? "active" : "")" @onclick='() => categoriaSel = ""'>
+            <div class="rc-chips" role="group" aria-label="Categoría de receta">
+                <button type="button" class="rc-chip @(categoriaSel == "" ? "active" : "")" aria-pressed="@(categoriaSel == "" ? "true" : "false")" @onclick='() => categoriaSel = ""'>
                     Todas<small>@recetas.Count</small>
                 </button>
                 @foreach (var c in CategoriasReceta.Lista)
                 {
                     var n = recetas.Count(r => r.Categoria == c.Valor);
                     if (n == 0 && categoriaSel != c.Valor) { continue; }
-                    <button type="button" class="rc-chip @(categoriaSel == c.Valor ? "active" : "")" @onclick="() => categoriaSel = c.Valor">
+                    <button type="button" class="rc-chip @(categoriaSel == c.Valor ? "active" : "")" aria-pressed="@(categoriaSel == c.Valor ? "true" : "false")" @onclick="() => categoriaSel = c.Valor">
                         @c.Etiqueta<small>@n</small>
                     </button>
                 }
                 @if (recetas.Any(r => string.IsNullOrEmpty(r.Categoria)))
                 {
-                    <button type="button" class="rc-chip @(categoriaSel == SinCategoria ? "active" : "")" @onclick="() => categoriaSel = SinCategoria">
+                    <button type="button" class="rc-chip @(categoriaSel == SinCategoria ? "active" : "")" aria-pressed="@(categoriaSel == SinCategoria ? "true" : "false")" @onclick="() => categoriaSel = SinCategoria">
                         Sin categoría<small>@recetas.Count(r => string.IsNullOrEmpty(r.Categoria))</small>
                     </button>
                 }
@@ -140,13 +145,13 @@
         </section>
 
         <div class="rc-result-bar">
-            <span>Mostrando <strong>@lista.Count</strong> de @recetas.Count receta(s) · Orden: @EtiquetasOrden[orden]</span>
+            <span role="status">Mostrando <strong>@lista.Count</strong> de @recetas.Count receta(s) · Orden: @EtiquetasOrden[orden]</span>
             <div class="rc-result-actions">
                 <div class="rc-view-toggle" role="group" aria-label="Vista de recetas">
                     <button type="button" class="@(vista == "carrusel" ? "active" : "")"
-                            @onclick='() => vista = "carrusel"'>Carrusel</button>
+                            aria-pressed="@(vista == "carrusel" ? "true" : "false")" @onclick='() => vista = "carrusel"'>Carrusel</button>
                     <button type="button" class="@(vista == "cuadricula" ? "active" : "")"
-                            @onclick='() => vista = "cuadricula"'>Cuadrícula</button>
+                            aria-pressed="@(vista == "cuadricula" ? "true" : "false")" @onclick='() => vista = "cuadricula"'>Cuadrícula</button>
                 </div>
                 @if (HayFiltros)
                 {
@@ -165,6 +170,7 @@
         }
         else if (vista == "cuadricula")
         {
+            <h2 class="visually-hidden">Resultados de recetas</h2>
             <div class="rc-grid">
                 @foreach (var r in lista)
                 {
@@ -181,7 +187,7 @@
                 var rid = $"rc-row-{fi}";
                 <section class="rc-row">
                     <div class="rc-row-head">
-                        <h5>@fila.Titulo</h5>
+                        <h2>@fila.Titulo</h2>
                         <span class="rc-row-count">@fila.Items.Count</span>
                     </div>
                     <div class="rc-row-wrap">
@@ -370,6 +376,12 @@
     {
         busqueda = e.Value?.ToString() ?? "";
         abierto = true;
+        seleccion = -1;
+    }
+
+    private void CerrarSugerencias()
+    {
+        abierto = false;
         seleccion = -1;
     }
 

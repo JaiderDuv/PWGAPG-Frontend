@@ -16,10 +16,54 @@
             <h1>Insumos</h1>
         </div>
         <div class="insumos-heading-acciones">
+            <div class="insumos-exportador" @onkeydown="ManejarTeclaMenuReportes">
+                @if (menuReportesAbierto)
+                {
+                    <div class="insumos-export-capa" @onclick="CerrarMenuReportes"></div>
+                }
+                <button type="button"
+                        class="btn-outline insumos-btn-reporte insumos-btn-descargar"
+                        @onclick="AlternarMenuReportes"
+                        disabled="@(generandoPdf || generandoExcel)"
+                        aria-label="Descargar reportes de insumos"
+                        @onkeydown="ManejarTeclaBotonReportes"
+                        id="insumos-descargar"
+                        aria-expanded="@(menuReportesAbierto ? "true" : "false")"
+                        aria-controls="@(menuReportesAbierto ? "menu-reportes-insumos" : null)">
+                    <svg class="insumos-icono-descarga" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14" />
+                    </svg>
+                    <span>@(generandoPdf || generandoExcel ? "Preparando…" : "Descargar")</span>
+                    <svg class="insumos-icono-chevron @(menuReportesAbierto ? "abierto" : "")" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                        <path d="m3 6 5 5 5-5" />
+                    </svg>
+                </button>
+                @if (menuReportesAbierto)
+                {
+                    <div id="menu-reportes-insumos" class="insumos-menu-reportes" role="group" aria-label="Formatos de descarga">
+                        <div class="insumos-menu-reportes-titulo">Descargar reporte</div>
+                        <button type="button" class="insumos-opcion-reporte" id="insumos-descargar-pdf" @onclick="DescargarPdfDesdeMenuAsync">
+                            <span class="insumos-reporte-formato insumos-reporte-formato-pdf" aria-hidden="true">PDF</span>
+                            <span class="insumos-reporte-detalle"><strong>Listado de insumos</strong><small>Inventario completo en PDF</small></span>
+                        </button>
+                        <button type="button" class="insumos-opcion-reporte" @onclick="DescargarExcelDesdeMenuAsync">
+                            <span class="insumos-reporte-formato insumos-reporte-formato-excel" aria-hidden="true">XLSX</span>
+                            <span class="insumos-reporte-detalle"><strong>Historial de insumos</strong><small>Movimientos y precios en Excel</small></span>
+                        </button>
+                    </div>
+                }
+            </div>
             <button type="button" class="btn-outline" @onclick='() => Navigation.NavigateTo("insumos/historial")'>Historial de precios</button>
             <button type="button" class="btn-solid" @onclick="AbrirModalNuevo">+ Nuevo insumo</button>
         </div>
     </div>
+
+    @if (!string.IsNullOrWhiteSpace(mensajeReporte))
+    {
+        <div class="perfil-alerta @(reporteConError ? "perfil-alerta-error" : "perfil-alerta-exito")" role="@(reporteConError ? "alert" : "status")">
+            @mensajeReporte
+        </div>
+    }
 
     @if (!string.IsNullOrWhiteSpace(mensajeExito))
     {
@@ -42,13 +86,14 @@
         </div>
     }
 
-    <section class="insumos-toolbar">
-        <input class="form-control insumos-buscador"
+    <section class="insumos-toolbar" aria-label="Filtros de insumos">
+        <input type="search" class="form-control insumos-buscador"
+               aria-label="Buscar insumos por nombre o proveedor"
                placeholder="Buscar por nombre o proveedor..."
                value="@textoBusqueda"
                @oninput="OnBusquedaInput" />
 
-        <select class="form-select" value="@unidadFiltro" @onchange="OnUnidadFiltroChanged" title="Filtrar por unidad">
+        <select class="form-select" value="@unidadFiltro" @onchange="OnUnidadFiltroChanged" aria-label="Filtrar por unidad">
             <option value="">Todas las unidades</option>
             @foreach (var unidad in ConversorUnidades.Unidades)
             {
@@ -56,20 +101,20 @@
             }
         </select>
 
-        <select class="form-select" value="@categoriaFiltro" @onchange="OnCategoriaFiltroChanged" title="Filtrar por categoría">
+        <select class="form-select" value="@categoriaFiltro" @onchange="OnCategoriaFiltroChanged" aria-label="Filtrar por categoría">
             <option value="">Todas las categorías</option>
             <option value="materia_prima">Materia prima</option>
             <option value="empaque">Empaque</option>
             <option value="otro">Otro</option>
         </select>
 
-        <select class="form-select" value="@ordenarPor" @onchange="OnOrdenChanged" title="Ordenar por">
+        <select class="form-select" value="@ordenarPor" @onchange="OnOrdenChanged" aria-label="Ordenar por">
             <option value="nombre">Nombre</option>
             <option value="costo">Costo</option>
             <option value="cantidad">Cantidad</option>
         </select>
 
-        <select class="form-select" value="@direccion" @onchange="OnDireccionChanged" title="Dirección">
+        <select class="form-select" value="@direccion" @onchange="OnDireccionChanged" aria-label="Dirección del orden">
             <option value="asc">Ascendente</option>
             <option value="desc">Descendente</option>
         </select>
@@ -94,19 +139,19 @@
     }
     else
     {
-        <div class="insumos-tabla-wrap">
-            <table class="insumos-tabla">
+        <div class="insumos-tabla-wrap" tabindex="0" role="region" aria-label="Inventario de insumos">
+            <table class="insumos-tabla" aria-label="Insumos">
                 <thead>
                     <tr>
-                        <th>Nombre</th>
-                        <th>Unidad</th>
-                        <th>Categoría</th>
-                        <th>Costo</th>
-                        <th>Cantidad</th>
-                        <th>Proveedor</th>
-                        <th>Estado</th>
-                        <th>Recetas</th>
-                        <th class="insumos-th-acciones">Acciones</th>
+                        <th scope="col">Nombre</th>
+                        <th scope="col">Unidad</th>
+                        <th scope="col">Categoría</th>
+                        <th scope="col">Costo</th>
+                        <th scope="col">Cantidad</th>
+                        <th scope="col">Proveedor</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col">Recetas</th>
+                        <th scope="col" class="insumos-th-acciones">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -116,17 +161,17 @@
                             <td>
                                 @if (EsEditando(insumo.Id, "nombre"))
                                 {
-                                    <input class="form-control form-control-sm input-edicion-rapida" value="@edicionRapidaValor" @oninput="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" @onblur="GuardarEdicionRapida" />
+                                    <input @ref="entradaRapida" aria-label="Editar nombre de @insumo.Nombre" class="form-control form-control-sm input-edicion-rapida" value="@edicionRapidaValor" @oninput="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" @onblur="GuardarEdicionRapida" />
                                 }
                                 else
                                 {
-                                    <span class="celda-editable" @onclick='() => IniciarEdicionRapida(insumo, "nombre")' title="Clic para editar"><strong>@insumo.Nombre</strong></span>
+                                    <button type="button" id="@($"editar-insumo-{insumo.Id}-nombre")" class="celda-editable" @onclick='() => IniciarEdicionRapida(insumo, "nombre")'><span class="visually-hidden">Editar nombre de @insumo.Nombre: </span><strong>@insumo.Nombre</strong></button>
                                 }
                             </td>
                             <td>
                                 @if (EsEditando(insumo.Id, "unidad"))
                                 {
-                                    <select class="form-select form-select-sm input-edicion-rapida" value="@edicionRapidaValor" @onchange="e => CambiarEdicionRapida(e.Value?.ToString() ?? string.Empty)" @onblur="GuardarEdicionRapida">
+                                    <select @ref="entradaRapida" aria-label="Editar unidad de medida de @insumo.Nombre" class="form-select form-select-sm input-edicion-rapida" value="@edicionRapidaValor" @onchange="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" @onblur="GuardarEdicionRapida">
                                         @foreach (var unidad in ConversorUnidades.Unidades)
                                         {
                                             <option value="@unidad">@unidad</option>
@@ -135,13 +180,13 @@
                                 }
                                 else
                                 {
-                                    <span class="celda-editable" @onclick='() => IniciarEdicionRapida(insumo, "unidad")' title="Clic para editar">@insumo.UnidadMedida</span>
+                                    <button type="button" id="@($"editar-insumo-{insumo.Id}-unidad")" class="celda-editable" @onclick='() => IniciarEdicionRapida(insumo, "unidad")'><span class="visually-hidden">Editar unidad de medida de @insumo.Nombre: </span>@insumo.UnidadMedida</button>
                                 }
                             </td>
                             <td>
                                 @if (EsEditando(insumo.Id, "categoria"))
                                 {
-                                    <select class="form-select form-select-sm input-edicion-rapida" value="@edicionRapidaValor" @onchange="e => CambiarEdicionRapida(e.Value?.ToString() ?? string.Empty)" @onblur="GuardarEdicionRapida">
+                                    <select @ref="entradaRapida" aria-label="Editar categoría de @insumo.Nombre" class="form-select form-select-sm input-edicion-rapida" value="@edicionRapidaValor" @onchange="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" @onblur="GuardarEdicionRapida">
                                         <option value="materia_prima">Materia prima</option>
                                         <option value="empaque">Empaque</option>
                                         <option value="otro">Otro</option>
@@ -149,37 +194,37 @@
                                 }
                                 else
                                 {
-                                    <span class="celda-editable" @onclick='() => IniciarEdicionRapida(insumo, "categoria")' title="Clic para editar">@CategoriaMostrar(insumo.Categoria)</span>
+                                    <button type="button" id="@($"editar-insumo-{insumo.Id}-categoria")" class="celda-editable" @onclick='() => IniciarEdicionRapida(insumo, "categoria")'><span class="visually-hidden">Editar categoría de @insumo.Nombre: </span>@CategoriaMostrar(insumo.Categoria)</button>
                                 }
                             </td>
                             <td>
                                 @if (EsEditando(insumo.Id, "costo"))
                                 {
-                                    <input type="number" step="1" min="0" class="form-control form-control-sm input-edicion-rapida" value="@edicionRapidaValor" @oninput="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" @onblur="GuardarEdicionRapida" />
+                                    <input @ref="entradaRapida" aria-label="Editar costo de @insumo.Nombre" type="number" step="1" min="0" class="form-control form-control-sm input-edicion-rapida" value="@edicionRapidaValor" @oninput="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" @onblur="GuardarEdicionRapida" />
                                 }
                                 else
                                 {
-                                    <span class="celda-editable" @onclick='() => IniciarEdicionRapida(insumo, "costo")' title="Clic para editar">$@insumo.CostoUnitario.ToString("N2")</span>
+                                    <button type="button" id="@($"editar-insumo-{insumo.Id}-costo")" class="celda-editable" @onclick='() => IniciarEdicionRapida(insumo, "costo")'><span class="visually-hidden">Editar costo de @insumo.Nombre: </span>$@insumo.CostoUnitario.ToString("N2")</button>
                                 }
                             </td>
                             <td>
                                 @if (EsEditando(insumo.Id, "cantidad"))
                                 {
-                                    <input type="number" step="1" min="0" class="form-control form-control-sm input-edicion-rapida" value="@edicionRapidaValor" @oninput="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" @onblur="GuardarEdicionRapida" />
+                                    <input @ref="entradaRapida" aria-label="Editar cantidad de @insumo.Nombre" type="number" step="1" min="0" class="form-control form-control-sm input-edicion-rapida" value="@edicionRapidaValor" @oninput="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" @onblur="GuardarEdicionRapida" />
                                 }
                                 else
                                 {
-                                    <span class="celda-editable" @onclick='() => IniciarEdicionRapida(insumo, "cantidad")' title="Clic para editar">@(insumo.Cantidad.HasValue ? insumo.Cantidad.Value.ToString("0.##") : "—")</span>
+                                    <button type="button" id="@($"editar-insumo-{insumo.Id}-cantidad")" class="celda-editable" @onclick='() => IniciarEdicionRapida(insumo, "cantidad")'><span class="visually-hidden">Editar cantidad de @insumo.Nombre: </span>@(insumo.Cantidad.HasValue ? insumo.Cantidad.Value.ToString("0.##") : "—")</button>
                                 }
                             </td>
                             <td>
                                 @if (EsEditando(insumo.Id, "proveedor"))
                                 {
-                                    <div class="proveedor-edicion-rapida">
-                                        <input class="form-control form-control-sm input-edicion-rapida" value="@edicionRapidaValor" @oninput="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" @onblur="GuardarEdicionRapida" placeholder="Escribe o elige un proveedor" />
+                                    <div class="proveedor-edicion-rapida" @onkeydown="TeclaProveedorRapido">
+                                        <input @ref="entradaRapida" aria-label="Editar proveedor de @insumo.Nombre" class="form-control form-control-sm input-edicion-rapida" value="@edicionRapidaValor" @oninput="e => edicionRapidaValor = e.Value?.ToString() ?? string.Empty" @onkeydown="TeclaEdicionRapida" placeholder="Escribe o elige un proveedor" />
                                         @if (cargandoProveedoresRapida)
                                         {
-                                            <small class="text-muted">Cargando proveedores...</small>
+                                            <small class="text-muted" role="status">Cargando proveedores...</small>
                                         }
                                         else if (proveedoresEdicionRapida.Any())
                                         {
@@ -189,7 +234,6 @@
                                                 {
                                                     <button type="button"
                                                             class="proveedor-asociado-rapida @(NombreIgual(p.Nombre, insumo.Proveedor) ? "proveedor-asociado-actual" : "")"
-                                                            @onmousedown:preventDefault
                                                             @onclick="() => SeleccionarProveedorRapidoAsync(p.Nombre)">
                                                         <span>@p.Nombre</span>
                                                         <small>@Formato.Moneda(p.Costo) · @p.Cantidad.ToString("0.##") @p.UnidadMedida</small>
@@ -201,22 +245,26 @@
                                         {
                                             <small class="proveedor-sin-asociados">Este insumo aún no tiene proveedores. Escribe uno nuevo y se creará al guardar.</small>
                                         }
+                                        <div class="proveedor-acciones-rapidas">
+                                            <button type="button" class="btn-mini-editar" @onclick="GuardarRapidoConFoco">Guardar proveedor</button>
+                                            <button type="button" class="btn-mini-historial" @onclick="CancelarRapidoConFoco">Cancelar</button>
+                                        </div>
                                     </div>
                                 }
                                 else
                                 {
-                                    <span class="celda-editable" @onclick='() => IniciarEdicionRapida(insumo, "proveedor")' title="Clic para editar">@(string.IsNullOrWhiteSpace(insumo.Proveedor) ? "—" : insumo.Proveedor)</span>
+                                    <button type="button" id="@($"editar-insumo-{insumo.Id}-proveedor")" class="celda-editable" @onclick='() => IniciarEdicionRapida(insumo, "proveedor")'><span class="visually-hidden">Editar proveedor de @insumo.Nombre: </span>@(string.IsNullOrWhiteSpace(insumo.Proveedor) ? "—" : insumo.Proveedor)</button>
                                 }
                             </td>
                             <td>
-                                <span class="insumos-badge @(insumo.Activo ? "insumos-badge-activo" : "insumos-badge-inactivo") celda-editable" @onclick="() => AlternarActivoRapido(insumo)" title="Clic para activar/desactivar">
+                                <button type="button" class="insumos-badge @(insumo.Activo ? "insumos-badge-activo" : "insumos-badge-inactivo") celda-editable" @onclick="() => AlternarActivoRapido(insumo)" aria-label="@(insumo.Activo ? "Activo, desactivar" : "Inactivo, activar") @insumo.Nombre">
                                     @(insumo.Activo ? "Activo" : "Inactivo")
-                                </span>
+                                </button>
                             </td>
                             <td>@(insumo.NumeroRecetas > 0 ? insumo.NumeroRecetas.ToString() : "—")</td>
                             <td class="insumos-acciones">
-                                <button type="button" class="btn-mini-editar" @onclick="() => AbrirModalEditar(insumo)">Editar</button>
-                                <button type="button" class="btn-mini-historial" @onclick='() => Navigation.NavigateTo($"insumos/{insumo.Id}/historial")' title="Ver historial de precios">Historial</button>
+                                <button type="button" class="btn-mini-editar" aria-label="Editar @insumo.Nombre" @onclick="() => AbrirModalEditar(insumo)">Editar</button>
+                                <button type="button" class="btn-mini-historial" @onclick='() => Navigation.NavigateTo($"insumos/{insumo.Id}/historial")' aria-label="Historial de @insumo.Nombre">Historial</button>
                                 <button type="button" class="btn-mini-eliminar" @onclick="() => PedirEliminar(insumo)" aria-label="Eliminar @insumo.Nombre">Eliminar</button>
                             </td>
                         </tr>
@@ -235,171 +283,143 @@
 
 @if (mostrarModal)
 {
-    <div class="confirm-overlay">
-        <div class="socio-modal">
-            <h3 class="onboarding-subtitulo">@(esEdicion ? "Editar insumo" : "Nuevo insumo")</h3>
+    <AccessibleDialog Class="socio-modal inventario-accesible" LabelledBy="insumo-form-titulo" OnCancel="CerrarModal">
+        <h2 id="insumo-form-titulo" class="onboarding-subtitulo">@(esEdicion ? "Editar insumo" : "Nuevo insumo")</h2>
 
-            <EditForm Model="@form" OnSubmit="@GuardarFormulario" novalidate>
-                @if (esEdicion && camposVaciadosParaProveedorNuevo && !string.IsNullOrWhiteSpace(form.Proveedor))
-                {
-                    <div class="text-muted" style="font-size:0.8rem; margin-bottom:12px;">Asociando nuevo proveedor '@form.Proveedor.Trim()'. Completa unidad, cantidad y costo, y guarda para asociarlo.</div>
-                }
-                @if (esEdicion && errores.TryGetValue(nameof(form.Proveedor), out var errProvEdit))
-                {
-                    <div class="text-danger msg-error" style="margin-bottom:12px;">@errProvEdit</div>
-                }
-                <div class="form-group-sm">
-                    <label class="auth-label">Nombre * <span class="campo-ayuda-wrap"><span id="ayuda-nombre-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("nombre")' @onmouseenter='() => AlEntrarAyuda("nombre")' @onmouseleave="AlSalirAyuda">?</span></span></label>
-                    <span id="ayuda-nombre-caja" class="campo-ayuda-caja" style='@EstiloAyuda("nombre")' @onmouseenter='() => AlEntrarAyuda("nombre")' @onmouseleave="AlSalirAyuda">Nombre con el que identificarás el insumo en recetas e inventario. Debe ser único y de máximo 75 caracteres. Ej.: Harina de trigo.</span>
-                    <InputText @bind-Value="form.Nombre" maxlength="75" class="form-control" placeholder="Ej.: Harina" />
-                    @if (errores.TryGetValue(nameof(form.Nombre), out var errNombre))
+        <EditForm EditContext="@contextoFormulario" OnSubmit="@GuardarFormulario" novalidate>
+            @if (esEdicion && camposVaciadosParaProveedorNuevo && !string.IsNullOrWhiteSpace(form.Proveedor))
+            {
+                <div class="text-muted" style="font-size:0.8rem; margin-bottom:12px;">Asociando nuevo proveedor '@form.Proveedor.Trim()'. Completa unidad, cantidad y costo, y guarda para asociarlo.</div>
+            }
+            @if (esEdicion && errores.TryGetValue(nameof(form.Proveedor), out var errProvEdit))
+            {
+                <div class="text-danger msg-error" style="margin-bottom:12px;">@errProvEdit</div>
+            }
+            <div class="form-group-sm">
+                <label class="auth-label" for="insumo-nombre">Nombre *</label>
+                <AyudaCampoInventario Id="ayuda-nombre-caja" Tema="Nombre">Nombre con el que identificarás el insumo en recetas e inventario. Debe ser único y de máximo 75 caracteres. Ej.: Harina de trigo.</AyudaCampoInventario>
+                <InputText id="insumo-nombre" aria-describedby="ayuda-nombre-caja insumo-nombre-error" aria-required="true" autofocus @bind-Value="form.Nombre" maxlength="75" class="form-control" placeholder="Ej.: Harina" />
+                <div id="insumo-nombre-error" class="text-danger msg-error" aria-live="polite">@(errores.GetValueOrDefault(nameof(form.Nombre)))</div>
+            </div>
+
+            <div class="form-group-sm">
+                <label class="auth-label" for="insumo-unidad">Unidad de medida *</label>
+                <AyudaCampoInventario Id="ayuda-unidad-caja" Tema="Unidad de medida">Unidad en la que compras y usas el insumo. Define cómo se calculan cantidades y costos en tus recetas. Ej.: kg para harina, l para leche.</AyudaCampoInventario>
+                <InputSelect id="insumo-unidad" aria-describedby="ayuda-unidad-caja insumo-unidad-error" aria-required="true" @bind-Value="form.UnidadMedida" class="form-select">
+                    <option value="">Selecciona...</option>
+                    @foreach (var unidad in ConversorUnidades.Unidades)
                     {
-                        <span class="text-danger msg-error">@errNombre</span>
+                        <option value="@unidad">@unidad</option>
                     }
+                </InputSelect>
+                <div id="insumo-unidad-error" class="text-danger msg-error" aria-live="polite">@(errores.GetValueOrDefault(nameof(form.UnidadMedida)))</div>
+            </div>
+
+            <div class="form-group-sm">
+                <label class="auth-label" for="insumo-densidad">Densidad (g/ml) opcional</label>
+                <AyudaCampoInventario Id="ayuda-densidad-caja" Tema="Densidad (g/ml) opcional">Permite convertir entre peso y volumen en las recetas (por ejemplo, una taza de harina a gramos). Déjala vacía si no la conoces; 0 también significa sin densidad.</AyudaCampoInventario>
+                <InputNumber id="insumo-densidad" aria-describedby="ayuda-densidad-caja insumo-densidad-error" @bind-Value="form.DensidadGPorMl" class="form-control" min="0" max="20" step="0.01" placeholder="Ej.: 0,53 para harina" />
+                <div id="insumo-densidad-error" class="text-danger msg-error" aria-live="polite">@(errores.GetValueOrDefault(nameof(form.DensidadGPorMl)))</div>
+            </div>
+
+            <div class="form-group-sm">
+                <label class="auth-label" for="insumo-cantidad">Cantidad *</label>
+                <AyudaCampoInventario Id="ayuda-cantidad-caja" Tema="Cantidad">Cantidad que compraste en la unidad elegida. Ej.: 10 significa 10 kg si elegiste kg. Máximo 999.99 para taza, cucharada, cucharadita, unidad o docena; 999999.99 para el resto.</AyudaCampoInventario>
+                <InputNumber id="insumo-cantidad" aria-describedby="ayuda-cantidad-caja insumo-cantidad-error" aria-required="true" @bind-Value="form.Cantidad" @oninput="OnCantidadRawInput" class="form-control" min="0" step="1" placeholder="Ej.: 10" />
+                <div id="insumo-cantidad-error" class="text-danger msg-error" aria-live="polite">@(errores.GetValueOrDefault(nameof(form.Cantidad)))</div>
+            </div>
+
+            <div class="@(esEdicion ? string.Empty : "onb-grid")">
+                <div class="form-group-sm">
+                    <label class="auth-label" for="insumo-costo">Costo *</label>
+                    <AyudaCampoInventario Id="ayuda-costo-caja" Tema="Costo">Lo que pagaste por la cantidad indicada arriba. Debe ser mayor a 0 y no superar 999999.99. Se usa como respaldo para calcular el costo de tus recetas.</AyudaCampoInventario>
+                    <InputNumber id="insumo-costo" aria-describedby="ayuda-costo-caja insumo-costo-error" aria-required="true" @bind-Value="form.CostoUnitario" @oninput="OnCostoRawInput" class="form-control" min="0" step="1" placeholder="Ej.: 2500" />
+                    <div id="insumo-costo-error" class="text-danger msg-error" aria-live="polite">@(errores.GetValueOrDefault(nameof(form.CostoUnitario)))</div>
                 </div>
 
+                @if (!esEdicion)
+                {
                 <div class="form-group-sm">
-                    <label class="auth-label">Unidad de medida * <span class="campo-ayuda-wrap"><span id="ayuda-unidad-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("unidad")' @onmouseenter='() => AlEntrarAyuda("unidad")' @onmouseleave="AlSalirAyuda">?</span></span></label>
-                    <span id="ayuda-unidad-caja" class="campo-ayuda-caja" style='@EstiloAyuda("unidad")' @onmouseenter='() => AlEntrarAyuda("unidad")' @onmouseleave="AlSalirAyuda">Unidad en la que compras y usas el insumo. Define cómo se calculan cantidades y costos en tus recetas. Ej.: kg para harina, l para leche.</span>
-                    <InputSelect @bind-Value="form.UnidadMedida" class="form-select">
-                        <option value="">Selecciona...</option>
-                        @foreach (var unidad in ConversorUnidades.Unidades)
+                    <label class="auth-label" for="insumo-proveedor">Proveedor *</label>
+                    <AyudaCampoInventario Id="ayuda-proveedor-caja" Tema="Proveedor">Quién te vende este insumo (obligatorio). Escribe para buscar uno existente o crear uno nuevo.</AyudaCampoInventario>
+                    <div>
+                        <input id="insumo-proveedor" list="insumo-proveedores-sugeridos" aria-describedby="ayuda-proveedor-caja insumo-proveedor-error" aria-invalid="@(errores.ContainsKey(nameof(form.Proveedor)) ? "true" : null)" aria-required="true" class="form-control" value="@form.Proveedor" @oninput="OnProveedorOnInput"
+                               @onfocus="MostrarSugerenciasProveedor" @onblur="OcultarSugerenciasProveedor"
+                               placeholder="Escribe para buscar o crear"
+                               disabled="@cargandoProveedores" autocomplete="off" />
+                        <datalist id="insumo-proveedores-sugeridos">
+                            @foreach (var sugerencia in sugerenciasActuales)
+                            {
+                                <option value="@sugerencia.Nombre"></option>
+                            }
+                        </datalist>
+                    </div>
+                    @* Área de estado con altura fija: los mensajes no mueven el resto del formulario. *@
+                    <div style="min-height:20px;" role="status">
+                        @if (cargandoProveedores)
                         {
-                            <option value="@unidad">@unidad</option>
+                            <span class="text-muted" style="font-size:0.8rem;">Cargando proveedores...</span>
                         }
-                    </InputSelect>
-                    @if (errores.TryGetValue(nameof(form.UnidadMedida), out var errUnidad))
-                    {
-                        <span class="text-danger msg-error">@errUnidad</span>
-                    }
-                </div>
-
-                <div class="form-group-sm">
-                    <label class="auth-label">Densidad (g/ml) opcional <span class="campo-ayuda-wrap"><span id="ayuda-densidad-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("densidad")' @onmouseenter='() => AlEntrarAyuda("densidad")' @onmouseleave="AlSalirAyuda">?</span></span></label>
-                    <span id="ayuda-densidad-caja" class="campo-ayuda-caja" style='@EstiloAyuda("densidad")' @onmouseenter='() => AlEntrarAyuda("densidad")' @onmouseleave="AlSalirAyuda">Permite convertir entre peso y volumen en las recetas (por ejemplo, una taza de harina a gramos). Déjala vacía si no la conoces; 0 también significa sin densidad.</span>
-                    <InputNumber @bind-Value="form.DensidadGPorMl" class="form-control" min="0" max="20" step="0.01" placeholder="Ej.: 0,53 para harina" />
-                    @if (errores.TryGetValue(nameof(form.DensidadGPorMl), out var errDensidad))
-                    {
-                        <span class="text-danger msg-error">@errDensidad</span>
-                    }
-                </div>
-
-                <div class="form-group-sm">
-                    <label class="auth-label">Cantidad * <span class="campo-ayuda-wrap"><span id="ayuda-cantidad-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("cantidad")' @onmouseenter='() => AlEntrarAyuda("cantidad")' @onmouseleave="AlSalirAyuda">?</span></span></label>
-                    <span id="ayuda-cantidad-caja" class="campo-ayuda-caja" style='@EstiloAyuda("cantidad")' @onmouseenter='() => AlEntrarAyuda("cantidad")' @onmouseleave="AlSalirAyuda">Cantidad que compraste en la unidad elegida. Ej.: 10 significa 10 kg si elegiste kg. Máximo 999.99 para taza, cucharada, cucharadita, unidad o docena; 999999.99 para el resto.</span>
-                        <InputNumber @bind-Value="form.Cantidad" @oninput="OnCantidadRawInput" class="form-control" min="0" step="1" placeholder="Ej.: 10" />
-                    @if (errores.TryGetValue(nameof(form.Cantidad), out var errCantidad))
-                    {
-                        <span class="text-danger msg-error">@errCantidad</span>
-                    }
-                </div>
-
-                <div class="@(esEdicion ? string.Empty : "onb-grid")">
-                    <div class="form-group-sm">
-                        <label class="auth-label">Costo * <span class="campo-ayuda-wrap"><span id="ayuda-costo-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("costo")' @onmouseenter='() => AlEntrarAyuda("costo")' @onmouseleave="AlSalirAyuda">?</span></span></label>
-                        <span id="ayuda-costo-caja" class="campo-ayuda-caja" style='@EstiloAyuda("costo")' @onmouseenter='() => AlEntrarAyuda("costo")' @onmouseleave="AlSalirAyuda">Lo que pagaste por la cantidad indicada arriba. Debe ser mayor a 0 y no superar 999999.99. Se usa como respaldo para calcular el costo de tus recetas.</span>
-                        <InputNumber @bind-Value="form.CostoUnitario" @oninput="OnCostoRawInput" class="form-control" min="0" step="1" placeholder="Ej.: 2500" />
-                        @if (errores.TryGetValue(nameof(form.CostoUnitario), out var errCosto))
+                        else if (errorCargaProveedores)
                         {
-                            <span class="text-danger msg-error">@errCosto</span>
+                            <span class="text-danger msg-error" style="font-size:0.8rem;">No se pudieron cargar los proveedores. Verifica que el backend esté corriendo.</span>
+                        }
+                        else if (!listaProveedores.Any() && string.IsNullOrWhiteSpace(form.Proveedor))
+                        {
+                            <span class="text-muted" style="font-size:0.8rem;">Aún no hay proveedores registrados. Escribe un nombre para crear el primero.</span>
+                        }
+                        else if (buscandoProveedores)
+                        {
+                            <span class="text-muted" style="font-size:0.75rem;">Actualizando desde la base de datos...</span>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(proveedorAutocompletado) && NombreIgual(form.Proveedor, proveedorAutocompletado))
+                        {
+                            <span class="text-muted" style="font-size:0.8rem;">Datos traídos de '@proveedorAutocompletado' (unidad, cantidad y costo).</span>
+                        }
+                        else if (ProveedorNoManejaInsumo())
+                        {
+                            <span class="text-muted" style="font-size:0.8rem;">'@form.Proveedor.Trim()' aún no maneja este insumo. Se vaciaron unidad, cantidad y costo: complétalos y al guardar quedará asociado.</span>
+                        }
+                        else if (MostrarAvisoSinCoincidencia)
+                        {
+                            <span class="text-muted" style="font-size:0.8rem;">Sin coincidencias para '@form.Proveedor.Trim()' — se creará como nuevo.</span>
                         }
                     </div>
-
-                    @if (!esEdicion)
-                    {
-                    <div class="form-group-sm">
-                        <label class="auth-label">Proveedor * <span class="campo-ayuda-wrap"><span id="ayuda-proveedor-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("proveedor")' @onmouseenter='() => AlEntrarAyuda("proveedor")' @onmouseleave="AlSalirAyuda">?</span></span></label>
-                        <span id="ayuda-proveedor-caja" class="campo-ayuda-caja" style='@EstiloAyuda("proveedor")' @onmouseenter='() => AlEntrarAyuda("proveedor")' @onmouseleave="AlSalirAyuda">Quién te vende este insumo (obligatorio). Escribe para buscar uno existente o crear uno nuevo.</span>
-                        <div class="proveedor-drop-wrap">
-                            <input class="form-control" value="@form.Proveedor" @oninput="OnProveedorOnInput"
-                                   @onfocus="MostrarSugerenciasProveedor" @onblur="OcultarSugerenciasProveedor"
-                                   placeholder="Escribe para buscar o crear"
-                                   disabled="@cargandoProveedores" autocomplete="off" />
-                            @if (mostrarSugerenciasProveedor && sugerenciasActuales.Any())
-                            {
-                                <div class="proveedor-drop-lista">
-                                    @foreach (var sug in sugerenciasActuales)
-                                    {
-                                        <button type="button" class="proveedor-drop-item" @onmousedown="() => SeleccionarProveedor(sug.Nombre)">
-                                            @sug.Nombre
-                                        </button>
-                                    }
-                                </div>
-                            }
-                        </div>
-                        @* Área de estado con altura fija: los mensajes no mueven el resto del formulario. *@
-                        <div style="min-height:20px;">
-                            @if (cargandoProveedores)
-                            {
-                                <span class="text-muted" style="font-size:0.8rem;">Cargando proveedores...</span>
-                            }
-                            else if (errorCargaProveedores)
-                            {
-                                <span class="text-danger msg-error" style="font-size:0.8rem;">No se pudieron cargar los proveedores. Verifica que el backend esté corriendo.</span>
-                            }
-                            else if (!listaProveedores.Any() && string.IsNullOrWhiteSpace(form.Proveedor))
-                            {
-                                <span class="text-muted" style="font-size:0.8rem;">Aún no hay proveedores registrados. Escribe un nombre para crear el primero.</span>
-                            }
-                            else if (buscandoProveedores)
-                            {
-                                <span class="text-muted" style="font-size:0.75rem;">Actualizando desde la base de datos...</span>
-                            }
-                            else if (!string.IsNullOrWhiteSpace(proveedorAutocompletado) && NombreIgual(form.Proveedor, proveedorAutocompletado))
-                            {
-                                <span class="text-muted" style="font-size:0.8rem;">Datos traídos de '@proveedorAutocompletado' (unidad, cantidad y costo).</span>
-                            }
-                            else if (ProveedorNoManejaInsumo())
-                            {
-                                <span class="text-muted" style="font-size:0.8rem;">'@form.Proveedor.Trim()' aún no maneja este insumo. Se vaciaron unidad, cantidad y costo: complétalos y al guardar quedará asociado.</span>
-                            }
-                            else if (MostrarAvisoSinCoincidencia)
-                            {
-                                <span class="text-muted" style="font-size:0.8rem;">Sin coincidencias para '@form.Proveedor.Trim()' — se creará como nuevo.</span>
-                            }
-                        </div>
-                        @if (errores.TryGetValue(nameof(form.Proveedor), out var errProv))
-                        {
-                            <span class="text-danger msg-error">@errProv</span>
-                        }
-                    </div>
-                    }
+                    <div id="insumo-proveedor-error" class="text-danger msg-error" aria-live="polite">@(errores.GetValueOrDefault(nameof(form.Proveedor)))</div>
                 </div>
-
-                <div class="form-group-sm">
-                    <label class="auth-label">Categoría <span class="campo-ayuda-wrap"><span id="ayuda-categoria-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("categoria")' @onmouseenter='() => AlEntrarAyuda("categoria")' @onmouseleave="AlSalirAyuda">?</span></span></label>
-                    <span id="ayuda-categoria-caja" class="campo-ayuda-caja" style='@EstiloAyuda("categoria")' @onmouseenter='() => AlEntrarAyuda("categoria")' @onmouseleave="AlSalirAyuda">Clasifica tu insumo para filtrarlo fácilmente: Materia prima (ingredientes), Empaque (envases, bolsas, cajas) u Otro.</span>
-                    <InputSelect @bind-Value="form.Categoria" class="form-select">
-                        <option value="Otro">Otro</option>
-                        <option value="Materia prima">Materia prima</option>
-                        <option value="Empaque">Empaque</option>
-                    </InputSelect>
-                    @if (errores.TryGetValue(nameof(form.Categoria), out var errCategoria))
-                    {
-                        <span class="text-danger msg-error">@errCategoria</span>
-                    }
-                </div>
-
-                <label class="insumos-check insumos-check-modal">
-                    <InputCheckbox @bind-Value="form.Activo" />
-                    Insumo activo <span class="campo-ayuda-wrap"><span id="ayuda-activo-ancla" class="campo-ayuda" @onclick='() => AlClicAyuda("activo")' @onmouseenter='() => AlEntrarAyuda("activo")' @onmouseleave="AlSalirAyuda">?</span></span>
-                </label>
-                <span id="ayuda-activo-caja" class="campo-ayuda-caja" style='@EstiloAyuda("activo")' @onmouseenter='() => AlEntrarAyuda("activo")' @onmouseleave="AlSalirAyuda">Si está activo aparece en tus listas y puedes usarlo en recetas. Desactívalo si dejaste de usarlo, sin borrar su historial.</span>
-
-                @if (!string.IsNullOrWhiteSpace(errorGeneralModal))
-                {
-                    <div class="text-danger msg-error">@errorGeneralModal</div>
                 }
+            </div>
 
-                <div class="confirm-acciones" style="margin-top: 16px;">
-                    <button type="button" class="btn-outline" @onclick="CerrarModal">Cancelar</button>
-                    <button type="submit" class="btn-solid" disabled="@procesando">
-                        @(procesando ? "Guardando..." : "Guardar")
-                    </button>
-                </div>
-            </EditForm>
-        </div>
-    </div>
+            <div class="form-group-sm">
+                <label class="auth-label" for="insumo-categoria">Categoría</label>
+                <AyudaCampoInventario Id="ayuda-categoria-caja" Tema="Categoría">Clasifica tu insumo para filtrarlo fácilmente: Materia prima (ingredientes), Empaque (envases, bolsas, cajas) u Otro.</AyudaCampoInventario>
+                <InputSelect id="insumo-categoria" aria-describedby="ayuda-categoria-caja insumo-categoria-error" @bind-Value="form.Categoria" class="form-select">
+                    <option value="Otro">Otro</option>
+                    <option value="Materia prima">Materia prima</option>
+                    <option value="Empaque">Empaque</option>
+                </InputSelect>
+                <div id="insumo-categoria-error" class="text-danger msg-error" aria-live="polite">@(errores.GetValueOrDefault(nameof(form.Categoria)))</div>
+            </div>
+
+            <label class="insumos-check insumos-check-modal">
+                <InputCheckbox @bind-Value="form.Activo" aria-describedby="ayuda-activo-caja" />
+                Insumo activo
+            </label>
+            <AyudaCampoInventario Id="ayuda-activo-caja" Tema="insumo activo">Si está activo aparece en tus listas y puedes usarlo en recetas. Desactívalo si dejaste de usarlo, sin borrar su historial.</AyudaCampoInventario>
+
+            @if (!string.IsNullOrWhiteSpace(errorGeneralModal))
+            {
+                <div class="text-danger msg-error" role="alert">@errorGeneralModal</div>
+            }
+
+            <div class="confirm-acciones" style="margin-top: 16px;">
+                <button type="button" class="btn-outline" @onclick="CerrarModal">Cancelar</button>
+                <button type="submit" class="btn-solid" disabled="@procesando">
+                    @(procesando ? "Guardando..." : "Guardar")
+                </button>
+            </div>
+        </EditForm>
+    </AccessibleDialog>
 }
 
 <ConfirmDialog Visible="@mostrarConfirmEliminar"
@@ -425,12 +445,19 @@
     private bool procesando;
     private string? mensajeExito;
     private string? mensajeError;
+    private string? mensajeReporte;
+    private bool reporteConError;
+    private bool generandoPdf;
+    private bool generandoExcel;
+    private bool menuReportesAbierto;
     private BloqueoEliminar? bloqueoEliminar;
 
     private bool mostrarModal;
     private bool esEdicion;
     private InsumoApiDto? insumoEditando;
     private InsumoFormModel form = new();
+    private EditContext? contextoFormulario;
+    private ValidationMessageStore? mensajesValidacion;
     private Dictionary<string, string> errores = new();
     private string? errorGeneralModal;
 
@@ -439,22 +466,6 @@
     private string? proveedorAutocompletado;
     private bool camposVaciadosParaProveedorNuevo;
     private bool cargandoProveedores;
-    private string? ayudaActual;
-    private bool mostrarAyuda;
-    private bool ayudaFija;
-    private bool posicionarAyudaPendiente;
-    private Dictionary<string, string> estilosAyuda = new()
-    {
-        ["nombre"] = "display:none;",
-        ["unidad"] = "display:none;",
-        ["densidad"] = "display:none;",
-        ["cantidad"] = "display:none;",
-        ["costo"] = "display:none;",
-        ["proveedor"] = "display:none;",
-        ["categoria"] = "display:none;",
-        ["activo"] = "display:none;"
-    };
-    private bool AyudaVisible => (mostrarAyuda || ayudaFija) && ayudaActual is not null;
     private bool errorCargaProveedores;
     private bool mostrarSugerenciasProveedor;
 
@@ -465,6 +476,9 @@
     private string? edicionRapidaCampo;
     private string edicionRapidaValor = string.Empty;
     private bool guardandoRapido;
+    private bool enfocarEditorRapido;
+    private ElementReference entradaRapida;
+    private string? enfocarElementoPendiente;
     private List<InsumoProveedorDTO> proveedoresEdicionRapida = new();
     private bool cargandoProveedoresRapida;
 
@@ -621,6 +635,7 @@
         mostrarSugerenciasProveedor = true;
         sugerenciasActuales = FiltrarProveedores(listaProveedores, form.Proveedor);
         AutocompletarDesdeProveedor();
+        ActualizarValidacionFormulario();
         _ = BuscarSugerenciasEnBdAsync(form.Proveedor);
     }
 
@@ -678,19 +693,6 @@
         }
     }
 
-    private void SeleccionarProveedor(string nombre)
-    {
-        proveedorBusquedaCts?.Cancel();
-        buscandoProveedores = false;
-        avisoProveedorCts?.Cancel();
-        avisoProveedorVisible = false;
-        form.Proveedor = nombre;
-        sugerenciasActuales.Clear();
-        mostrarSugerenciasProveedor = false;
-        errores.Remove(nameof(form.Proveedor));
-        AutocompletarDesdeProveedor();
-    }
-
     private void VaciarCamposParaNuevoProveedor()
     {
         form.UnidadMedida = string.Empty;
@@ -701,6 +703,7 @@
         errores.Remove(nameof(form.CostoUnitario));
         errores.Remove(nameof(form.Cantidad));
         errores.Remove(nameof(form.UnidadMedida));
+        ActualizarValidacionFormulario();
     }
 
     private void AutocompletarDesdeProveedor()
@@ -766,6 +769,173 @@
         {
             cargando = false;
         }
+    }
+
+    private async Task DescargarListadoPdfAsync()
+    {
+        if (generandoPdf) return;
+        generandoPdf = true;
+        mensajeReporte = null;
+        reporteConError = false;
+        try
+        {
+            var listado = await ObtenerListadoCompletoAsync();
+            var filas = listado.Select(insumo => new
+            {
+                insumo.Id,
+                insumo.Nombre,
+                insumo.UnidadMedida,
+                Categoria = CategoriaMostrar(insumo.Categoria),
+                insumo.CostoUnitario,
+                insumo.Cantidad,
+                insumo.Proveedor,
+                insumo.Activo
+            }).ToList();
+
+            await JS.InvokeVoidAsync("reportesInsumos.descargarPdf", filas);
+            mensajeReporte = $"Se descargó el PDF con {filas.Count} insumo(s).";
+        }
+        catch (HttpRequestException)
+        {
+            reporteConError = true;
+            mensajeReporte = "No fue posible conectar con el servidor para generar el listado.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            reporteConError = true;
+            mensajeReporte = ex.Message;
+        }
+        catch (Exception)
+        {
+            reporteConError = true;
+            mensajeReporte = "No se pudo generar el PDF del inventario.";
+        }
+        finally
+        {
+            generandoPdf = false;
+        }
+    }
+
+    private void AlternarMenuReportes()
+    {
+        menuReportesAbierto = !menuReportesAbierto;
+    }
+
+    private void CerrarMenuReportes()
+    {
+        menuReportesAbierto = false;
+    }
+
+    private void ManejarTeclaBotonReportes(KeyboardEventArgs e)
+    {
+        if (e.Key != "ArrowDown") return;
+        menuReportesAbierto = true;
+        enfocarElementoPendiente = "insumos-descargar-pdf";
+    }
+
+    private void ManejarTeclaMenuReportes(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape" && menuReportesAbierto)
+        {
+            CerrarMenuReportes();
+            enfocarElementoPendiente = "insumos-descargar";
+        }
+    }
+
+    private async Task DescargarPdfDesdeMenuAsync()
+    {
+        CerrarMenuReportes();
+        await DescargarListadoPdfAsync();
+        enfocarElementoPendiente = "insumos-descargar";
+    }
+
+    private async Task DescargarExcelDesdeMenuAsync()
+    {
+        CerrarMenuReportes();
+        await DescargarHistorialExcelAsync();
+        enfocarElementoPendiente = "insumos-descargar";
+    }
+
+    private async Task DescargarHistorialExcelAsync()
+    {
+        if (generandoExcel) return;
+        generandoExcel = true;
+        mensajeReporte = null;
+        reporteConError = false;
+        try
+        {
+            var resultado = await InsumoService.ObtenerHistorialGeneralAsync(null, null);
+            if (!resultado.Success || resultado.Data is null)
+            {
+                throw new InvalidOperationException(resultado.Message ?? "No se pudo cargar el historial de precios.");
+            }
+
+            var movimientos = resultado.Data.Precios
+                .OrderByDescending(precio => precio.Fecha)
+                .Select(precio => new
+                {
+                    precio.InsumoId,
+                    precio.NombreInsumo,
+                    precio.Fecha,
+                    precio.Proveedor,
+                    precio.Precio,
+                    precio.Cantidad,
+                    precio.PrecioUnitario,
+                    precio.Diferencia,
+                    precio.VariacionPorcentual,
+                    precio.InsumoEliminado,
+                    precio.VariacionPaquete
+                }).ToList();
+
+            await JS.InvokeVoidAsync("reportesInsumos.descargarExcel", movimientos);
+            mensajeReporte = $"Se descargó el Excel con {movimientos.Count} movimiento(s) del historial.";
+        }
+        catch (HttpRequestException)
+        {
+            reporteConError = true;
+            mensajeReporte = "No fue posible conectar con el servidor para generar el historial.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            reporteConError = true;
+            mensajeReporte = ex.Message;
+        }
+        catch (Exception)
+        {
+            reporteConError = true;
+            mensajeReporte = "No se pudo generar el Excel del historial.";
+        }
+        finally
+        {
+            generandoExcel = false;
+        }
+    }
+
+    private async Task<List<InsumoApiDto>> ObtenerListadoCompletoAsync()
+    {
+        const int tamanoPaginaReporte = 100;
+        var primeraPagina = await InsumoService.ListarAsync(
+            string.Empty, "nombre", "asc", string.Empty, string.Empty, true, 1, tamanoPaginaReporte);
+        if (!primeraPagina.Success || primeraPagina.Data is null)
+        {
+            throw new InvalidOperationException(primeraPagina.Message ?? "No se pudo cargar el listado de insumos.");
+        }
+
+        var listado = new List<InsumoApiDto>(primeraPagina.Data.Datos);
+        var totalPaginasReporte = (int)Math.Ceiling(primeraPagina.Data.Total / (double)tamanoPaginaReporte);
+        for (var numeroPagina = 2; numeroPagina <= totalPaginasReporte; numeroPagina++)
+        {
+            var paginaResultado = await InsumoService.ListarAsync(
+                string.Empty, "nombre", "asc", string.Empty, string.Empty, true, numeroPagina, tamanoPaginaReporte);
+            if (!paginaResultado.Success || paginaResultado.Data is null)
+            {
+                throw new InvalidOperationException(paginaResultado.Message ?? "No se pudo completar la descarga del listado de insumos.");
+            }
+
+            listado.AddRange(paginaResultado.Data.Datos);
+        }
+
+        return listado;
     }
 
     private async Task OnBusquedaInput(ChangeEventArgs e)
@@ -849,7 +1019,7 @@
         esEdicion = false;
         insumoEditando = null;
         form = new InsumoFormModel { Activo = true, Categoria = "Otro" };
-        errores.Clear();
+        ReiniciarValidacionFormulario();
         errorGeneralModal = null;
         mostrarSugerenciasProveedor = false;
         sugerenciasActuales.Clear();
@@ -883,7 +1053,7 @@
             Proveedor = insumo.Proveedor ?? string.Empty,
             Activo = insumo.Activo
         };
-        errores.Clear();
+        ReiniciarValidacionFormulario();
         errorGeneralModal = null;
         mostrarSugerenciasProveedor = false;
         sugerenciasActuales.Clear();
@@ -913,7 +1083,6 @@
     {
         mostrarModal = false;
         insumoEditando = null;
-        OcultarAyudas();
         mostrarSugerenciasProveedor = false;
         sugerenciasActuales.Clear();
         buscandoProveedores = false;
@@ -985,6 +1154,7 @@
         {
             errores.Remove(nameof(form.CostoUnitario));
         }
+        ActualizarValidacionFormulario();
     }
 
     private void OnCantidadRawInput(ChangeEventArgs e)
@@ -999,6 +1169,25 @@
         {
             errores.Remove(nameof(form.Cantidad));
         }
+        ActualizarValidacionFormulario();
+    }
+
+    private void ReiniciarValidacionFormulario()
+    {
+        errores.Clear();
+        contextoFormulario = new EditContext(form);
+        mensajesValidacion = new ValidationMessageStore(contextoFormulario);
+    }
+
+    private void ActualizarValidacionFormulario()
+    {
+        if (contextoFormulario is null || mensajesValidacion is null) return;
+        mensajesValidacion.Clear();
+        foreach (var (campo, mensaje) in errores)
+        {
+            mensajesValidacion.Add(contextoFormulario.Field(campo), mensaje);
+        }
+        contextoFormulario.NotifyValidationStateChanged();
     }
 
     private bool ValidarFormulario()
@@ -1077,6 +1266,7 @@
             errores[nameof(form.Proveedor)] = "Para cambiar el precio primero indica el proveedor desde la celda Proveedor de la tabla (clic para editar).";
         }
 
+        ActualizarValidacionFormulario();
         return errores.Count == 0;
     }
 
@@ -1246,6 +1436,7 @@
         LimpiarMensajes();
         edicionRapidaId = insumo.Id;
         edicionRapidaCampo = campo;
+        enfocarEditorRapido = true;
         proveedoresEdicionRapida.Clear();
         cargandoProveedoresRapida = false;
         var invariante = System.Globalization.CultureInfo.InvariantCulture;
@@ -1296,7 +1487,7 @@
     {
         if (guardandoRapido) return;
         edicionRapidaValor = nombre;
-        await GuardarEdicionRapida();
+        await GuardarRapidoConFoco();
     }
 
     private void CancelarEdicionRapida()
@@ -1317,16 +1508,35 @@
     private static bool EsMensajeSinCambios(string? mensaje) =>
         mensaje?.Contains("al menos un campo", StringComparison.OrdinalIgnoreCase) == true;
 
-    private async Task CambiarEdicionRapida(string valor)
-    {
-        edicionRapidaValor = valor;
-        await GuardarEdicionRapida();
-    }
-
     private async Task TeclaEdicionRapida(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter") await GuardarEdicionRapida();
-        else if (e.Key == "Escape") CancelarEdicionRapida();
+        if (e.Key == "Enter") await GuardarRapidoConFoco();
+        else if (e.Key == "Escape") CancelarRapidoConFoco();
+    }
+
+    private void TeclaProveedorRapido(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") CancelarRapidoConFoco();
+    }
+
+    private string? IdDisparadorEdicionRapida() => edicionRapidaId.HasValue
+        ? $"editar-insumo-{edicionRapidaId}-{edicionRapidaCampo}" : null;
+
+    private void CancelarRapidoConFoco()
+    {
+        if (!edicionRapidaId.HasValue) return;
+        enfocarElementoPendiente = IdDisparadorEdicionRapida();
+        CancelarEdicionRapida();
+    }
+
+    private async Task GuardarRapidoConFoco()
+    {
+        var disparador = IdDisparadorEdicionRapida();
+        await GuardarEdicionRapida();
+        if (!edicionRapidaId.HasValue && !mostrarModal)
+        {
+            enfocarElementoPendiente = disparador;
+        }
     }
 
     private static bool IntentarDecimal(string texto, out decimal valor) =>
@@ -1688,115 +1898,23 @@
         bloqueoEliminar = null;
     }
 
-    private string EstiloAyuda(string clave)
-    {
-        if (estilosAyuda.TryGetValue(clave, out var estilo)
-            && string.Equals(ayudaActual, clave, StringComparison.Ordinal)
-            && AyudaVisible)
-        {
-            return estilo;
-        }
-        return "display:none;";
-    }
-
-    private void OcultarAyudas()
-    {
-        ayudaActual = null;
-        mostrarAyuda = false;
-        ayudaFija = false;
-        posicionarAyudaPendiente = false;
-        foreach (var clave in estilosAyuda.Keys.ToList())
-        {
-            estilosAyuda[clave] = "display:none;";
-        }
-    }
-
-    private void OcultarOtrasAyudas(string excepto)
-    {
-        foreach (var clave in estilosAyuda.Keys.ToList())
-        {
-            if (!string.Equals(clave, excepto, StringComparison.Ordinal))
-            {
-                estilosAyuda[clave] = "display:none;";
-            }
-        }
-    }
-
-    private void AlEntrarAyuda(string clave)
-    {
-        ayudaActual = clave;
-        mostrarAyuda = true;
-        OcultarOtrasAyudas(clave);
-        PedirPosicionAyuda();
-    }
-
-    private void AlSalirAyuda()
-    {
-        if (ayudaFija) return;
-        var actual = ayudaActual;
-        mostrarAyuda = false;
-        if (actual is not null && estilosAyuda.ContainsKey(actual))
-        {
-            estilosAyuda[actual] = "display:none;";
-        }
-    }
-
-    private void AlClicAyuda(string clave)
-    {
-        if (!string.Equals(ayudaActual, clave, StringComparison.Ordinal))
-        {
-            ayudaActual = clave;
-            ayudaFija = true;
-            mostrarAyuda = true;
-            OcultarOtrasAyudas(clave);
-        }
-        else
-        {
-            ayudaFija = !ayudaFija;
-            mostrarAyuda = ayudaFija || mostrarAyuda;
-        }
-        if (AyudaVisible) PedirPosicionAyuda();
-        else if (estilosAyuda.ContainsKey(clave))
-        {
-            estilosAyuda[clave] = "display:none;";
-        }
-    }
-
-    private void PedirPosicionAyuda()
-    {
-        posicionarAyudaPendiente = true;
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (posicionarAyudaPendiente && AyudaVisible)
+        if (enfocarEditorRapido)
         {
-            posicionarAyudaPendiente = false;
-            await PosicionarAyuda();
+            enfocarEditorRapido = false;
+            if (edicionRapidaId.HasValue)
+            {
+                await entradaRapida.FocusAsync();
+            }
         }
-    }
 
-    private async Task PosicionarAyuda()
-    {
-        var clave = ayudaActual;
-        if (string.IsNullOrEmpty(clave)) return;
-        try
+        if (enfocarElementoPendiente is not null)
         {
-            var pos = await JS.InvokeAsync<double[]>("ayudaProveedor.posicionar", $"ayuda-{clave}-ancla", $"ayuda-{clave}-caja");
-            if (pos is { Length: 2 })
-            {
-                estilosAyuda[clave] = $"display:block;top:{pos[0]:0}px;left:{pos[1]:0}px;";
-            }
-            else
-            {
-                estilosAyuda[clave] = "display:block;";
-            }
+            var id = enfocarElementoPendiente;
+            enfocarElementoPendiente = null;
+            await JS.InvokeVoidAsync("ayudaInventario.enfocar", id);
         }
-        catch
-        {
-            estilosAyuda[clave] = "display:block;";
-        }
-        StateHasChanged();
     }
 
     public void Dispose()

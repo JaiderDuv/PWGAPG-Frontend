@@ -4,7 +4,7 @@
 
 .mn-page {
     --mn-ink: #3F3126;
-    --mn-muted: #8A7A6B;
+    --mn-muted: #6B5948;
     --mn-line: #F0E9E1;
     --mn-soft: #FDF6EC;
     --mn-success: #067647;
@@ -20,6 +20,7 @@
     margin: 0 auto;
     padding: 4px 0 48px;
     color: var(--mn-ink);
+    --bs-secondary-color: var(--mn-muted);
 }
 
 /* ---------- Encabezado ---------- */
@@ -34,9 +35,7 @@
     padding: 2rem 2.2rem;
     border: 1px solid #F0DFC9;
     border-radius: 24px;
-    background:
-        radial-gradient(circle at 88% 12%, rgba(204, 149, 90, .18), transparent 34%),
-        linear-gradient(135deg, #FFFAF3 0%, #FDF3E6 55%, #F8EAD8 100%);
+    background: #FDF3E6;
     box-shadow: 0 12px 32px rgba(96, 61, 25, .06);
     margin-bottom: 1rem;
 }
@@ -134,7 +133,7 @@
     }
 
 .mn-btn-ghost {
-    background: rgba(255, 255, 255, .72);
+    background: #fff;
     border-color: #E6D5C1;
     color: #6B4A2F;
 }
@@ -360,6 +359,7 @@
 }
 
 .mn-card {
+    position: relative;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -372,22 +372,17 @@
 }
 
     .mn-card:hover,
-    .mn-card:focus-visible {
+    .mn-card:focus-within {
         border-color: #EBD9C2;
         box-shadow: 0 12px 30px rgba(96, 61, 25, .10);
-        outline: none;
         transform: translateY(-3px);
-    }
-
-    .mn-card:focus-visible {
-        box-shadow: 0 0 0 3px rgba(204, 149, 90, .30), 0 12px 30px rgba(96, 61, 25, .10);
     }
 
 .mn-card-media {
     position: relative;
     aspect-ratio: 4 / 3;
     overflow: hidden;
-    background: linear-gradient(135deg, #FDF6EC, #F3E4D0);
+    background: #FDF6EC;
 }
 
     .mn-card-media > img {
@@ -414,7 +409,7 @@
     gap: .2rem;
     width: 100%;
     height: 100%;
-    color: #B39B82;
+    color: var(--mn-muted);
 }
 
     .mn-card-placeholder span {
@@ -448,21 +443,21 @@
     font-weight: 800;
     letter-spacing: .02em;
     line-height: 1.2;
-    backdrop-filter: blur(5px);
 }
 
 .mn-badge-active {
-    background: rgba(236, 253, 243, .94);
+    background: var(--mn-success-soft);
     color: var(--mn-success);
 }
 
 .mn-badge-inactive {
-    background: rgba(243, 244, 246, .94);
-    color: #6B7280;
+    background: #F3F4F6;
+    color: var(--mn-muted);
 }
 
 .mn-card-actions {
     position: absolute;
+    z-index: 2;
     top: .65rem;
     right: .65rem;
     display: flex;
@@ -524,7 +519,7 @@
     gap: .5rem;
 }
 
-    .mn-card-heading h3 {
+    .mn-card-heading h2 {
         overflow: hidden;
         color: var(--mn-ink);
         font-size: .98rem;
@@ -605,6 +600,11 @@
     transition: background .15s ease, border-color .15s ease;
 }
 
+button.mn-status-btn {
+    position: relative;
+    z-index: 2;
+}
+
     .mn-status-btn span {
         width: 7px;
         height: 7px;
@@ -621,7 +621,7 @@
     .mn-status-btn.is-inactive {
         border-color: #E5E7EB;
         background: #F3F4F6;
-        color: #6B7280;
+        color: var(--mn-muted);
     }
 
     .mn-status-btn:hover {
@@ -635,18 +635,21 @@
     border: 0;
     background: transparent;
     color: var(--cm-primary-dark);
+    min-height: 24px;
     font-family: inherit;
     font-size: .76rem;
     font-weight: 800;
     padding: 0;
+    text-decoration: underline;
+    text-underline-offset: .18em;
     white-space: nowrap;
 }
 
-    .mn-detail-link span {
+    .mn-detail-link svg {
         transition: transform .15s ease;
     }
 
-.mn-card:hover .mn-detail-link span {
+.mn-card:hover .mn-detail-link svg {
     transform: translateX(2px);
 }
 
@@ -670,7 +673,7 @@
     padding: 3.25rem 1.5rem;
     border: 1px dashed #E6D5C1;
     border-radius: 20px;
-    background: linear-gradient(180deg, #FFFDF9, #FFF9F1);
+    background: #FFF9F1;
     text-align: center;
 }
 
@@ -747,7 +750,7 @@
     overflow: hidden;
     border: 1px solid #F0DFC9;
     border-radius: 24px;
-    background: linear-gradient(135deg, #FFFAF3 0%, #FDF3E6 55%, #F8EAD8 100%);
+    background: #FDF3E6;
     box-shadow: 0 12px 32px rgba(96, 61, 25, .06);
     margin-bottom: 1rem;
 }
@@ -756,7 +759,7 @@
     position: relative;
     min-height: 250px;
     overflow: hidden;
-    background: linear-gradient(135deg, #FDF6EC, #F3E4D0);
+    background: #FDF6EC;
 }
 
     .mn-detail-media > img {

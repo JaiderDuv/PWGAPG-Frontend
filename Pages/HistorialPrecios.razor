@@ -11,6 +11,13 @@
         ← Volver a insumos
     </button>
 
+    <div class="insumos-heading" style="margin-top: 16px;">
+        <div>
+            <span class="perfil-kicker">HISTORIAL DE PRECIOS</span>
+            <h1>@(historial?.Nombre ?? "Historial de precios del insumo")</h1>
+        </div>
+    </div>
+
     @if (cargando)
     {
         <section class="perfil-cargando-card" aria-live="polite" style="margin-top: 16px;">
@@ -27,8 +34,6 @@
     {
         <div class="insumos-heading" style="margin-top: 16px;">
             <div>
-                <span class="perfil-kicker">HISTORIAL DE PRECIOS</span>
-                <h1>@historial.Nombre</h1>
                 @if (historial.InsumoEliminado)
                 {
                     <p class="text-muted" style="font-size:0.85rem;">Este insumo fue eliminado. Se conserva su historial de precios.</p>
@@ -44,13 +49,13 @@
             @if (nombresProveedores is null)
             {
                 <input class="form-control insumos-buscador"
-                       placeholder="Filtrar por proveedor..."
+                       aria-label="Filtrar historial por proveedor" placeholder="Filtrar por proveedor..."
                        value="@filtroProveedor"
                        @oninput="OnFiltroProveedorInput" />
             }
             else
             {
-                <select class="form-select insumos-buscador" value="@filtroProveedor" @onchange="OnFiltroProveedorSelect">
+                <select class="form-select insumos-buscador" value="@filtroProveedor" @onchange="OnFiltroProveedorSelect" aria-label="Filtrar historial por proveedor">
                     <option value="">Todos los proveedores</option>
                     @foreach (var nombre in nombresProveedores)
                     {
@@ -72,17 +77,17 @@
         {
             @foreach (var grupo in gruposFiltrados)
             {
-                <h3 class="insumos-grupo-titulo">@grupo.Proveedor</h3>
-                <div class="insumos-tabla-wrap" style="margin-bottom: 20px;">
-                    <table class="insumos-tabla">
+                <h2 class="insumos-grupo-titulo">@grupo.Proveedor</h2>
+                <div class="insumos-tabla-wrap" style="margin-bottom: 20px;" tabindex="0" role="region" aria-label="Movimientos de @grupo.Proveedor">
+                    <table class="insumos-tabla" aria-label="Historial de precios de @grupo.Proveedor">
                         <thead>
                                 <tr>
-                                    <th>Fecha</th>
-                                    <th>Precio</th>
-                                    <th>Cantidad</th>
-                                    <th>P. unitario</th>
-                                    <th>Diferencia</th>
-                                    <th>Variación vs. anterior</th>
+                                    <th scope="col">Fecha</th>
+                                    <th scope="col">Precio</th>
+                                    <th scope="col">Cantidad</th>
+                                    <th scope="col">P. unitario</th>
+                                    <th scope="col">Diferencia</th>
+                                    <th scope="col">Variación vs. anterior</th>
                                 </tr>
                             </thead>
                             <tbody>

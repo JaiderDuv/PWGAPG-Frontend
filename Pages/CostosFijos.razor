@@ -7,10 +7,12 @@
 @using PWGAPG_Frontend.Components
 @inject CosteoApiService Api
 
+<PageTitle>Costos fijos | Chef Metrics</PageTitle>
+
 <div class="rc-page container py-4">
     <div class="rc-header">
         <div>
-            <h2 class="rc-title">Costos fijos del negocio</h2>
+            <h1 class="rc-title">Costos fijos del negocio</h1>
             <p class="rc-subtitle">
                 Arriendo, servicios, nómina... Son gastos que pagas todos los meses, aunque no vendas.
                 Aquí los repartimos entre las preparaciones base que haces al mes para saber cuánto de esos gastos
@@ -26,7 +28,7 @@
     <div class="rc-card mb-3">
         <div class="rc-card-header">
             <div>
-                <h5 class="mb-0">Preparaciones base al mes</h5>
+                <h2 class="mb-0">Preparaciones base al mes</h2>
                 <small class="text-muted">Un solo valor para todos los costos fijos del negocio.</small>
             </div>
         </div>
@@ -65,7 +67,7 @@
 
             @if (errorPreparaciones is not null)
             {
-                <div class="alert alert-danger mt-3 mb-0">@errorPreparaciones</div>
+                <div class="alert alert-danger mt-3 mb-0" role="alert">@errorPreparaciones</div>
             }
 
             @if (preparacionesBaseMes is null)
@@ -107,14 +109,14 @@
         </div>
     </div>
 
-    @if (mensajeOk is not null) { <div class="alert alert-success">@mensajeOk</div> }
-    @if (error is not null) { <div class="alert alert-danger">@error</div> }
+    @if (mensajeOk is not null) { <div class="alert alert-success" role="status">@mensajeOk</div> }
+    @if (error is not null) { <div class="alert alert-danger" role="alert">@error</div> }
 
     @if (mostrarForm)
     {
         <div class="rc-card">
             <div class="rc-card-header">
-                <h5 class="mb-0">@(editando is null ? "Nuevo costo fijo" : $"Editar costo fijo #{editando.Id}")</h5>
+                <h2 class="mb-0">@(editando is null ? "Nuevo costo fijo" : $"Editar costo fijo #{editando.Id}")</h2>
             </div>
             <EditForm Model="modelo" OnValidSubmit="Guardar" class="rc-card-body" novalidate>
                 <DataAnnotationsValidator />
@@ -135,22 +137,22 @@
                     <div class="col-lg-7">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="rc-label">
+                                <label class="rc-label" for="cf-nombre">
                                     Nombre *
                                     <span class="campo-ayuda" tabindex="0"
                                           data-tip="Nombre con el que identificarás el costo fijo. Ej.: Arriendo del local, Nómina, Internet.">?</span>
                                 </label>
-                                <InputText class="form-control" @bind-Value="modelo.Nombre" maxlength="150"
+                                <InputText id="cf-nombre" class="form-control" @bind-Value="modelo.Nombre" maxlength="150" required
                                            placeholder="Ej: Arriendo del local" />
                                 <ValidationMessage For="() => modelo.Nombre" class="rc-error" />
                             </div>
                             <div class="col-md-6">
-                                <label class="rc-label">
+                                <label class="rc-label" for="cf-categoria">
                                     Categoría *
                                     <span class="campo-ayuda" tabindex="0"
                                           data-tip="Agrupa el costo para analizarlo. Puedes elegir una sugerencia o escribir tu propia categoría. Ej.: Arriendo, Servicios, Nómina.">?</span>
                                 </label>
-                                <InputText class="form-control" @bind-Value="modelo.Categoria" maxlength="50"
+                                <InputText id="cf-categoria" class="form-control" @bind-Value="modelo.Categoria" maxlength="50"
                                            list="categorias-costo-fijo" placeholder="Ej: Arriendo" />
                                 <datalist id="categorias-costo-fijo">
                                     @foreach (var cat in CategoriasCostoFijo) { <option value="@cat"></option> }
@@ -158,12 +160,12 @@
                                 <ValidationMessage For="() => modelo.Categoria" class="rc-error" />
                             </div>
                             <div class="col-md-6">
-                                <label class="rc-label">
+                                <label class="rc-label" for="cf-monto">
                                     Monto mensual *
                                     <span class="campo-ayuda" tabindex="0"
                                           data-tip="Valor total que pagas al mes por este costo. Ej.: 1.000.000 de arriendo. No cambia el costo de insumos y empaques de los productos.">?</span>
                                 </label>
-                                <InputNumber class="form-control" @bind-Value="modelo.MontoMensual" min="0" step="1" />
+                                <InputNumber id="cf-monto" class="form-control" @bind-Value="modelo.MontoMensual" min="0" step="1" required />
                                 <ValidationMessage For="() => modelo.MontoMensual" class="rc-error" />
                             </div>
                             <div class="col-12">
@@ -182,7 +184,7 @@
                     <div class="col-lg-5">
                         <aside class="cs-costos-existentes">
                             <div class="cs-costos-existentes-header">
-                                <h6>Costos fijos actuales</h6>
+                                <h3 class="cs-preview-title">Costos fijos actuales</h3>
                                 <span>@CantidadActivos @(CantidadActivos == 1 ? "activo" : "activos") · @Formato.Moneda(TotalMensual)/mes</span>
                             </div>
                             <p>
@@ -243,7 +245,7 @@
                     </div>
                 }
 
-                @if (errorForm is not null) { <div class="alert alert-danger mt-3">@errorForm</div> }
+                @if (errorForm is not null) { <div class="alert alert-danger mt-3" role="alert">@errorForm</div> }
 
                 <div class="d-flex gap-2 justify-content-end mt-3">
                     <button type="button" class="btn btn-outline-secondary" @onclick="CerrarForm" disabled="@guardando">Cancelar</button>
@@ -268,7 +270,7 @@
     else
     {
         <div class="rc-card">
-            <div class="table-responsive">
+            <div class="table-responsive" role="region" aria-label="Tabla de costos fijos" tabindex="0">
                 <table class="table cs-table align-middle mb-0">
                     <thead>
                         <tr>
@@ -277,7 +279,7 @@
                             <th class="text-end">Monto mensual</th>
                             <th class="text-end" title="Parte del gasto fijo mensual que le corresponde a cada preparación base. No es un pago adicional ni el total mensual del costo.">Cuota por preparación</th>
                             <th>Estado</th>
-                            <th></th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -335,7 +337,7 @@
     {
         <div class="rc-card mt-3">
             <div class="rc-card-header">
-                <h5 class="mb-0">Resumen por categoría</h5>
+                <h2 class="mb-0">Resumen por categoría</h2>
             </div>
             <div class="rc-card-body">
                 <div class="cs-kpis">
@@ -357,7 +359,7 @@
         <div class="rc-card mt-4">
             <div class="rc-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <div>
-                    <h5 class="mb-0">Punto de equilibrio mensual</h5>
+                    <h2 class="mb-0">Punto de equilibrio mensual</h2>
                     <small class="text-muted">
                         Cuánto necesitas vender al mes para que, después de pagar insumos y empaques,
                         te alcance para cubrir arriendo, nómina y demás costos fijos. No es una meta de ventas
@@ -371,7 +373,7 @@
             <div class="rc-card-body">
                 @if (errorEquilibrio is not null)
                 {
-                    <div class="alert alert-danger mb-0">@errorEquilibrio</div>
+                    <div class="alert alert-danger mb-0" role="alert">@errorEquilibrio</div>
                 }
                 else if (equilibrio is null)
                 {
@@ -476,7 +478,7 @@
                             </div>
                         </div>
 
-                        <div class="table-responsive mt-3">
+                        <div class="table-responsive mt-3" role="region" aria-label="Punto de equilibrio por producto" tabindex="0">
                             <table class="table table-sm cs-table align-middle mb-0">
                                 <thead>
                                     <tr>

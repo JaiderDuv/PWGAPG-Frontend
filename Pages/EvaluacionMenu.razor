@@ -9,6 +9,8 @@
 @inject MenuApiService MenuApi
 @inject NavigationManager Navigation
 
+<PageTitle>Márgenes del menú | Chef Metrics</PageTitle>
+
 <div class="rc-page mg-page container py-4">
     <button type="button" class="mg-back" @onclick='() => Navigation.NavigateTo("menu")'>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -21,7 +23,7 @@
     <section class="mg-hero">
         <div class="mg-hero-copy">
             <span class="mg-eyebrow">Precios y márgenes</span>
-            <h2 class="mg-title">Márgenes del menú</h2>
+            <h1 class="mg-title">Márgenes del menú</h1>
             <p class="mg-subtitle">
                 Evalúa el margen directo de cada producto y ajusta los que estén por debajo de tu umbral.
                 Los costos fijos se cubren aparte con el punto de equilibrio.
@@ -57,7 +59,7 @@
                 </svg>
             </span>
             <div>
-                <h3>Margen directo</h3>
+                <h2>Margen directo</h2>
                 <p>Precio menos ingredientes y empaques. Es el indicador que evalúa esta página.</p>
             </div>
         </article>
@@ -71,7 +73,7 @@
                 </svg>
             </span>
             <div>
-                <h3>Punto de equilibrio</h3>
+                <h2>Punto de equilibrio</h2>
                 <p>
                     Costos fijos y mix de ventas.
                     <a href="costos-fijos">Costos fijos</a> · <a href="simulador">Simulador</a>
@@ -124,13 +126,13 @@
         </div>
         @if (errorUmbral is not null)
         {
-            <div class="mg-inline-error">@errorUmbral</div>
+            <div class="mg-inline-error" role="alert">@errorUmbral</div>
         }
     </section>
 
     @if (error is not null)
     {
-        <div class="mg-alert mg-alert-danger">
+        <div class="mg-alert mg-alert-danger" role="alert">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="m10.3 3.9-8.4 14.6A2 2 0 0 0 3.6 21h16.8a2 2 0 0 0 1.7-2.5L13.7 3.9a2 2 0 0 0-3.4 0Z" />
                 <path d="M12 9v4" />
@@ -157,7 +159,7 @@
                     <path d="M12 13v8" />
                 </svg>
             </span>
-            <h3>Aún no hay productos para evaluar</h3>
+            <h2>Aún no hay productos para evaluar</h2>
             <p>Crea o revisa los productos de tu menú para ver sus márgenes directos.</p>
             <button type="button" class="btn btn-primary" @onclick='() => Navigation.NavigateTo("menu")'>
                 Crear o revisar productos
@@ -258,7 +260,8 @@
                         </select>
                     </div>
                     <button type="button" class="mg-btn-filter @(mostrarFiltrosAvanzados ? "is-open" : "")"
-                            @onclick="AlternarFiltros" aria-expanded="@mostrarFiltrosAvanzados">
+                            @onclick="AlternarFiltros" aria-expanded="@(mostrarFiltrosAvanzados ? "true" : "false")"
+                            aria-controls="mg-filtros-avanzados">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M3 5h18" />
                             <path d="M6 12h12" />
@@ -279,44 +282,40 @@
                 </div>
             </div>
 
-            @if (mostrarFiltrosAvanzados)
-            {
-                <div class="mg-filters">
+                <div class="mg-filters" id="mg-filtros-avanzados" hidden="@(!mostrarFiltrosAvanzados)">
                     <div class="mg-filter-field">
-                        <label>Costo directo mín.</label>
-                        <input type="number" class="form-control" min="0" max="99999999" step="1"
+                        <label for="mg-costo-min">Costo directo mín.</label>
+                        <input id="mg-costo-min" type="number" class="form-control" min="0" max="99999999" step="1"
                                @bind="costoMin" @bind:event="oninput" @bind:after="AlFiltrar" />
                     </div>
                     <div class="mg-filter-field">
-                        <label>Costo directo máx.</label>
-                        <input type="number" class="form-control" min="0" max="99999999" step="1"
+                        <label for="mg-costo-max">Costo directo máx.</label>
+                        <input id="mg-costo-max" type="number" class="form-control" min="0" max="99999999" step="1"
                                @bind="costoMax" @bind:event="oninput" @bind:after="AlFiltrar" />
                     </div>
                     <div class="mg-filter-field">
-                        <label>Precio mín.</label>
-                        <input type="number" class="form-control" min="0" max="99999999" step="1"
+                        <label for="mg-precio-min">Precio mín.</label>
+                        <input id="mg-precio-min" type="number" class="form-control" min="0" max="99999999" step="1"
                                @bind="precioMin" @bind:event="oninput" @bind:after="AlFiltrar" />
                     </div>
                     <div class="mg-filter-field">
-                        <label>Precio máx.</label>
-                        <input type="number" class="form-control" min="0" max="99999999" step="1"
+                        <label for="mg-precio-max">Precio máx.</label>
+                        <input id="mg-precio-max" type="number" class="form-control" min="0" max="99999999" step="1"
                                @bind="precioMax" @bind:event="oninput" @bind:after="AlFiltrar" />
                     </div>
                     <div class="mg-filter-field">
-                        <label>Margen directo mín. %</label>
-                        <input type="number" class="form-control" min="-999" max="999" step="1"
+                        <label for="mg-margen-min">Margen directo mín. %</label>
+                        <input id="mg-margen-min" type="number" class="form-control" min="-999" max="999" step="1"
                                @bind="margenMin" @bind:event="oninput" @bind:after="AlFiltrar" />
                     </div>
                     <div class="mg-filter-field">
-                        <label>Margen directo máx. %</label>
-                        <input type="number" class="form-control" min="-999" max="999" step="1"
+                        <label for="mg-margen-max">Margen directo máx. %</label>
+                        <input id="mg-margen-max" type="number" class="form-control" min="-999" max="999" step="1"
                                @bind="margenMax" @bind:event="oninput" @bind:after="AlFiltrar" />
                     </div>
                 </div>
-            }
-
             <div class="mg-toolbar-footer">
-                <span class="mg-results">@productosFiltrados.Count resultado(s)</span>
+                <span class="mg-results" role="status">@productosFiltrados.Count resultado(s)</span>
                 @if (FiltrosActivosCount > 0)
                 {
                     <span class="mg-results">@FiltrosActivosCount filtro(s) activo(s)</span>
@@ -326,7 +325,7 @@
 
         @if (mensajeExito is not null)
         {
-            <div class="mg-alert mg-alert-success">
+            <div class="mg-alert mg-alert-success" role="status">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <circle cx="12" cy="12" r="9" />
                     <path d="m8.5 12 2.5 2.5 4.5-5" />
@@ -344,7 +343,7 @@
                         <path d="m21 21-4.3-4.3" />
                     </svg>
                 </span>
-                <h3>Sin resultados</h3>
+                <h2>Sin resultados</h2>
                 <p>Ningún producto coincide con los filtros actuales.</p>
                 <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarFiltros">
                     Limpiar filtros
@@ -356,8 +355,8 @@
             <div class="mg-table-card">
                 <div class="mg-table-head">
                     <div>
-                        <h3>Detalle por producto</h3>
-                        <p>Ordenado por margen directo. Haz clic en una fila para abrir el producto.</p>
+                        <h2>Detalle por producto</h2>
+                        <p>Selecciona el nombre de un producto para abrir su detalle.</p>
                     </div>
                     <div class="mg-legend">
                         <span class="mg-legend-item"><span class="mg-dot mg-dot-risk"></span> En riesgo</span>
@@ -365,7 +364,7 @@
                         <span class="mg-legend-item"><span class="mg-dot mg-dot-empty"></span> Sin datos</span>
                     </div>
                 </div>
-                <div class="table-responsive">
+                <div class="table-responsive" role="region" aria-label="Márgenes por producto" tabindex="0">
                     <table class="table mg-table align-middle mb-0">
                         <thead>
                             <tr>
@@ -374,14 +373,14 @@
                                 <th class="text-end">Costo directo</th>
                                 <th class="text-end">Precio</th>
                                 <th class="text-end">Margen directo</th>
-                                <th></th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var p in productosPagina)
                             {
                                 <tr class="mg-row @(p.EnRiesgo ? "mg-row-risk" : "") @(p.MargenNoCalculable ? "mg-row-empty" : "")">
-                                    <td @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">
+                                    <td>
                                         @if (p.MargenNoCalculable)
                                         {
                                             <span class="mg-badge mg-badge-empty" title="@p.MotivoNoCalculable">
@@ -401,16 +400,16 @@
                                             </span>
                                         }
                                     </td>
-                                    <td @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">
-                                        <span class="mg-product-name">@p.Nombre</span>
+                                    <td>
+                                        <a class="mg-product-name" href="@($"menu/{p.ProductoId}")">@p.Nombre</a>
                                     </td>
-                                    <td class="text-end" @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">
+                                    <td class="text-end">
                                         <span class="mg-money">@Formato.Moneda(p.CostoDirecto)</span>
                                     </td>
-                                    <td class="text-end" @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">
+                                    <td class="text-end">
                                         <span class="mg-money">@(p.PrecioVenta.HasValue? Formato.Moneda(p.PrecioVenta.Value) : "—")</span>
                                     </td>
-                                    <td class="text-end" @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' role="button">
+                                    <td class="text-end">
                                         @if (p.MargenNoCalculable)
                                         {
                                             <span class="pm-badge-sin-datos">@(p.MotivoNoCalculable ?? "Margen no calculable")</span>
@@ -433,8 +432,7 @@
                                         @if (p.MargenNoCalculable)
                                         {
                                             <button type="button" class="mg-action mg-action-muted"
-                                                    @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")'
-                                                    @onclick:stopPropagation="true">
+                                                    @onclick='() => Navigation.NavigateTo($"menu/{p.ProductoId}")' aria-label="Revisar @p.Nombre">
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                                     <path d="M5 12h14" />
                                                     <path d="m12 5 7 7-7 7" />
@@ -445,7 +443,7 @@
                                         else
                                         {
                                             <button type="button" class="mg-action"
-                                                    @onclick="() => AbrirModalEditar(p)" @onclick:stopPropagation="true">
+                                                    @onclick="() => AbrirModalEditar(p)" aria-label="Ajustar precio de @p.Nombre">
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                                     <path d="M4 21v-7" />
                                                     <path d="M4 10V3" />
@@ -477,8 +475,7 @@
 
 @if (mostrarModalEditar && productoEditando is not null)
 {
-    <div class="pm-modal-overlay mg-modal-overlay">
-        <div class="pm-modal-box mg-modal" role="dialog" aria-modal="true" aria-labelledby="mg-modal-title">
+    <AccessibleDialog Class="pm-modal-box mg-modal" LabelledBy="mg-modal-title" OnCancel="CerrarModalEditar">
             <div class="mg-modal-head">
                 <div class="mg-modal-title">
                     <span class="mg-modal-icon">
@@ -488,7 +485,7 @@
                         </svg>
                     </span>
                     <div>
-                        <h5 id="mg-modal-title">Ajustar precio</h5>
+                        <h2 id="mg-modal-title">Ajustar precio</h2>
                         <p>@productoEditando.Nombre</p>
                     </div>
                 </div>
@@ -537,7 +534,7 @@
                     </div>
                 </div>
 
-                <div class="mg-suggested-box @(precioSugerido.HasValue ? "is-ready" : "")">
+                <div class="mg-suggested-box @(precioSugerido.HasValue ? "is-ready" : "")" role="status">
                     @if (calculandoSugerencia)
                     {
                         <div class="d-flex align-items-center gap-2">
@@ -559,7 +556,7 @@
 
                 @if (errorEdicion is not null)
                 {
-                    <div class="mg-modal-error">@errorEdicion</div>
+                    <div class="mg-modal-error" role="alert">@errorEdicion</div>
                 }
 
                 <div class="mg-modal-actions">
@@ -570,8 +567,7 @@
                     </button>
                 </div>
             </div>
-        </div>
-    </div>
+    </AccessibleDialog>
 }
 
 @code {

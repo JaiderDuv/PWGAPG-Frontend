@@ -7,72 +7,68 @@
 <EditForm Model="@duenio" OnValidSubmit="@GuardarTodo">
     <DataAnnotationsValidator />
 
-    <h3 class="onboarding-subtitulo">Dueño del negocio</h3>
-
     <div class="foto-perfil-container">
+        <InputFile id="fotoDuenio" OnChange="@(e => CargarFoto(e, duenio))" class="foto-perfil-input" accept="image/*"
+                   aria-label="Foto de perfil (opcional)" />
         <label class="foto-perfil-label" for="fotoDuenio">
             @if (!string.IsNullOrEmpty(duenio.FotoPerfilBase64))
             {
-                <img src="@duenio.FotoPerfilBase64" class="foto-perfil-preview" />
+                <img src="@duenio.FotoPerfilBase64" class="foto-perfil-preview" alt="Vista previa de la foto de perfil" />
             }
             else
             {
-                <div class="foto-perfil-placeholder">+</div>
+                <span class="foto-perfil-placeholder" aria-hidden="true">+</span>
             }
         </label>
-        <InputFile id="fotoDuenio" OnChange="@(e => CargarFoto(e, duenio))" class="foto-perfil-input" accept="image/*" />
         <span class="foto-perfil-texto">Foto de perfil (opcional)</span>
     </div>
 
     <div class="onb-grid">
         <div class="form-group-sm">
-            <label class="auth-label">Nombres *</label>
-            <InputText @bind-Value="duenio.Nombres" class="form-control" />
-            <ValidationMessage For="@(() => duenio.Nombres)" class="text-danger msg-error" />
+            <label class="auth-label" for="onboarding-nombres">Nombres *</label>
+            <InputText id="onboarding-nombres" @bind-Value="duenio.Nombres" class="form-control" autocomplete="given-name" aria-required="true" aria-describedby="onboarding-nombres-error" />
+            <div id="onboarding-nombres-error"><ValidationMessage For="@(() => duenio.Nombres)" class="text-danger msg-error" /></div>
         </div>
 
         <div class="form-group-sm">
-            <label class="auth-label">Apellidos *</label>
-            <InputText @bind-Value="duenio.Apellidos" class="form-control" />
-            <ValidationMessage For="@(() => duenio.Apellidos)" class="text-danger msg-error" />
+            <label class="auth-label" for="onboarding-apellidos">Apellidos *</label>
+            <InputText id="onboarding-apellidos" @bind-Value="duenio.Apellidos" class="form-control" autocomplete="family-name" aria-required="true" aria-describedby="onboarding-apellidos-error" />
+            <div id="onboarding-apellidos-error"><ValidationMessage For="@(() => duenio.Apellidos)" class="text-danger msg-error" /></div>
         </div>
 
         <div class="form-group-sm">
-            <label class="auth-label">Tipo de Documento *</label>
-            <InputSelect @bind-Value="duenio.TipoDocumento" class="form-select">
+            <label class="auth-label" for="onboarding-tipo-documento">Tipo de Documento *</label>
+            <InputSelect id="onboarding-tipo-documento" @bind-Value="duenio.TipoDocumento" class="form-select" aria-required="true" aria-describedby="onboarding-tipo-documento-error">
                 <option value="">-- Seleccione --</option>
-            <option value="CC">Cédula de Ciudadanía</option>
-            <option value="CE">Cédula de Extranjería</option>
-            <option value="TI">Tarjeta de Identidad</option>
-            <option value="PA">Pasaporte</option>
+                <option value="CC">Cédula de Ciudadanía</option>
+                <option value="CE">Cédula de Extranjería</option>
+                <option value="TI">Tarjeta de Identidad</option>
+                <option value="PA">Pasaporte</option>
             </InputSelect>
-            <ValidationMessage For="@(() => duenio.TipoDocumento)" class="text-danger msg-error" />
+            <div id="onboarding-tipo-documento-error"><ValidationMessage For="@(() => duenio.TipoDocumento)" class="text-danger msg-error" /></div>
         </div>
 
         <div class="form-group-sm">
-            <label class="auth-label">Número de Documento *</label>
-            <InputText @bind-Value="duenio.NumeroDocumento" class="form-control" />
-            <ValidationMessage For="@(() => duenio.NumeroDocumento)" class="text-danger msg-error" />
+            <label class="auth-label" for="onboarding-documento">Número de Documento *</label>
+            <InputText id="onboarding-documento" @bind-Value="duenio.NumeroDocumento" class="form-control" aria-required="true" aria-describedby="onboarding-documento-error" />
+            <div id="onboarding-documento-error"><ValidationMessage For="@(() => duenio.NumeroDocumento)" class="text-danger msg-error" /></div>
         </div>
 
         <div class="form-group-sm">
-            <label class="auth-label">Teléfono *</label>
-            <InputText @bind-Value="duenio.Telefono" class="form-control" />
-            <ValidationMessage For="@(() => duenio.Telefono)" class="text-danger msg-error" />
+            <label class="auth-label" for="onboarding-telefono">Teléfono *</label>
+            <InputText id="onboarding-telefono" @bind-Value="duenio.Telefono" class="form-control" type="tel" autocomplete="tel" aria-required="true" aria-describedby="onboarding-telefono-error" />
+            <div id="onboarding-telefono-error"><ValidationMessage For="@(() => duenio.Telefono)" class="text-danger msg-error" /></div>
         </div>
 
         <div class="form-group-sm">
-            <label class="auth-label">Correo Electrónico *</label>
-            <InputText @bind-Value="duenio.CorreoElectronico" class="form-control" type="email" readonly="true" />
-            <small class="text-muted">El correo de acceso se administra desde tu perfil.</small>
-            <ValidationMessage For="@(() => duenio.CorreoElectronico)" class="text-danger msg-error" />
+            <label class="auth-label" for="onboarding-correo">Correo Electrónico *</label>
+            <InputText id="onboarding-correo" @bind-Value="duenio.CorreoElectronico" class="form-control" type="email" autocomplete="email" readonly="true" aria-describedby="onboarding-correo-ayuda onboarding-correo-error" />
+            <small id="onboarding-correo-ayuda" class="text-muted">El correo de acceso se administra desde tu perfil.</small>
+            <div id="onboarding-correo-error"><ValidationMessage For="@(() => duenio.CorreoElectronico)" class="text-danger msg-error" /></div>
         </div>
     </div>
 
-    @if (mensajeErrorGeneral != null)
-    {
-        <div class="text-danger msg-error">@mensajeErrorGeneral</div>
-    }
+    <div class="text-danger msg-error" role="status">@mensajeErrorGeneral</div>
 
     <div class="onboarding-acciones">
         <button type="submit" class="btn-solid btn-full">Continuar</button>

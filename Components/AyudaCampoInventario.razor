@@ -1,0 +1,10 @@
+<details class="inventario-ayuda">
+    <summary>Ayuda sobre @Tema</summary>
+    <p id="@Id">@ChildContent</p>
+</details>
+
+@code {
+    [Parameter, EditorRequired] public string Id { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Tema { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
+}

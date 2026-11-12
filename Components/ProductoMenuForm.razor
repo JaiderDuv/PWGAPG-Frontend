@@ -6,7 +6,7 @@
 
 <div class="rc-card rc-form">
     <div class="rc-card-header">
-        <h5 class="mb-0">@(Editando is null ? "Nuevo producto" : $"Editar producto #{Editando.Id}")</h5>
+        <h2 class="mb-0">@(Editando is null ? "Nuevo producto" : $"Editar producto #{Editando.Id}")</h2>
     </div>
 
     <EditForm Model="modelo" OnValidSubmit="Guardar" OnInvalidSubmit="AlInvalido" class="rc-card-body" novalidate>
@@ -14,23 +14,25 @@
 
         <div class="row g-4">
             <div class="col-lg-4">
-                <label class="rc-label">Foto del producto</label>
-                <ImageCropper @ref="cropper" ImagenActualUrl="@MenuApi.UrlImagen(imagenActual)" />
+                <div class="rc-label">Foto del producto</div>
+                <ImageCropper @ref="cropper" ImagenActualUrl="@MenuApi.UrlImagen(imagenActual)"
+                              DescripcionImagen="@(string.IsNullOrWhiteSpace(modelo.Nombre) ? "el producto" : modelo.Nombre)" />
             </div>
             <div class="col-lg-8">
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="rc-label">Nombre * <small class="text-muted">(@(modelo.Nombre?.Length ?? 0)/75)</small></label>
-                        <InputText class="form-control" @bind-Value="modelo.Nombre" maxlength="75"
+                        <label class="rc-label" for="pm-nombre">Nombre * <small class="text-muted">(@(modelo.Nombre?.Length ?? 0)/75)</small></label>
+                        <InputText id="pm-nombre" class="form-control" @bind-Value="modelo.Nombre" maxlength="75" required
+                                   aria-describedby="pm-error-nombre"
                                    placeholder="Ej: Caja Mixta de Panes" />
-                        <ValidationMessage For="() => modelo.Nombre" class="rc-error" />
+                        <div id="pm-error-nombre" aria-live="polite"><ValidationMessage For="() => modelo.Nombre" class="rc-error" /></div>
                     </div>
                     <div class="col-md-3">
-                        <label class="rc-label">Costo directo</label>
-                        <input class="form-control" readonly
+                        <label class="rc-label" for="pm-costo">Costo directo</label>
+                        <input id="pm-costo" class="form-control" readonly aria-describedby="pm-ayuda-costo"
                                value="@(costoPreview is not null ? Formato.Moneda(costoPreview.CostoDirecto) : (calculando ? "Calculando..." : "$ 0"))"
                                placeholder="$ 0" />
-                        <small class="text-muted">Recetas + empaques. Los fijos se muestran aparte.</small>
+                        <small id="pm-ayuda-costo" class="text-muted">Recetas + empaques. Los fijos se muestran aparte.</small>
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
                         <div class="form-check">
@@ -42,7 +44,7 @@
             </div>
         </div>
 
-        <h6 class="rc-section-title mt-4">Recetas del producto * (mínimo una)</h6>
+        <h3 class="rc-section-title mt-4">Recetas del producto * (mínimo una)</h3>
         @if (!recetasDisponibles.Any())
         {
             <div class="alert alert-warning">Aún no tienes recetas. Crea al menos una en el apartado Recetas.</div>
@@ -53,15 +55,16 @@
                     <tr>
                         <th>Receta</th>
                         <th style="width:160px">Porciones</th>
-                        <th style="width:50px"></th>
+                        <th style="width:50px"><span class="visually-hidden">Acciones</span></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var f in modelo.FilasReceta)
                     {
-                        <tr>
+                        var numero = modelo.FilasReceta.IndexOf(f) + 1;
+                        <tr @key="f">
                             <td>
-                                <select class="form-select" @bind="f.RecetaId" @bind:after="AlCambiarComposicion">
+                                <select class="form-select" aria-label="Receta @numero" @bind="f.RecetaId" @bind:after="AlCambiarComposicion">
                                     <option value="0">Selecciona...</option>
                                     @foreach (var r in recetasDisponibles)
                                     {
@@ -70,12 +73,12 @@
                                 </select>
                             </td>
                             <td>
-                                <input type="number" class="form-control" min="0" max="10000" step="1"
+                                <input type="number" class="form-control" min="0" max="10000" step="1" aria-label="Porciones de la receta @numero"
                                        @bind="f.Cantidad" @bind:event="oninput" @bind:after="AlCambiarComposicion" />
                             </td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-outline-danger"
-                                        @onclick="() => QuitarReceta(f)" title="Quitar">×</button>
+                                        @onclick="() => QuitarReceta(f)" aria-label="Quitar receta @numero">×</button>
                             </td>
                         </tr>
                     }
@@ -83,28 +86,29 @@
             </table>
         </div>
         <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AgregarReceta">+ Agregar receta</button>
-        @if (errorRecetas is not null) { <div class="rc-error mt-2">@errorRecetas</div> }
+        @if (errorRecetas is not null) { <div class="rc-error mt-2" role="alert">@errorRecetas</div> }
 
-        <h6 class="rc-section-title mt-4">Empaques / insumos directos <small class="text-muted">(opcional)</small></h6>
+        <h3 class="rc-section-title mt-4">Empaques / insumos directos <small class="text-muted">(opcional)</small></h3>
         <p class="text-muted small">
             Ej.: caja, bolsa o etiqueta. Se guardan con el producto y entran en el costo completo, el margen y la evaluación del menú.
         </p>
-        <div class="table-responsive">
+        <div class="table-responsive" hidden="@(modelo.FilasEmpaque.Count == 0)">
             <table class="table rc-table align-middle">
                 <thead>
                     <tr>
                         <th>Insumo</th>
                         <th style="width:140px">Cantidad</th>
                         <th style="width:120px">Unidad</th>
-                        <th style="width:50px"></th>
+                        <th style="width:50px"><span class="visually-hidden">Acciones</span></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var f in modelo.FilasEmpaque)
                     {
-                        <tr>
+                        var numero = modelo.FilasEmpaque.IndexOf(f) + 1;
+                        <tr @key="f">
                             <td>
-                                <select class="form-select" @bind="f.InsumoId" @bind:after="() => AlCambiarInsumo(f)">
+                                <select class="form-select" aria-label="Insumo del empaque @numero" @bind="f.InsumoId" @bind:after="() => AlCambiarInsumo(f)">
                                     <option value="0">Selecciona...</option>
                                     @foreach (var i in insumosDisponibles)
                                     {
@@ -113,17 +117,17 @@
                                 </select>
                             </td>
                             <td>
-                                <input type="number" class="form-control" min="0" step="1"
+                                <input type="number" class="form-control" min="0" step="1" aria-label="Cantidad del empaque @numero"
                                        @bind="f.Cantidad" @bind:event="oninput" @bind:after="AlCambiarComposicion" />
                             </td>
                             <td>
-                                <select class="form-select" @bind="f.UnidadMedida" @bind:after="AlCambiarComposicion">
+                                <select class="form-select" aria-label="Unidad del empaque @numero" @bind="f.UnidadMedida" @bind:after="AlCambiarComposicion">
                                     @foreach (var u in Unidades) { <option value="@u">@u</option> }
                                 </select>
                             </td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-outline-danger"
-                                        @onclick="() => QuitarEmpaque(f)" title="Quitar">×</button>
+                                        @onclick="() => QuitarEmpaque(f)" aria-label="Quitar empaque @numero">×</button>
                             </td>
                         </tr>
                     }
@@ -157,10 +161,10 @@
 
         <div class="row g-3 mt-2">
             <div class="col-md-4">
-                <label class="rc-label">Margen de ganancia % <small class="text-muted">(sobre el precio de venta)</small></label>
-                <input type="number" class="form-control" min="1" max="99" step="1" @bind="margenSugerido" />
+                <label class="rc-label" for="pm-margen">Margen de ganancia % <small class="text-muted">(sobre el precio de venta)</small></label>
+                <input id="pm-margen" type="number" class="form-control" min="1" max="99" step="1" @bind="margenSugerido" />
             </div>
-            <div class="col-md-8 d-flex align-items-end gap-2">
+            <div class="col-md-8 d-flex flex-wrap align-items-end gap-2">
                 <button type="button" class="btn btn-outline-secondary" @onclick="SugerirPrecio" disabled="@sugiriendo">
                     @(sugiriendo ? "Sugiriendo..." : "Sugerir precio")
                 </button>
@@ -184,16 +188,16 @@
                 actívalo solo si quieres que este producto cargue con todos los fijos activos.
             </small>
         </div>
-        @if (errorSugerido is not null) { <div class="rc-error mt-2">@errorSugerido</div> }
+        @if (errorSugerido is not null) { <div class="rc-error mt-2" role="alert">@errorSugerido</div> }
 
         <div class="row g-3 mt-2">
             <div class="col-md-6">
-                <label class="rc-label">Precio de venta</label>
-                <InputNumber class="form-control" @bind-Value="modelo.PrecioVenta"
+                <label class="rc-label" for="pm-precio">Precio de venta</label>
+                <InputNumber id="pm-precio" class="form-control" @bind-Value="modelo.PrecioVenta" aria-describedby="pm-ayuda-precio pm-error-precio"
                              min="0" max="999999.99" step="1" placeholder="Ej: 25000"
                              ParsingErrorMessage="El precio debe ser un número válido." />
-                <ValidationMessage For="() => modelo.PrecioVenta" class="rc-error" />
-                <small class="text-muted">Máximo 6 dígitos (999.999,99). Se reescribe con “Usar”.</small>
+                <div id="pm-error-precio" aria-live="polite"><ValidationMessage For="() => modelo.PrecioVenta" class="rc-error" /></div>
+                <small id="pm-ayuda-precio" class="text-muted">Máximo 6 dígitos (999.999,99). Se reescribe con “Usar”.</small>
                 @if (MargenRealResultante.HasValue)
                 {
                     <small class="d-block mt-1">
@@ -205,7 +209,7 @@
             </div>
         </div>
 
-        @if (errorForm is not null) { <div class="alert alert-danger mt-3">@errorForm</div> }
+        @if (errorForm is not null) { <div class="alert alert-danger mt-3" role="alert">@errorForm</div> }
 
         <div class="d-flex gap-2 justify-content-end mt-3">
             <button type="button" class="btn btn-outline-secondary" @onclick="OnCancelar" disabled="@guardando">Cancelar</button>
