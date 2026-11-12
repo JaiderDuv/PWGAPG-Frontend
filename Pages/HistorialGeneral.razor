@@ -28,17 +28,17 @@
         <div class="perfil-alerta perfil-alerta-exito" role="status">@mensajeExito</div>
     }
 
-    <section class="insumos-toolbar">
+    <section class="insumos-toolbar" aria-label="Filtros del historial">
         @if (nombresProductos is null)
         {
             <input class="form-control insumos-buscador"
-                   placeholder="Filtrar por nombre del insumo..."
+                   aria-label="Filtrar por nombre del insumo" placeholder="Filtrar por nombre del insumo..."
                    value="@filtroNombre"
                    @oninput="OnNombreInput" />
         }
         else
         {
-            <select class="form-select insumos-buscador" value="@filtroNombre" @onchange="OnNombreSelect">
+            <select class="form-select insumos-buscador" value="@filtroNombre" @onchange="OnNombreSelect" aria-label="Filtrar por nombre del insumo">
                 <option value="">Todos los productos</option>
                 @foreach (var nombre in nombresProductos)
                 {
@@ -46,7 +46,7 @@
                 }
             </select>
         }
-        <select class="form-select insumos-buscador" value="@estadoFiltro" @onchange="OnEstadoSelect" title="Filtrar por estado">
+        <select class="form-select insumos-buscador" value="@estadoFiltro" @onchange="OnEstadoSelect" aria-label="Filtrar por estado">
             <option value="todos">Todos los estados</option>
             <option value="activos">No eliminados</option>
             <option value="eliminados">Eliminados</option>
@@ -76,7 +76,7 @@
                         <button type="button"
                                 class="insumos-acordeon-cabecera @(grupo.Abierto && !esEliminado ? "abierto" : "")"
                                 @onclick="() => AlternarGrupo(grupo)"
-                                aria-expanded="@grupo.Abierto"
+                                aria-expanded="@(grupo.Abierto ? "true" : "false")"
                                 aria-label="@(grupo.Abierto ? "Contraer" : "Expandir") historial de @grupo.Nombre">
                             <span class="insumos-acordeon-titulo">
                                 <strong>@grupo.Nombre</strong>
@@ -90,8 +90,12 @@
                             {
                                 <span class="insumos-acordeon-resumen">
                                     @BadgeVariacion(grupo.Entradas[0])
-                                    <span class="insumos-acordeon-flecha">@(grupo.Abierto ? "▾" : "▸")</span>
+                                    <span class="insumos-acordeon-flecha" aria-hidden="true">@(grupo.Abierto ? "▾" : "▸")</span>
                                 </span>
+                            }
+                            else
+                            {
+                                <span class="insumos-acordeon-flecha" aria-hidden="true">@(grupo.Abierto ? "▾" : "▸")</span>
                             }
                         </button>
                         @if (esEliminado)
@@ -100,35 +104,29 @@
                                     style="flex-shrink:0; white-space:nowrap;"
                                     disabled="@(restaurandoId == grupo.InsumoId)"
                                     @onclick="() => RestaurarGrupo(grupo)"
-                                    title="Restaurar con sus últimos datos guardados">
+                                    aria-label="Restaurar @grupo.Nombre">
                                 @(restaurandoId == grupo.InsumoId ? "Restaurando..." : "↩ Restaurar")
                             </button>
                             <span class="insumos-acordeon-resumen" style="flex-shrink:0;">
                                 @BadgeVariacion(grupo.Entradas[0])
                             </span>
-                            <button type="button" class="insumos-acordeon-flecha-btn"
-                                    @onclick="() => AlternarGrupo(grupo)"
-                                    aria-expanded="@grupo.Abierto"
-                                    aria-label="@(grupo.Abierto ? "Contraer" : "Expandir") historial de @grupo.Nombre">
-                                <span class="insumos-acordeon-flecha">@(grupo.Abierto ? "▾" : "▸")</span>
-                            </button>
                         }
                     </div>
 
                     @if (grupo.Abierto)
                     {
-                        <div class="insumos-tabla-wrap">
-                            <table class="insumos-tabla">
+                        <div class="insumos-tabla-wrap" tabindex="0" role="region" aria-label="Movimientos de @grupo.Nombre">
+                            <table class="insumos-tabla" aria-label="Historial de precios de @grupo.Nombre">
                                 <thead>
                                         <tr>
-                                            <th>Fecha</th>
-                                            <th>Proveedor</th>
-                                            <th>Precio</th>
-                                            <th>Cantidad</th>
-                                            <th>P. unitario</th>
-                                            <th>Diferencia</th>
-                                            <th>Variación</th>
-                                            <th></th>
+                                            <th scope="col">Fecha</th>
+                                            <th scope="col">Proveedor</th>
+                                            <th scope="col">Precio</th>
+                                            <th scope="col">Cantidad</th>
+                                            <th scope="col">P. unitario</th>
+                                            <th scope="col">Diferencia</th>
+                                            <th scope="col">Variación</th>
+                                            <th scope="col">Acciones</th>
                                         </tr>
                                 </thead>
                                 <tbody>
@@ -145,7 +143,7 @@
                                             <td>
                                                 <button type="button" class="btn-texto"
                                                         @onclick='() => Navigation.NavigateTo($"insumos/{entrada.InsumoId}/historial")'
-                                                        title="Ver historial de este insumo">
+                                                        aria-label="Ver detalle del historial de @grupo.Nombre">
                                                     Ver detalle
                                                 </button>
                                             </td>

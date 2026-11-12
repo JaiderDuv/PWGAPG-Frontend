@@ -4,8 +4,10 @@
 @using PWGAPG_Frontend.Models
 @inject NavigationManager Navigation
 
+<PageTitle>Iniciar sesión | Chef Metrics</PageTitle>
+
 <div class="auth-card-login">
-    <h2 class="auth-titulo">Iniciar Sesión</h2>
+    <h1 class="auth-titulo">Iniciar Sesión</h1>
     <p class="auth-subtitulo">
         Ingresa tus credenciales para acceder a la plataforma
     </p>
@@ -44,28 +46,30 @@
 
         <!-- 1. Correo Electrónico -->
         <div class="form-group">
-            <label class="auth-label">Correo Electrónico *</label>
-            <InputText @bind-Value="modelo.CorreoElectronico" class="form-control" type="email" placeholder="ejemplo@correo.com" />
-            <ValidationMessage For="@(() => modelo.CorreoElectronico)" class="text-danger msg-error" />
+            <label class="auth-label" for="login-correo">Correo Electrónico *</label>
+            <InputText id="login-correo" @bind-Value="modelo.CorreoElectronico" class="form-control" type="email" autocomplete="username" aria-required="true" aria-describedby="login-correo-error" placeholder="ejemplo@correo.com" />
+            <div id="login-correo-error" aria-live="polite">
+                <ValidationMessage For="@(() => modelo.CorreoElectronico)" class="text-danger msg-error" />
+            </div>
         </div>
 
         <!-- 2. Contraseña -->
         <div class="form-group-sm">
-            <label class="auth-label">Contraseña *</label>
+            <label class="auth-label" for="login-password">Contraseña *</label>
             <div class="campo-password-container">
-                <InputText @bind-Value="modelo.Password" type="@tipoCampoPassword" class="form-control input-password" placeholder="••••••••" />
+                <InputText id="login-password" @bind-Value="modelo.Password" type="@tipoCampoPassword" class="form-control input-password" autocomplete="current-password" aria-required="true" aria-describedby="login-password-error" />
 
-                <button type="button" class="btn-ojo-password" @onclick="AlternarVisibilidadPassword">
+                <button type="button" class="btn-ojo-password" aria-label="Mostrar contraseña" aria-pressed="@(mostrarPassword ? "true" : "false")" @onclick="AlternarVisibilidadPassword">
                     @if (mostrarPassword)
                     {
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z" />
                             <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z" />
                         </svg>
                     }
                     else
                     {
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.028 7.028 0 0 0-2.79.588l.77.771A5.944 5.944 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.134 13.134 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755-.165.165-.337.328-.517.486l.708.709z" />
                             <path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829l.822.822zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829z" />
                             <path d="M3.35 5.47c-.18.16-.353.322-.518.487A13.134 13.134 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7.029 7.029 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.709.709zm10.296 8.884-12-12 .708-.708 12 12-.708.707z" />
@@ -73,7 +77,9 @@
                     }
                 </button>
             </div>
-            <ValidationMessage For="@(() => modelo.Password)" class="alerta-box alerta-errorr" />
+            <div id="login-password-error" aria-live="polite">
+                <ValidationMessage For="@(() => modelo.Password)" class="text-danger msg-error" />
+            </div>
         </div>
 
         <div class="recuperar-container">
@@ -86,17 +92,14 @@
         @if (mensajeErrorLogin != null)
         {
             <div class="alerta-box alerta-error">
-                <div>@mensajeErrorLogin</div>
+                <div role="alert">@mensajeErrorLogin</div>
                 @if (cuentaNoVerificada)
                 {
                     <div style="margin-top: 8px;">
-                        <button type="button" class="btn-link-reenvio" style="background: none; border: none; color: #D97706; cursor: pointer; text-decoration: underline; padding: 0; font-size: 0.9rem;" @onclick="SolicitarNuevoCorreoVerificacion" disabled="@enviandoReenvio">
+                        <button type="button" class="btn-link-reenvio" @onclick="SolicitarNuevoCorreoVerificacion" disabled="@enviandoReenvio">
                             @(enviandoReenvio ? "Enviando..." : "¿No recibiste el correo? Solicitar un nuevo correo de verificación")
                         </button>
-                        @if (!string.IsNullOrEmpty(mensajeReenvio))
-                        {
-                            <div style="margin-top: 4px; font-size: 0.9rem;">@mensajeReenvio</div>
-                        }
+                        <div role="status">@mensajeReenvio</div>
                     </div>
                 }
             </div>

@@ -9,16 +9,18 @@
 @inject HttpClient Http
 @inject NavigationManager Navigation
 
-<div class="onboarding-container">
+<PageTitle>Proveedores de un insumo | Chef Metrics</PageTitle>
+
+<div class="onboarding-container inventario-accesible">
     <button type="button" class="btn-outline"
             @onclick='() => Navigation.NavigateTo("insumos-proveedores")'>
         ← Volver
     </button>
 
-    <h2 class="auth-titulo" style="margin-top: 16px;">
+    <h1 class="auth-titulo" style="margin-top: 16px;">
         Proveedores de @(string.IsNullOrWhiteSpace(nombreInsumo)
                 ? "este insumo" : $"«{nombreInsumo}»")
-    </h2>
+    </h1>
     <p class="auth-subtitulo">
         Compara precios y gestiona los proveedores asociados a este insumo.
     </p>
@@ -39,25 +41,25 @@
 
             @if (mensajeError != null)
             {
-                <div class="text-danger msg-error">@mensajeError</div>
+                <div class="text-danger msg-error" role="alert">@mensajeError</div>
             }
             @if (mensajeExito != null)
             {
-                <div class="text-success msg-error">@mensajeExito</div>
+                <div class="text-success msg-error" role="status">@mensajeExito</div>
             }
 
             @if (proveedoresAsociados.Any())
             {
-                <div class="tabla-proveedores-wrap">
-                    <table class="tabla-proveedores">
+                <div class="tabla-proveedores-wrap" tabindex="0" role="region" aria-label="Proveedores asociados">
+                    <table class="tabla-proveedores" aria-label="Proveedores del insumo">
                         <thead>
                             <tr>
-                                <th>Proveedor</th>
-                                <th>Contacto</th>
-                                <th>Cantidad</th>
-                                <th>Unidad</th>
-                                <th>Precio</th>
-                                <th></th>
+                                <th scope="col">Proveedor</th>
+                                <th scope="col">Contacto</th>
+                                <th scope="col">Cantidad</th>
+                                <th scope="col">Unidad</th>
+                                <th scope="col">Precio</th>
+                                <th scope="col">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -87,18 +89,18 @@
                                     <td>
                                         <div class="proveedor-acciones">
                                             <button type="button" class="btn-mini-editar"
-                                                    @onclick="() => AbrirModalEditar(p)">
+                                                    aria-label="Editar @p.Nombre" @onclick="() => AbrirModalEditar(p)">
                                                 Editar
                                             </button>
                                             @if (!p.EsPrincipal)
                                             {
                                                 <button type="button" class="btn-mini-principal"
-                                                        @onclick="() => MarcarPrincipal(p.ProveedorId)">
+                                                        aria-label="Marcar principal a @p.Nombre" @onclick="() => MarcarPrincipal(p.ProveedorId)">
                                                     Marcar Principal
                                                 </button>
                                             }
                                             <button type="button" class="btn-mini-eliminar"
-                                                    @onclick="() => PedirDesasociar(p)">
+                                                    aria-label="Eliminar @p.Nombre" @onclick="() => PedirDesasociar(p)">
                                                 Eliminar
                                             </button>
                                         </div>
@@ -119,291 +121,236 @@
 
 @if (mostrarModalEditar && editando is not null)
 {
-    <div class="confirm-overlay">
-        <div class="socio-modal">
-            <h3 class="onboarding-subtitulo">Editar proveedor</h3>
-            <p class="text-muted" style="font-size:0.8rem; margin-top:-8px; margin-bottom:14px;">
-                Los campos marcados con * son obligatorios.
+    <AccessibleDialog Class="socio-modal inventario-accesible" LabelledBy="asociado-editar-titulo" OnCancel="CerrarModalEditar">
+        <h2 id="asociado-editar-titulo" class="onboarding-subtitulo">Editar proveedor</h2>
+        <p class="text-muted" style="font-size:0.8rem; margin-top:-8px; margin-bottom:14px;">
+            Los campos marcados con * son obligatorios.
+        </p>
+
+        <EditForm Model="@formularioEditar" OnSubmit="@GuardarEdicion" novalidate>
+
+            <div class="form-group-sm">
+                <label class="auth-label" for="asociado-editar-nombre">Nombre *</label>
+                <input id="asociado-editar-nombre" aria-describedby="asociado-editar-nombre-error" aria-invalid="@(erroresEditar.ContainsKey("Nombre") ? "true" : null)" aria-required="true" autofocus class="form-control @(erroresEditar.ContainsKey("Nombre") ? "is-invalid" : "")"
+                       value="@formularioEditar.Nombre"
+                       @oninput="e => OnEditarNombre(e.Value?.ToString())" />
+                <div id="asociado-editar-nombre-error" class="text-danger msg-error" aria-live="polite">@(erroresEditar.GetValueOrDefault("Nombre"))</div>
+            </div>
+
+            <div class="form-group-sm">
+                <label class="auth-label" for="asociado-editar-telefono">Teléfono</label>
+                <input type="tel" id="asociado-editar-telefono" aria-describedby="asociado-editar-telefono-error" aria-invalid="@(erroresEditar.ContainsKey("Telefono") ? "true" : null)" class="form-control @(erroresEditar.ContainsKey("Telefono") ? "is-invalid" : "")"
+                       placeholder="Opcional"
+                       value="@formularioEditar.Telefono"
+                       @oninput="e => OnEditarTelefono(e.Value?.ToString())" />
+                <div id="asociado-editar-telefono-error" class="text-danger msg-error" aria-live="polite">@(erroresEditar.GetValueOrDefault("Telefono"))</div>
+            </div>
+
+            <div class="form-group-sm">
+                <label class="auth-label" for="asociado-editar-correo">Correo</label>
+                <input type="email" id="asociado-editar-correo" aria-describedby="asociado-editar-correo-error" aria-invalid="@(erroresEditar.ContainsKey("Correo") ? "true" : null)" class="form-control @(erroresEditar.ContainsKey("Correo") ? "is-invalid" : "")"
+                       placeholder="Opcional"
+                       value="@formularioEditar.Correo"
+                       @oninput="e => OnEditarCorreo(e.Value?.ToString())" />
+                <div id="asociado-editar-correo-error" class="text-danger msg-error" aria-live="polite">@(erroresEditar.GetValueOrDefault("Correo"))</div>
+            </div>
+
+            <p class="text-muted" style="font-size:0.75rem; margin-top:-4px;">
+                Nombre, teléfono y correo son del proveedor: el cambio aplica a todos los insumos donde aparece.
             </p>
 
-            <EditForm Model="@formularioEditar" OnSubmit="@GuardarEdicion" novalidate>
-
+            <div class="onb-grid">
                 <div class="form-group-sm">
-                    <label class="auth-label">Nombre *</label>
-                    <input class="form-control @(erroresEditar.ContainsKey("Nombre") ? "is-invalid" : "")"
-                           value="@formularioEditar.Nombre"
-                           @oninput="e => OnEditarNombre(e.Value?.ToString())" />
-                    @if (erroresEditar.TryGetValue("Nombre", out var eNombre))
-                    {
-                        <div class="text-danger msg-error">@eNombre</div>
-                    }
+                    <label class="auth-label" for="asociado-editar-cantidad">Cantidad *</label>
+                    <AyudaCampoInventario Id="asociado-editar-cantidad-ayuda" Tema="cantidad">Indica la cantidad numérica o el tamaño del producto (por ejemplo: 500).</AyudaCampoInventario>
+                    <input id="asociado-editar-cantidad" aria-describedby="asociado-editar-cantidad-error asociado-editar-cantidad-ayuda" aria-invalid="@(erroresEditar.ContainsKey("Cantidad") ? "true" : null)" aria-required="true" type="number" step="1" min="0"
+                           class="form-control @(erroresEditar.ContainsKey("Cantidad") ? "is-invalid" : "")"
+                           value="@formularioEditar.CantidadTexto"
+                           @oninput="e => OnEditarInput(nameof(formularioEditar.CantidadTexto), e.Value?.ToString())" />
+                    <div id="asociado-editar-cantidad-error" class="text-danger msg-error" aria-live="polite">@(erroresEditar.GetValueOrDefault("Cantidad"))</div>
                 </div>
-
                 <div class="form-group-sm">
-                    <label class="auth-label">Teléfono</label>
-                    <input class="form-control @(erroresEditar.ContainsKey("Telefono") ? "is-invalid" : "")"
-                           placeholder="Opcional"
-                           value="@formularioEditar.Telefono"
-                           @oninput="e => OnEditarTelefono(e.Value?.ToString())" />
-                    @if (erroresEditar.TryGetValue("Telefono", out var eTel))
-                    {
-                        <div class="text-danger msg-error">@eTel</div>
-                    }
-                </div>
-
-                <div class="form-group-sm">
-                    <label class="auth-label">Correo</label>
-                    <input class="form-control @(erroresEditar.ContainsKey("Correo") ? "is-invalid" : "")"
-                           placeholder="Opcional"
-                           value="@formularioEditar.Correo"
-                           @oninput="e => OnEditarCorreo(e.Value?.ToString())" />
-                    @if (erroresEditar.TryGetValue("Correo", out var eCorreo))
-                    {
-                        <div class="text-danger msg-error">@eCorreo</div>
-                    }
-                </div>
-
-                <p class="text-muted" style="font-size:0.75rem; margin-top:-4px;">
-                    Nombre, teléfono y correo son del proveedor: el cambio aplica a todos los insumos donde aparece.
-                </p>
-
-                <div class="onb-grid">
-                    <div class="form-group-sm">
-                        <label class="auth-label">
-                            Cantidad *<span class="campo-ayuda"
-                                            data-tip="Indica la cantidad numérica o el tamaño del producto (por ejemplo: 500).">?</span>
-                        </label>
-                        <input type="number" step="1" min="0"
-                               class="form-control @(erroresEditar.ContainsKey("Cantidad") ? "is-invalid" : "")"
-                               value="@formularioEditar.CantidadTexto"
-                               @oninput="e => OnEditarInput(nameof(formularioEditar.CantidadTexto), e.Value?.ToString())" />
-                        @if (erroresEditar.TryGetValue("Cantidad", out var eCant))
+                    <label class="auth-label" for="asociado-editar-unidad">Unidad *</label>
+                    <AyudaCampoInventario Id="asociado-editar-unidad-ayuda" Tema="unidad">Indica en qué se mide la cantidad del producto (por ejemplo: Gramos, Kilos, Litros, Unidades).</AyudaCampoInventario>
+                    <InputSelect id="asociado-editar-unidad" aria-describedby="asociado-editar-unidad-error asociado-editar-unidad-ayuda" aria-invalid="@(erroresEditar.ContainsKey("UnidadMedida") ? "true" : null)" aria-required="true" @bind-Value="formularioEditar.UnidadMedida" class="form-select">
+                        <option value="">Selecciona...</option>
+                        @foreach (var unidad in ConversorUnidades.Unidades)
                         {
-                            <div class="text-danger msg-error">@eCant</div>
+                            <option value="@unidad">@unidad</option>
                         }
-                    </div>
-                    <div class="form-group-sm">
-                        <label class="auth-label">
-                            Unidad *<span class="campo-ayuda"
-                                          data-tip="Indica en qué se mide la cantidad del producto (por ejemplo: Gramos, Kilos, Litros, Unidades).">?</span>
-                        </label>
-                        <InputSelect @bind-Value="formularioEditar.UnidadMedida" class="form-select">
-                            <option value="">Selecciona...</option>
-                            @foreach (var unidad in ConversorUnidades.Unidades)
-                            {
-                                <option value="@unidad">@unidad</option>
-                            }
-                        </InputSelect>
-                        @if (erroresEditar.TryGetValue("UnidadMedida", out var eUnidad))
-                        {
-                            <div class="text-danger msg-error">@eUnidad</div>
-                        }
-                    </div>
+                    </InputSelect>
+                    <div id="asociado-editar-unidad-error" class="text-danger msg-error" aria-live="polite">@(erroresEditar.GetValueOrDefault("UnidadMedida"))</div>
                 </div>
+            </div>
 
-                <div class="form-group-sm">
-                    <label class="auth-label">
-                        Precio *<span class="campo-ayuda"
-                                      data-tip="Es el costo total que tiene esa cantidad específica del producto (por ejemplo: el precio completo de la bolsa de 500 gramos).">?</span>
-                    </label>
-                    <input type="number" step="1" min="0"
-                           class="form-control @(erroresEditar.ContainsKey("Costo") ? "is-invalid" : "")"
-                           value="@formularioEditar.CostoTexto"
-                           @oninput="e => OnEditarInput(nameof(formularioEditar.CostoTexto), e.Value?.ToString())" />
-                    @if (erroresEditar.TryGetValue("Costo", out var eCosto))
-                    {
-                        <div class="text-danger msg-error">@eCosto</div>
-                    }
-                </div>
+            <div class="form-group-sm">
+                <label class="auth-label" for="asociado-editar-precio">Precio *</label>
+                <AyudaCampoInventario Id="asociado-editar-precio-ayuda" Tema="precio">Es el costo total que tiene esa cantidad específica del producto (por ejemplo: el precio completo de la bolsa de 500 gramos).</AyudaCampoInventario>
+                <input id="asociado-editar-precio" aria-describedby="asociado-editar-precio-error asociado-editar-precio-ayuda" aria-invalid="@(erroresEditar.ContainsKey("Costo") ? "true" : null)" aria-required="true" type="number" step="1" min="0"
+                       class="form-control @(erroresEditar.ContainsKey("Costo") ? "is-invalid" : "")"
+                       value="@formularioEditar.CostoTexto"
+                       @oninput="e => OnEditarInput(nameof(formularioEditar.CostoTexto), e.Value?.ToString())" />
+                <div id="asociado-editar-precio-error" class="text-danger msg-error" aria-live="polite">@(erroresEditar.GetValueOrDefault("Costo"))</div>
+            </div>
 
-                @if (mensajeErrorModal != null)
-                {
-                    <div class="text-danger msg-error">@mensajeErrorModal</div>
-                }
+            @if (mensajeErrorModal != null)
+            {
+                <div class="text-danger msg-error" role="alert">@mensajeErrorModal</div>
+            }
 
-                <div class="confirm-acciones" style="margin-top:16px;">
-                    <button type="button" class="btn-outline" @onclick="CerrarModalEditar">Cancelar</button>
-                    <button type="submit" class="btn-solid" disabled="@guardando">
-                        @(guardando ? "Guardando..." : "Guardar")
-                    </button>
-                </div>
-            </EditForm>
-        </div>
-    </div>
+            <div class="confirm-acciones" style="margin-top:16px;">
+                <button type="button" class="btn-outline" @onclick="CerrarModalEditar">Cancelar</button>
+                <button type="submit" class="btn-solid" disabled="@guardando">
+                    @(guardando ? "Guardando..." : "Guardar")
+                </button>
+            </div>
+        </EditForm>
+    </AccessibleDialog>
 }
 
 @if (mostrarModalAgregar)
 {
-    <div class="confirm-overlay">
-        <div class="socio-modal">
-            <h3 class="onboarding-subtitulo">Agregar proveedor</h3>
-            <p class="text-muted" style="font-size:0.8rem; margin-top:-8px; margin-bottom:14px;">
-                Los campos marcados con * son obligatorios.
-            </p>
+    <AccessibleDialog Class="socio-modal inventario-accesible" LabelledBy="asociado-agregar-titulo" OnCancel="CerrarModalAgregar">
+        <h2 id="asociado-agregar-titulo" class="onboarding-subtitulo">Agregar proveedor</h2>
+        <p class="text-muted" style="font-size:0.8rem; margin-top:-8px; margin-bottom:14px;">
+            Los campos marcados con * son obligatorios.
+        </p>
 
-            <div class="modo-toggle">
-                <button type="button"
-                        class="@(modoProveedor == "existente" ? "modo-btn activo" : "modo-btn")"
-                        @onclick='() => CambiarModo("existente")'
-                        disabled="@(!disponibles.Any())">
-                    Elegir existente
-                </button>
-                <button type="button"
-                        class="@(modoProveedor == "nuevo" ? "modo-btn activo" : "modo-btn")"
-                        @onclick='() => CambiarModo("nuevo")'>
-                    Crear nuevo
-                </button>
-            </div>
+        <div class="modo-toggle">
+            <button type="button"
+                    class="@(modoProveedor == "existente" ? "modo-btn activo" : "modo-btn")"
+                    aria-pressed="@(modoProveedor == "existente" ? "true" : "false")"
+                    @onclick='() => CambiarModo("existente")'
+                    disabled="@(!disponibles.Any())">
+                Elegir existente
+            </button>
+            <button type="button"
+                    class="@(modoProveedor == "nuevo" ? "modo-btn activo" : "modo-btn")"
+                    aria-pressed="@(modoProveedor == "nuevo" ? "true" : "false")"
+                    @onclick='() => CambiarModo("nuevo")'>
+                Crear nuevo
+            </button>
+        </div>
 
-            <EditForm Model="@formularioAgregar" OnSubmit="@AgregarProveedor" novalidate>
+        <EditForm Model="@formularioAgregar" OnSubmit="@AgregarProveedor" novalidate>
 
-                @if (modoProveedor == "existente")
-                {
-                    <div class="form-group-sm">
-                        <label class="auth-label">Proveedor *</label>
-                        <div class="proveedor-drop-wrap">
-                            <input type="text" class="form-control"
-                                   placeholder="Escribe para buscar..."
-                                   value="@textoProveedor"
-                                   @oninput="AlEscribirProveedor"
-                                   @onfocus="() => mostrarLista = true" />
+            @if (modoProveedor == "existente")
+            {
+                <div class="form-group-sm">
+                    <label for="asociado-buscar" class="auth-label">Buscar proveedores</label>
+                    <input id="asociado-buscar" type="search" class="form-control"
+                           placeholder="Escribe para buscar..." value="@textoProveedor"
+                           @oninput="AlEscribirProveedor" />
+                    <label for="asociado-existente" class="auth-label">Proveedor *</label>
+                    <select id="asociado-existente" class="form-select" value="@(proveedorExistenteId?.ToString() ?? string.Empty)"
+                            @onchange="SeleccionarProveedor" aria-required="true"
+                            aria-invalid="@(mostrarErrorSeleccion ? "true" : null)"
+                            aria-describedby="asociado-existente-estado asociado-existente-error">
+                        <option value="">Selecciona un proveedor</option>
+                        @foreach (var disponible in coincidenciasExistentes)
+                        {
+                            <option value="@disponible.Id">@disponible.Nombre</option>
+                        }
+                    </select>
+                    <div id="asociado-existente-estado" class="text-muted" role="status">
+                        @if (coincidenciasExistentes.Count == 0)
+                        {
+                            <small>No hay proveedores que coincidan.</small>
+                        }
+                    </div>
+                    <div id="asociado-existente-error" class="text-danger msg-error" aria-live="polite">
+                        @(mostrarErrorSeleccion ? "Selecciona un proveedor de la lista." : null)
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="form-group-sm">
+                    <label class="auth-label" for="asociado-agregar-nombre">Nombre *</label>
+                    <input id="asociado-agregar-nombre" aria-describedby="asociado-agregar-nombre-error" aria-invalid="@(erroresAgregar.ContainsKey("Nombre") ? "true" : null)" aria-required="true" class="form-control @(erroresAgregar.ContainsKey("Nombre") ? "is-invalid" : "")"
+                           value="@formularioAgregar.Nombre"
+                           @oninput="e => OnAgregarNombre(e.Value?.ToString())" />
+                    <div id="asociado-agregar-nombre-error" class="text-danger msg-error" aria-live="polite">@(erroresAgregar.GetValueOrDefault("Nombre"))</div>
 
-                            @if (mostrarLista && coincidenciasExistentes.Any())
+                    @if (sugerenciasNombre.Any())
+                    {
+                        <div class="sugerencias-proveedor">
+                            <span class="sugerencias-proveedor-titulo">
+                                Proveedores similares que ya tienes:
+                            </span>
+                            @foreach (var s in sugerenciasNombre)
                             {
-                                <div class="proveedor-drop-lista">
-                                    @foreach (var d in coincidenciasExistentes)
-                                    {
-                                        <button type="button" class="proveedor-drop-item"
-                                                @onclick="() => SeleccionarProveedor(d)">
-                                            @d.Nombre
-                                        </button>
-                                    }
-                                </div>
-                            }
-                            else if (mostrarLista && textoProveedor.Length > 0)
-                            {
-                                <small class="text-muted">No hay proveedores que coincidan.</small>
+                                <div class="sugerencias-proveedor-item">@s.Nombre</div>
                             }
                         </div>
-                        @if (mostrarErrorSeleccion)
-                        {
-                            <span class="text-danger msg-error">Seleccione un proveedor de la lista.</span>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <div class="form-group-sm">
-                        <label class="auth-label">Nombre *</label>
-                        <input class="form-control @(erroresAgregar.ContainsKey("Nombre") ? "is-invalid" : "")"
-                               value="@formularioAgregar.Nombre"
-                               @oninput="e => OnAgregarNombre(e.Value?.ToString())" />
-                        @if (erroresAgregar.TryGetValue("Nombre", out var eNomA))
-                        {
-                            <div class="text-danger msg-error">@eNomA</div>
-                        }
-
-                        @if (sugerenciasNombre.Any())
-                        {
-                            <div class="sugerencias-proveedor">
-                                <span class="sugerencias-proveedor-titulo">
-                                    Proveedores similares que ya tienes:
-                                </span>
-                                @foreach (var s in sugerenciasNombre)
-                                {
-                                    <div class="sugerencias-proveedor-item">@s.Nombre</div>
-                                }
-                            </div>
-                        }
-                    </div>
-                    <div class="form-group-sm">
-                        <label class="auth-label">Teléfono</label>
-                        <input class="form-control @(erroresAgregar.ContainsKey("Telefono") ? "is-invalid" : "")"
-                               placeholder="Opcional"
-                               value="@formularioAgregar.Telefono"
-                               @oninput="e => OnAgregarTelefono(e.Value?.ToString())" />
-                        @if (erroresAgregar.TryGetValue("Telefono", out var eTelA))
-                        {
-                            <div class="text-danger msg-error">@eTelA</div>
-                        }
-                    </div>
-                    <div class="form-group-sm">
-                        <label class="auth-label">Correo</label>
-                        <input class="form-control @(erroresAgregar.ContainsKey("Correo") ? "is-invalid" : "")"
-                               placeholder="Opcional"
-                               value="@formularioAgregar.Correo"
-                               @oninput="e => OnAgregarCorreo(e.Value?.ToString())" />
-                        @if (erroresAgregar.TryGetValue("Correo", out var eCorreoA))
-                        {
-                            <div class="text-danger msg-error">@eCorreoA</div>
-                        }
-                    </div>
-                }
-
-                <div class="onb-grid">
-                    <div class="form-group-sm">
-                        <label class="auth-label">
-                            Cantidad *<span class="campo-ayuda"
-                                            data-tip="Indica la cantidad numérica o el tamaño del producto (por ejemplo: 500).">?</span>
-                        </label>
-                        <input type="number" step="1" min="0" placeholder="Ej.: 500"
-                               class="form-control @(erroresAgregar.ContainsKey("Cantidad") ? "is-invalid" : "")"
-                               value="@formularioAgregar.CantidadTexto"
-                               @oninput="e => OnAgregarInput(nameof(formularioAgregar.CantidadTexto), e.Value?.ToString())" />
-                        @if (erroresAgregar.TryGetValue("Cantidad", out var eCantA))
-                        {
-                            <div class="text-danger msg-error">@eCantA</div>
-                        }
-                    </div>
-                    <div class="form-group-sm">
-                        <label class="auth-label">
-                            Unidad *<span class="campo-ayuda"
-                                          data-tip="Indica en qué se mide la cantidad del producto (por ejemplo: Gramos, Kilos, Litros, Unidades).">?</span>
-                        </label>
-                        <InputSelect @bind-Value="formularioAgregar.UnidadMedida" class="form-select">
-                            <option value="">Selecciona...</option>
-                            @foreach (var unidad in ConversorUnidades.Unidades)
-                            {
-                                <option value="@unidad">@unidad</option>
-                            }
-                        </InputSelect>
-                        @if (erroresAgregar.TryGetValue("UnidadMedida", out var eUnidadA))
-                        {
-                            <div class="text-danger msg-error">@eUnidadA</div>
-                        }
-                    </div>
-                </div>
-
-                <div class="form-group-sm">
-                    <label class="auth-label">
-                        Precio *<span class="campo-ayuda"
-                                      data-tip="Es el costo total que tiene esa cantidad específica del producto (por ejemplo: el precio completo de la bolsa de 500 gramos).">?</span>
-                    </label>
-                    <input type="number" step="1" min="0"
-                           class="form-control @(erroresAgregar.ContainsKey("Costo") ? "is-invalid" : "")"
-                           value="@formularioAgregar.CostoTexto"
-                           @oninput="e => OnAgregarInput(nameof(formularioAgregar.CostoTexto), e.Value?.ToString())" />
-                    @if (erroresAgregar.TryGetValue("Costo", out var eCostoA))
-                    {
-                        <div class="text-danger msg-error">@eCostoA</div>
                     }
                 </div>
-
-                @if (mensajeErrorModal != null)
-                {
-                    <div class="text-danger msg-error">@mensajeErrorModal</div>
-                }
-
-                <div class="confirm-acciones" style="margin-top:16px;">
-                    <button type="button" class="btn-outline"
-                            @onclick="() => mostrarModalAgregar = false">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="btn-solid">Guardar</button>
+                <div class="form-group-sm">
+                    <label class="auth-label" for="asociado-agregar-telefono">Teléfono</label>
+                    <input type="tel" id="asociado-agregar-telefono" aria-describedby="asociado-agregar-telefono-error" aria-invalid="@(erroresAgregar.ContainsKey("Telefono") ? "true" : null)" class="form-control @(erroresAgregar.ContainsKey("Telefono") ? "is-invalid" : "")"
+                           placeholder="Opcional"
+                           value="@formularioAgregar.Telefono"
+                           @oninput="e => OnAgregarTelefono(e.Value?.ToString())" />
+                    <div id="asociado-agregar-telefono-error" class="text-danger msg-error" aria-live="polite">@(erroresAgregar.GetValueOrDefault("Telefono"))</div>
                 </div>
-            </EditForm>
-        </div>
-    </div>
+                <div class="form-group-sm">
+                    <label class="auth-label" for="asociado-agregar-correo">Correo</label>
+                    <input type="email" id="asociado-agregar-correo" aria-describedby="asociado-agregar-correo-error" aria-invalid="@(erroresAgregar.ContainsKey("Correo") ? "true" : null)" class="form-control @(erroresAgregar.ContainsKey("Correo") ? "is-invalid" : "")"
+                           placeholder="Opcional"
+                           value="@formularioAgregar.Correo"
+                           @oninput="e => OnAgregarCorreo(e.Value?.ToString())" />
+                    <div id="asociado-agregar-correo-error" class="text-danger msg-error" aria-live="polite">@(erroresAgregar.GetValueOrDefault("Correo"))</div>
+                </div>
+            }
+
+            <div class="onb-grid">
+                <div class="form-group-sm">
+                    <label class="auth-label" for="asociado-agregar-cantidad">Cantidad *</label>
+                    <AyudaCampoInventario Id="asociado-agregar-cantidad-ayuda" Tema="cantidad">Indica la cantidad numérica o el tamaño del producto (por ejemplo: 500).</AyudaCampoInventario>
+                    <input id="asociado-agregar-cantidad" aria-describedby="asociado-agregar-cantidad-error asociado-agregar-cantidad-ayuda" aria-invalid="@(erroresAgregar.ContainsKey("Cantidad") ? "true" : null)" aria-required="true" type="number" step="1" min="0" placeholder="Ej.: 500"
+                           class="form-control @(erroresAgregar.ContainsKey("Cantidad") ? "is-invalid" : "")"
+                           value="@formularioAgregar.CantidadTexto"
+                           @oninput="e => OnAgregarInput(nameof(formularioAgregar.CantidadTexto), e.Value?.ToString())" />
+                    <div id="asociado-agregar-cantidad-error" class="text-danger msg-error" aria-live="polite">@(erroresAgregar.GetValueOrDefault("Cantidad"))</div>
+                </div>
+                <div class="form-group-sm">
+                    <label class="auth-label" for="asociado-agregar-unidad">Unidad *</label>
+                    <AyudaCampoInventario Id="asociado-agregar-unidad-ayuda" Tema="unidad">Indica en qué se mide la cantidad del producto (por ejemplo: Gramos, Kilos, Litros, Unidades).</AyudaCampoInventario>
+                    <InputSelect id="asociado-agregar-unidad" aria-describedby="asociado-agregar-unidad-error asociado-agregar-unidad-ayuda" aria-invalid="@(erroresAgregar.ContainsKey("UnidadMedida") ? "true" : null)" aria-required="true" @bind-Value="formularioAgregar.UnidadMedida" class="form-select">
+                        <option value="">Selecciona...</option>
+                        @foreach (var unidad in ConversorUnidades.Unidades)
+                        {
+                            <option value="@unidad">@unidad</option>
+                        }
+                    </InputSelect>
+                    <div id="asociado-agregar-unidad-error" class="text-danger msg-error" aria-live="polite">@(erroresAgregar.GetValueOrDefault("UnidadMedida"))</div>
+                </div>
+            </div>
+
+            <div class="form-group-sm">
+                <label class="auth-label" for="asociado-agregar-precio">Precio *</label>
+                <AyudaCampoInventario Id="asociado-agregar-precio-ayuda" Tema="precio">Es el costo total que tiene esa cantidad específica del producto (por ejemplo: el precio completo de la bolsa de 500 gramos).</AyudaCampoInventario>
+                <input id="asociado-agregar-precio" aria-describedby="asociado-agregar-precio-error asociado-agregar-precio-ayuda" aria-invalid="@(erroresAgregar.ContainsKey("Costo") ? "true" : null)" aria-required="true" type="number" step="1" min="0"
+                       class="form-control @(erroresAgregar.ContainsKey("Costo") ? "is-invalid" : "")"
+                       value="@formularioAgregar.CostoTexto"
+                       @oninput="e => OnAgregarInput(nameof(formularioAgregar.CostoTexto), e.Value?.ToString())" />
+                <div id="asociado-agregar-precio-error" class="text-danger msg-error" aria-live="polite">@(erroresAgregar.GetValueOrDefault("Costo"))</div>
+            </div>
+
+            @if (mensajeErrorModal != null)
+            {
+                <div class="text-danger msg-error" role="alert">@mensajeErrorModal</div>
+            }
+
+            <div class="confirm-acciones" style="margin-top:16px;">
+                <button type="button" class="btn-outline"
+                        @onclick="CerrarModalAgregar">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn-solid">Guardar</button>
+            </div>
+        </EditForm>
+    </AccessibleDialog>
 }
 
 <ConfirmDialog Visible="@mostrarConfirmEliminar"
@@ -429,7 +376,6 @@
     private string modoProveedor = "nuevo";
     private int? proveedorExistenteId;
     private string textoProveedor = string.Empty;
-    private bool mostrarLista = false;
     private ProveedorNuevoDTO formularioAgregar = new();
     private bool mostrarErrorSeleccion;
 
@@ -610,6 +556,11 @@
         }
     }
 
+    private void CerrarModalAgregar()
+    {
+        if (!guardando) mostrarModalAgregar = false;
+    }
+
     private void AbrirModalAgregar()
     {
         formularioAgregar = new ProveedorNuevoDTO
@@ -621,7 +572,6 @@
         erroresAgregar.Clear();
         proveedorExistenteId = null;
         textoProveedor = string.Empty;
-        mostrarLista = false;
         mostrarErrorSeleccion = false;
         mensajeErrorModal = null;
         mensajeError = null;
@@ -636,7 +586,6 @@
         mostrarErrorSeleccion = false;
         mensajeErrorModal = null;
         textoProveedor = string.Empty;
-        mostrarLista = false;
         proveedorExistenteId = null;
         formularioAgregar.Nombre = modo == "existente" ? "placeholder" : string.Empty;
         formularioAgregar.Telefono = null;
@@ -668,14 +617,11 @@
         textoProveedor = e.Value?.ToString() ?? string.Empty;
         proveedorExistenteId = null;      // si edita el texto, debe volver a elegir
         mostrarErrorSeleccion = false;
-        mostrarLista = true;
     }
 
-    private void SeleccionarProveedor(ProveedorDTO p)
+    private void SeleccionarProveedor(ChangeEventArgs e)
     {
-        proveedorExistenteId = p.Id;
-        textoProveedor = p.Nombre;
-        mostrarLista = false;
+        proveedorExistenteId = int.TryParse(e.Value?.ToString(), out var id) ? id : null;
         mostrarErrorSeleccion = false;
     }
 

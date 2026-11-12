@@ -138,6 +138,15 @@
             if (s.refrescar) s.refrescar(false);
         },
 
+        mover(id, x, y) {
+            const s = estados[id];
+            if (!s?.img) return;
+            s.x += x;
+            s.y += y;
+            limitar(s);
+            s.refrescar?.(false);
+        },
+
         exportar(id) {
             const s = estados[id];
             if (!s || !s.img) return null;

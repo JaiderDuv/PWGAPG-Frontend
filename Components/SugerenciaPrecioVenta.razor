@@ -6,7 +6,7 @@
 @inject CosteoApiService Api
 
 <div class="cs-panel">
-    <h6 class="mb-2">Precio de venta sugerido</h6>
+    <h3 class="mb-2 rc-section-title">Precio de venta sugerido</h3>
 
     @if (cargando)
     {
@@ -16,8 +16,8 @@
     {
         <div class="row g-3 align-items-end mb-2">
             <div class="col-md-4">
-                <label class="rc-label">Margen deseado (%) *</label>
-                <input type="number" class="form-control" step="1" min="0" max="100"
+                <label class="rc-label" for="receta-margen-sugerido">Margen deseado (%) *</label>
+                <input id="receta-margen-sugerido" type="number" class="form-control" step="1" min="0" max="100" required
                        @bind="margen" @bind:event="oninput" @bind:after="OnMargenCambiado" />
             </div>
 

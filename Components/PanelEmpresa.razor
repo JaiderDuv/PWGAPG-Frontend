@@ -8,7 +8,8 @@
 @inject InsumoService InsumoApi
 @inject RecetaApiService RecetaApi
 @inject HttpClient Http
-@inject NavigationManager Navigation
+
+<PageTitle>Panel de empresa | Chef Metrics</PageTitle>
 
 <div class="panel-empresa">
     <div class="panel-empresa-header">
@@ -19,11 +20,11 @@
             }
             else
             {
-                @(string.IsNullOrWhiteSpace(AuthService.NombreEmpresa) ? "E" : AuthService.NombreEmpresa.Substring(0, 1).ToUpper())
+                <span aria-hidden="true">@(string.IsNullOrWhiteSpace(AuthService.NombreEmpresa) ? "E" : AuthService.NombreEmpresa.Substring(0, 1).ToUpper())</span>
             }
         </div>
         <div class="panel-empresa-titulos">
-            <h1 class="panel-empresa-nombre">@AuthService.NombreEmpresa</h1>
+            <h1 class="panel-empresa-nombre">@(string.IsNullOrWhiteSpace(AuthService.NombreEmpresa) ? "Panel de empresa" : AuthService.NombreEmpresa)</h1>
             <div class="panel-empresa-badges">
                 <span class="panel-empresa-badge">Emprendimiento Verificado</span>
                 @* TODO: reemplazar por la categoría real del negocio cuando se conecte el endpoint correspondiente *@
@@ -38,18 +39,18 @@
     @* ---------- Alerta de riesgo: lo más urgente primero ---------- *@
     @if (cargandoRiesgo)
     {
-        <div class="panel-alerta-riesgo">Revisando los márgenes de tu menú...</div>
+        <div class="panel-alerta-riesgo" role="status">Revisando los márgenes de tu menú...</div>
     }
     else if (errorRiesgo is not null)
     {
-        <div class="panel-alerta-riesgo">@errorRiesgo</div>
+        <div class="panel-alerta-riesgo" role="status">@errorRiesgo</div>
     }
     else if (productosEnRiesgo > 0)
     {
-        <div class="panel-alerta-riesgo panel-alerta-riesgo-activa" role="button" @onclick='() => Navigation.NavigateTo("menu/evaluacion")'>
+        <a class="panel-alerta-riesgo panel-alerta-riesgo-activa" href="menu/evaluacion">
             <span>⚠️ <strong>@productosEnRiesgo producto(s)</strong> están por debajo de tu margen mínimo (@umbralActual.ToString("0.##") %).</span>
             <span class="panel-alerta-link">Revisar ahora →</span>
-        </div>
+        </a>
     }
     else
     {
@@ -62,8 +63,8 @@
     <div class="panel-resumen-grid">
         <div class="panel-resumen-card">
             <div class="panel-resumen-card-header">
-                <h4>Productos de menú</h4>
-                <button type="button" class="btn-texto-ver-mas" @onclick='() => Navigation.NavigateTo("menu")'>Ver más →</button>
+                <h2>Productos de menú</h2>
+                <a class="btn-texto-ver-mas" href="menu" aria-label="Ver más productos del menú">Ver más →</a>
             </div>
             @if (cargandoMenu)
             {
@@ -86,8 +87,8 @@
 
         <div class="panel-resumen-card">
             <div class="panel-resumen-card-header">
-                <h4>Costos fijos</h4>
-                <button type="button" class="btn-texto-ver-mas" @onclick='() => Navigation.NavigateTo("costos-fijos")'>Ver más →</button>
+                <h2>Costos fijos</h2>
+                <a class="btn-texto-ver-mas" href="costos-fijos" aria-label="Ver más costos fijos">Ver más →</a>
             </div>
             @if (cargandoCostos)
             {
@@ -113,8 +114,8 @@
 
         <div class="panel-resumen-card">
             <div class="panel-resumen-card-header">
-                <h4>Insumos</h4>
-                <button type="button" class="btn-texto-ver-mas" @onclick='() => Navigation.NavigateTo("insumos")'>Ver más →</button>
+                <h2>Insumos</h2>
+                <a class="btn-texto-ver-mas" href="insumos" aria-label="Ver más insumos">Ver más →</a>
             </div>
             @if (cargandoInsumos)
             {
@@ -129,8 +130,8 @@
 
         <div class="panel-resumen-card">
             <div class="panel-resumen-card-header">
-                <h4>Proveedores</h4>
-                <button type="button" class="btn-texto-ver-mas" @onclick='() => Navigation.NavigateTo("proveedores")'>Ver más →</button>
+                <h2>Proveedores</h2>
+                <a class="btn-texto-ver-mas" href="proveedores" aria-label="Ver más proveedores">Ver más →</a>
             </div>
             @if (cargandoProveedores)
             {
@@ -145,8 +146,8 @@
 
         <div class="panel-resumen-card">
             <div class="panel-resumen-card-header">
-                <h4>Recetas</h4>
-                <button type="button" class="btn-texto-ver-mas" @onclick='() => Navigation.NavigateTo("recetas")'>Ver más →</button>
+                <h2>Recetas</h2>
+                <a class="btn-texto-ver-mas" href="recetas" aria-label="Ver más recetas">Ver más →</a>
             </div>
             @if (cargandoRecetas)
             {
@@ -163,8 +164,8 @@
     @* ---------- Cambios de precio recientes (última semana, máx. 10) ---------- *@
     <div class="panel-resumen-card panel-cambios-card">
         <div class="panel-resumen-card-header">
-            <h4>Cambios de precio recientes</h4>
-            <button type="button" class="btn-texto-ver-mas" @onclick='() => Navigation.NavigateTo("insumos/historial")'>Ver todo el historial →</button>
+            <h2>Cambios de precio recientes</h2>
+            <a class="btn-texto-ver-mas" href="insumos/historial">Ver todo el historial →</a>
         </div>
 
         @if (cargandoCambios)
@@ -180,7 +181,7 @@
             <div class="panel-cambios-lista">
                 @foreach (var c in cambiosRecientes)
                 {
-                    <div class="panel-cambio-item" role="button" @onclick='() => Navigation.NavigateTo($"insumos/{c.InsumoId}/historial")'>
+                    <a class="panel-cambio-item" href="@($"insumos/{c.InsumoId}/historial")">
                         <div class="panel-cambio-info">
                             <strong>@c.NombreInsumo</strong>
                             <span class="text-muted small-texto">
@@ -201,7 +202,7 @@
                         {
                             <span class="text-muted small-texto">Primer registro</span>
                         }
-                    </div>
+                    </a>
                 }
             </div>
         }

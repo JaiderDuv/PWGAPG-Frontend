@@ -5,34 +5,42 @@
 @if (hayImagenNueva)
 {
     <div class="rc-crop-frame">
-        <canvas id="@CanvasId" width="600" height="450" class="rc-crop-canvas"></canvas>
+        <canvas id="@CanvasId" width="600" height="450" class="rc-crop-canvas"
+                role="img" aria-label="Vista previa del recorte de @DescripcionImagen">
+            Vista previa del recorte de @DescripcionImagen.
+        </canvas>
     </div>
     <div class="rc-crop-zoom">
-        <span>−</span>
-        <input id="@SliderId" type="range" min="1" max="3" step="0.01" value="1" aria-label="Zoom" />
-        <span>+</span>
+        <label for="@SliderId">Zoom del recorte</label>
+        <input id="@SliderId" type="range" min="1" max="3" step="0.01" value="1" />
     </div>
-    <small class="rc-crop-hint">Arrastra la foto para encuadrarla. Zoom con la barra, la rueda del mouse o pellizcando.</small>
+    <div class="d-flex flex-wrap gap-2" role="group" aria-label="Mover la imagen dentro del recorte">
+        <button type="button" class="btn btn-sm btn-outline-secondary" aria-label="Mover a la izquierda" @onclick="() => Mover(-15, 0)">Izquierda</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" aria-label="Mover hacia arriba" @onclick="() => Mover(0, -15)">Arriba</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" aria-label="Mover hacia abajo" @onclick="() => Mover(0, 15)">Abajo</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" aria-label="Mover a la derecha" @onclick="() => Mover(15, 0)">Derecha</button>
+    </div>
+    <small class="rc-crop-hint">Ajusta el zoom y usa los botones de dirección o arrastra la imagen para encuadrarla.</small>
 }
 else
 {
     <div class="rc-image-box">
         @if (MostrarActual)
         {
-            <img src="@ImagenActualUrl" alt="Imagen actual" />
+            <img src="@ImagenActualUrl" alt="Imagen actual de @DescripcionImagen" />
         }
         else
         {
 
-            <div class="rc-image-placeholder"><span>🍽️</span><small>Sin imagen</small></div>
+            <div class="rc-image-placeholder"><span aria-hidden="true">🍽️</span><small>Sin imagen</small></div>
         }
     </div>
 }
 
 <div class="d-flex gap-2 mt-2 flex-wrap">
-    <label class="btn btn-sm btn-outline-secondary mb-0">
+    <label for="@ArchivoId" class="rc-image-picker btn btn-sm btn-outline-secondary mb-0">
         @(hayImagenNueva || MostrarActual ? "Cambiar imagen" : "Elegir imagen")
-        <InputFile class="d-none" OnChange="AlElegirImagen"
+        <InputFile id="@ArchivoId" class="visually-hidden" OnChange="AlElegirImagen" aria-describedby="@AyudaId"
                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" />
     </label>
     @if (hayImagenNueva)
@@ -44,14 +52,15 @@ else
         <button type="button" class="btn btn-sm btn-outline-danger" @onclick="Quitar">Quitar</button>
     }
 </div>
-<small class="text-muted d-block mt-1">JPG, PNG o WEBP, hasta 8 MB. Se recorta a 4:3 y se comprime sola.</small>
+<small id="@AyudaId" class="text-muted d-block mt-1">JPG, PNG o WEBP, hasta 8 MB. Se recorta a 4:3 y se comprime sola.</small>
 @if (error is not null)
 {
-    <div class="rc-error">@error</div>
+    <div class="rc-error" role="alert">@error</div>
 }
 
 @code {
     [Parameter] public string? ImagenActualUrl { get; set; }
+    [Parameter] public string DescripcionImagen { get; set; } = "la receta";
 
     public bool HayImagenNueva => hayImagenNueva;
     public bool QuitarImagenActual => quitarImagen;
@@ -63,6 +72,8 @@ else
     private readonly string uid = Guid.NewGuid().ToString("N")[..8];
     private string CanvasId => $"crop-{uid}";
     private string SliderId => $"zoom-{uid}";
+    private string ArchivoId => $"archivo-imagen-{uid}";
+    private string AyudaId => $"ayuda-imagen-{uid}";
 
     private bool hayImagenNueva, quitarImagen, pendienteIniciar;
     private string? error;
@@ -105,6 +116,8 @@ else
     {
         try { await JS.InvokeVoidAsync("recetaCrop.reiniciar", CanvasId); } catch { }
     }
+
+    private async Task Mover(int x, int y) => await JS.InvokeVoidAsync("recetaCrop.mover", CanvasId, x, y);
 
     private async Task Quitar()
     {

@@ -1,21 +1,23 @@
 ﻿@page "/preview-email"
 
-<div style=""background-color: #F3F4F6; padding: 40px 10px; font-family: 'Segoe UI', Arial, sans-serif; min-height: 100vh;"">
-    <table align=""center"" border="0" cellpadding="0" cellspacing="0" width=""100%"" style=""max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"">
+<PageTitle>Vista previa de confirmación | Chef Metrics</PageTitle>
+
+<div style="background-color: #F3F4F6; padding: 40px 10px; font-family: 'Segoe UI', Arial, sans-serif; min-height: 100vh;">
+    <table role="presentation" align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
         
         <!-- Header Superior Oscuro -->
         <tr>
-            <td style=""background-color: #1F2937; padding: 30px 25px 20px 25px;"">
-                <table border="0" cellpadding="0" cellspacing="0" width=""100%"">
+            <td style="background-color: #1F2937; padding: 30px 25px 20px 25px;">
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                     <tr>
-                        <td align=""left"">
-                            <img src=""https://res.cloudinary.com/h9nkn3lo/image/upload/f_auto,q_auto/Logo.png"" 
-                                 alt=""Chef Metrics Logo"" 
-                                 style=""max-height: 50px; width: auto; display: block; margin-bottom: 12px; border: 0;"" />
-                            <h1 style=""color: #F59E0B; margin: 0; font-size: 24px; font-weight: bold; letter-spacing: 1px;"">
-                                CHEF <span style=""color: #ffffff;"">METRICS</span>
-                            </h1>
-                            <p style=""color: #D1D5DB; font-size: 11px; margin-top: 4px; margin-bottom: 0; text-transform: uppercase; letter-spacing: 1.5px;"">
+                        <td align="left">
+                            <img src="assets/Logo.png"
+                                 alt="Chef Metrics"
+                                 style="max-height: 50px; width: auto; display: block; margin-bottom: 12px; border: 0;" />
+                            <p style="color: #F59E0B; margin: 0; font-size: 24px; font-weight: bold; letter-spacing: 1px;">
+                                CHEF <span style="color: #ffffff;">METRICS</span>
+                            </p>
+                            <p style="color: #D1D5DB; font-size: 11px; margin-top: 4px; margin-bottom: 0; text-transform: uppercase; letter-spacing: 1.5px;">
                                 Red de Emprendimiento Gastronómico
                             </p>
                         </td>
@@ -26,9 +28,9 @@
 
         <!-- Sub-banner -->
         <tr>
-            <td align=""center"" style=""background-color: #374151; padding: 12px 20px;"">
-                <p style=""color: #F3F4F6; font-size: 13px; font-weight: 600; letter-spacing: 2px; margin: 0; text-transform: uppercase;"">
-                    RECUPERACIÓN DE ACCESO
+            <td align="center" style="background-color: #374151; padding: 12px 20px;">
+                <p style="color: #F3F4F6; font-size: 13px; font-weight: 600; letter-spacing: 2px; margin: 0; text-transform: uppercase;">
+                    BIENVENIDO A NUESTRA COMUNIDAD
                 </p>
             </td>
         </tr>
@@ -36,53 +38,53 @@
         <!-- Cuerpo del Correo -->
         <tr>
             <td align="center" style="padding: 40px 30px 20px 30px;">
-                <!-- Icono de Candado / Llave en Círculo Naranja -->
-                <div style="width: 64px; height: 64px; background-color: #D97706; border-radius: 50%; display: inline-block; text-align: center; line-height: 64px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(217, 119, 6, 0.3);">
-                    <span style="color: #ffffff; font-size: 28px; vertical-align: middle;">&#x1F511;</span>
+                <!-- Icono decorativo de correo -->
+                <div aria-hidden="true" style="width: 64px; height: 64px; background-color: #8F4A12; border-radius: 50%; display: inline-block; text-align: center; line-height: 64px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(217, 119, 6, 0.3);">
+                    <span style="color: #ffffff; font-size: 28px; vertical-align: middle;">&#x2709;</span>
                 </div>
 
-                <h2 style="color: #111827; font-size: 24px; margin-top: 0; margin-bottom: 12px; font-weight: 700;">
-                    ¡Hola, {nombreHtml}!
-                </h2>
+                <h1 style="color: #111827; font-size: 24px; margin-top: 0; margin-bottom: 12px; font-weight: 700;">
+                    Confirma tu cuenta
+                </h1>
 
-                <div style=""width: 50px; height: 3px; background-color: #F59E0B; margin: 0 auto 24px auto; border-radius: 2px;""></div>
+                <div style="width: 50px; height: 3px; background-color: #F59E0B; margin: 0 auto 24px auto; border-radius: 2px;"></div>
 
-                <p style=""color: #4B5563; font-size: 15px; line-height: 1.6; margin-bottom: 30px; max-width: 480px;"">
-                    Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en <strong>Chef Metrics</strong>. Haz clic en el siguiente botón para ingresar tu nueva contraseña:
+                <p style="color: #4B5563; font-size: 15px; line-height: 1.6; margin-bottom: 30px; max-width: 480px;">
+                    Para completar tu registro en <strong>Chef Metrics</strong>, confirma tu cuenta con el siguiente enlace.
                 </p>
 
                 <!-- Botón Redondeado -->
-                <table border="0" cellpadding="0" cellspacing="0" style="margin: 10px auto 30px auto;">
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 10px auto 30px auto;">
                     <tr>
-                        <td align="center" bgcolor="#D97706" style="border-radius: 50px;">
-                            <a href="{linkHtml}" target="_blank" style="display: inline-block; padding: 16px 40px; font-size: 14px; color: #ffffff; text-decoration: none; font-weight: bold; border-radius: 50px; background-color: #D97706; letter-spacing: 1px; text-transform: uppercase;">
-                                RESTABLECER CONTRASEÑA
+                        <td align="center" bgcolor="#8F4A12" style="border-radius: 50px;">
+                            <a href="confirmar-cuenta" style="display: inline-block; padding: 16px 40px; font-size: 14px; color: #ffffff; text-decoration: none; font-weight: bold; border-radius: 50px; background-color: #8F4A12; letter-spacing: 1px; text-transform: uppercase;">
+                                VERIFICAR CUENTA
                             </a>
                         </td>
                     </tr>
                 </table>
 
-                <p style="color: #9CA3AF; font-size: 12px; margin-top: 25px; margin-bottom: 0;">
-                    Si no solicitaste este cambio, puedes ignorar este mensaje de forma segura. Tu contraseña actual no cambiará.
+                <p style="color: #6B7280; font-size: 12px; margin-top: 25px; margin-bottom: 0;">
+                    Si no realizaste este registro, puedes ignorar este correo.
                 </p>
             </td>
         </tr>
 
         <!-- Divisor Naranja Suave -->
         <tr>
-            <td style=""padding: 0 30px;"">
-                <hr style=""border: 0; border-top: 1px solid #FDE68A; margin: 10px,0,0,0;"" />
+            <td style="padding: 0 30px;">
+                <hr style="border: 0; border-top: 1px solid #FDE68A; margin: 10px 0 0 0;" />
             </td>
         </tr>
 
         <!-- Footer -->
         <tr>
-            <td align=""center"" style=""background-color: #F9FAFB; padding: 25px 20px; color: #9CA3AF; font-size: 12px;"">
-                <p style=""color: #D97706; font-size: 13px; font-weight: bold; margin:0 0 6px 0; letter-spacing: 1px;"">
+            <td align="center" style="background-color: #F9FAFB; padding: 25px 20px; color: #6B7280; font-size: 12px;">
+                <p style="color: #8F4A12; font-size: 13px; font-weight: bold; margin:0 0 6px 0; letter-spacing: 1px;">
                     CHEF METRICS
                 </p>
-                <p style=""margin: 0; color: #6B7280; font-size: 12px;"">
-                    Estás recibiendo este correo porque solicitaste la recuperación de tu contraseña.
+                <p style="margin: 0; color: #6B7280; font-size: 12px;">
+                    Recibes este correo porque se solicitó el registro de una cuenta con tu dirección.
                 </p>
             </td>
         </tr>

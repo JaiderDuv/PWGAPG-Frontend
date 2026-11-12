@@ -1,7 +1,7 @@
 ﻿
 :root {
-    --primary-color: #CC955A; 
-    --primary-dark: #A15F2B; 
+    --primary-color: #8F4A12;
+    --primary-dark: #713A0E;
     --primary-light: #FBBF24; 
     --bg-light: #F9FAFB; 
     --text-main: #374151; 
@@ -29,9 +29,31 @@ a, a:hover, a:focus {
     text-decoration: none !important;
 }
 
-h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
-    outline: none !important;
-    box-shadow: none !important;
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 3px solid #185ABD !important;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 3px #fff;
+}
+
+.skip-link {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 1100;
+    padding: 10px 14px;
+    border-radius: 6px;
+    background: #fff;
+    color: var(--primary-dark);
+    transform: translateY(calc(-100% - 12px));
+}
+
+.skip-link:focus {
+    transform: none;
+}
+
+.form-select {
+    appearance: auto;
+    background-image: none;
 }
 
 .navbar {
@@ -107,6 +129,61 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
     align-items: center;
     gap: 12px;
     margin-left: 15px;
+}
+
+.navbar .nav-toggle {
+    display: none;
+}
+
+@media (max-width: 70rem) {
+    .navbar {
+        height: auto;
+        min-height: 64px;
+        padding: 10px 16px;
+        flex-wrap: wrap;
+        position: static;
+    }
+
+    .navbar .nav-toggle {
+        display: inline-block;
+    }
+
+    .navbar .nav-links {
+        display: none;
+        height: auto;
+        flex: 1 0 100%;
+        flex-wrap: wrap;
+        padding: 8px 0;
+        gap: 8px 16px;
+    }
+
+    .navbar .nav-links.nav-expanded {
+        display: flex;
+    }
+
+    .navbar .nav-link {
+        padding: 8px 0;
+    }
+
+    .navbar .auth-group {
+        margin: 0;
+        flex-wrap: wrap;
+    }
+
+    .navbar .user-profile-menu {
+        height: auto;
+    }
+
+    .navbar .user-profile-menu:has(.dropdown-menu-custom) {
+        flex: 1 0 100%;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .navbar .dropdown-menu-custom {
+        position: static !important;
+        width: min(100%, 220px);
+    }
 }
 @media (max-width: 800px) {
     .brand-title {
@@ -200,6 +277,26 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
     margin: 30px auto;
     padding: 0 20px;
     min-height: calc(100vh - 180px);
+    scroll-margin-top: 84px;
+}
+
+dialog.accessible-dialog {
+    inset: 0;
+    margin: auto;
+    border: 0;
+    max-width: calc(100% - 2rem);
+    max-height: calc(100% - 2rem);
+    overflow: auto;
+    color: var(--text-main);
+    background: #fff;
+}
+
+.accessible-dialog:not([open]) {
+    display: none !important;
+}
+
+.accessible-dialog::backdrop {
+    background: rgba(17, 24, 39, 0.62);
 }
 
 .loading-progress-text {
@@ -308,7 +405,9 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
 .confirm-acciones {
     display: flex;
     justify-content: center;
+    flex-wrap: wrap;
     gap: 12px;
+    margin-top: 12px;
 }
 
 .btn-confirmar-peligro {
@@ -427,8 +526,19 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
     font-weight: 700;
 }
 
-.foto-perfil-input {
-    display: none;
+.foto-perfil-input,
+.img-upload-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+    overflow: hidden;
+}
+
+.foto-perfil-input:focus-visible + .foto-perfil-label,
+.img-upload-input:focus-visible + .img-upload-label {
+    outline: 3px solid #185ABD;
+    outline-offset: 3px;
 }
 
 .foto-perfil-texto {
@@ -550,10 +660,6 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
     justify-content: center;
     font-size: 1.8rem;
     font-weight: 700;
-}
-
-.img-upload-input {
-    display: none;
 }
 
 .img-upload-texto {
@@ -1387,7 +1493,7 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
 
 .panel-resumen-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
     gap: 16px;
 }
 
@@ -1402,10 +1508,11 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 8px;
     margin-bottom: 10px;
 }
 
-    .panel-resumen-card-header h4 {
+    .panel-resumen-card-header h2 {
         margin: 0;
         font-size: 0.95rem;
     }
@@ -1417,7 +1524,10 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
     font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
-    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 4px 0;
 }
 
 .panel-resumen-cifras {
@@ -1433,13 +1543,13 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
 }
 
 .panel-resumen-numero-apagado {
-    color: #868e96;
+    color: #58636d;
 }
 
 .panel-resumen-etiqueta {
     display: block;
     font-size: 0.75rem;
-    color: #868e96;
+    color: #58636d;
     text-transform: uppercase;
 }
 
@@ -1488,8 +1598,15 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
     cursor: pointer;
     border: 1px solid #fcd9a4;
+}
+
+.panel-alerta-riesgo-activa:hover {
+    color: #713a0e;
+    background-color: #ffe6bd;
 }
 
 .panel-alerta-link {
@@ -1525,6 +1642,8 @@ h1:focus, h2:focus, h3:focus, button:focus, input:focus, select:focus {
     padding: 8px 4px;
     border-bottom: 1px solid #f1f3f5;
     cursor: pointer;
+    gap: 8px;
+    color: var(--text-main);
 }
 
     .panel-cambio-item:last-child {

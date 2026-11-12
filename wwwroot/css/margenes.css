@@ -2,7 +2,8 @@
    Márgenes del menú · estilos de la página
    ===================================================================== */
 
-.mg-page {
+.mg-page,
+.mg-modal {
     --mg-danger: #B42318;
     --mg-danger-soft: #FFF1F0;
     --mg-success: #067647;
@@ -12,9 +13,13 @@
     --mg-amber: #B54708;
     --mg-amber-soft: #FFFAEB;
     --mg-ink: #3F3126;
-    --mg-muted: #8A7A6B;
+    --mg-muted: #6B5948;
     --mg-line: #F0E9E1;
     --mg-shadow: 0 8px 24px rgba(96, 61, 25, .05);
+    --bs-secondary-color: var(--mg-muted);
+}
+
+.mg-page {
     max-width: 1180px;
 }
 
@@ -54,9 +59,7 @@
     padding: 2rem 2.2rem;
     border-radius: 24px;
     border: 1px solid #F0DFC9;
-    background:
-        radial-gradient(circle at 88% 12%, rgba(204, 149, 90, .18), transparent 34%),
-        linear-gradient(135deg, #FFFAF3 0%, #FDF3E6 55%, #F8EAD8 100%);
+    background: #FDF3E6;
     box-shadow: 0 12px 32px rgba(96, 61, 25, .06);
     margin-bottom: 1rem;
 }
@@ -154,7 +157,7 @@
     }
 
 .mg-btn-ghost {
-    background: rgba(255, 255, 255, .72);
+    background: #fff;
     border-color: #E6D5C1;
     color: #6B4A2F;
 }
@@ -200,7 +203,7 @@
         height: 19px;
     }
 
-.mg-context-card h3 {
+.mg-context-card h2 {
     color: var(--mg-ink);
     font-size: .9rem;
     font-weight: 800;
@@ -318,14 +321,14 @@
     .mg-input-suffix span {
         position: absolute;
         right: .7rem;
-        color: #8A7A6B;
+        color: var(--mg-muted);
         font-size: .8rem;
         font-weight: 700;
         pointer-events: none;
     }
 
 .mg-autosave {
-    color: #8A7A6B;
+    color: var(--mg-muted);
     background: #F8F4EE;
     border-radius: 999px;
     padding: .3rem .55rem;
@@ -391,7 +394,7 @@
 
 .mg-kpi-risk {
     --mg-accent: #E5484D;
-    background: linear-gradient(180deg, #fff 0%, #FFF8F8 100%);
+    background: #FFF8F8;
 }
 
 .mg-kpi-ok {
@@ -519,7 +522,7 @@
     .mg-search .form-control {
         height: 42px;
         padding-left: 2.2rem;
-        border-color: #E4DDD4;
+        border-color: #827466;
         border-radius: 11px;
         background: #FFFDF9;
         font-size: .88rem;
@@ -694,7 +697,7 @@
     border-bottom: 1px solid #F1EBE4;
 }
 
-    .mg-table-head h3 {
+    .mg-table-head h2 {
         color: var(--mg-ink);
         font-size: .98rem;
         font-weight: 800;
@@ -781,10 +784,6 @@
             background: #FFFBF6;
         }
 
-.mg-row {
-    cursor: pointer;
-}
-
 .mg-row-risk {
     background: #FFFAFA;
 }
@@ -798,8 +797,10 @@
 }
 
 .mg-product-name {
-    color: var(--mg-ink);
+    color: var(--cm-primary-dark);
     font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: .18em;
 }
 
 .mg-money {
@@ -989,7 +990,7 @@
         height: 24px;
     }
 
-.mg-empty h3 {
+.mg-empty h2 {
     color: var(--mg-ink);
     font-size: 1rem;
     font-weight: 800;
@@ -1023,17 +1024,11 @@
 }
 
 /* ---------- Modal ---------- */
-.mg-modal-overlay {
-    padding: 1rem;
-    background: rgba(41, 30, 20, .42);
-    backdrop-filter: blur(3px);
-}
-
 .mg-modal {
     width: 540px;
     max-width: 94vw;
     padding: 0;
-    overflow: hidden;
+    overflow-y: auto;
     border-radius: 22px;
     box-shadow: 0 24px 60px rgba(41, 30, 20, .28);
 }
@@ -1045,7 +1040,7 @@
     gap: 1rem;
     padding: 1.25rem 1.35rem .9rem;
     border-bottom: 1px solid #F0E6DA;
-    background: linear-gradient(135deg, #FFFAF3, #FDF3E6);
+    background: #FDF3E6;
 }
 
 .mg-modal-title {
@@ -1053,6 +1048,11 @@
     align-items: center;
     gap: .7rem;
     min-width: 0;
+}
+
+.mg-modal-title > div {
+    min-width: 0;
+    background: #FDF3E6;
 }
 
 .mg-modal-icon {
@@ -1073,7 +1073,7 @@
         height: 20px;
     }
 
-.mg-modal-title h5 {
+.mg-modal-title h2 {
     color: var(--mg-ink);
     font-size: 1.05rem;
     font-weight: 800;
@@ -1081,12 +1081,10 @@
 }
 
 .mg-modal-title p {
-    overflow: hidden;
     color: var(--mg-muted);
     font-size: .8rem;
     margin: .1rem 0 0;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
 }
 
 .mg-modal-close {
@@ -1209,7 +1207,7 @@
 
     .mg-suggested-box.is-ready {
         border: 1px solid #E8CDAE;
-        background: linear-gradient(135deg, #FFFAF3, #FDF1E2);
+        background: #FDF1E2;
     }
 
 .mg-suggested-label {

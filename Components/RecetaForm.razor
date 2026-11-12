@@ -8,7 +8,7 @@
 
 <div class="rc-card rc-form">
     <div class="rc-card-header">
-        <h5 class="mb-0">@(Editando is null ? "Nueva receta" : $"Editar receta #{Editando.Id}")</h5>
+        <h2 class="mb-0">@(Editando is null ? "Nueva receta" : $"Editar receta #{Editando.Id}")</h2>
     </div>
 
     <EditForm EditContext="editContext" class="rc-card-body" novalidate>
@@ -17,22 +17,24 @@
         <div class="row g-4">
             <!-- Imagen -->
             <div class="col-lg-4">
-                <label class="rc-label">Imagen de la receta</label>
-                <ImageCropper @ref="cropper" ImagenActualUrl="@Api.UrlImagen(imagenActual)" />
+                <div class="rc-label">Imagen de la receta</div>
+                <ImageCropper @ref="cropper" ImagenActualUrl="@Api.UrlImagen(imagenActual)"
+                              DescripcionImagen="@(string.IsNullOrWhiteSpace(modelo.Nombre) ? "la receta" : modelo.Nombre)" />
             </div>
 
             <!-- Datos básicos -->
             <div class="col-lg-8">
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="rc-label">Nombre *</label>
-                        <InputText class="form-control" @bind-Value="modelo.Nombre"
+                        <label class="rc-label" for="receta-nombre">Nombre *</label>
+                        <InputText id="receta-nombre" class="form-control" @bind-Value="modelo.Nombre" required
+                                   aria-describedby="receta-error-nombre"
                                    maxlength="100" placeholder="Ej: Salsa de tomate casera" />
-                        <ValidationMessage For="() => modelo.Nombre" class="rc-error" />
+                        <div id="receta-error-nombre" aria-live="polite"><ValidationMessage For="() => modelo.Nombre" class="rc-error" /></div>
                     </div>
                     <div class="col-md-4">
-                        <label class="rc-label">Categoría</label>
-                        <InputSelect class="form-select" @bind-Value="modelo.Categoria">
+                        <label class="rc-label" for="receta-categoria">Categoría</label>
+                        <InputSelect id="receta-categoria" class="form-select" @bind-Value="modelo.Categoria">
                             <option value="">Sin categoría</option>
                             @foreach (var c in CategoriasReceta.Lista)
                             {
@@ -41,13 +43,14 @@
                         </InputSelect>
                     </div>
                     <div class="col-md-2">
-                        <label class="rc-label">Porciones *</label>
-                        <InputNumber class="form-control" @bind-Value="modelo.PorcionesBase" min="1" max="1000" step="1" />
-                        <ValidationMessage For="() => modelo.PorcionesBase" class="rc-error" />
+                        <label class="rc-label" for="receta-porciones">Porciones *</label>
+                        <InputNumber id="receta-porciones" class="form-control" @bind-Value="modelo.PorcionesBase"
+                                     min="1" max="1000" step="1" required aria-describedby="receta-error-porciones" />
+                        <div id="receta-error-porciones" aria-live="polite"><ValidationMessage For="() => modelo.PorcionesBase" class="rc-error" /></div>
                     </div>
                     <div class="col-12">
-                        <label class="rc-label">Instrucciones <small class="text-muted">(@(modelo.Instrucciones?.Length ?? 0)/2000)</small></label>
-                        <textarea class="form-control" rows="6" maxlength="2000"
+                        <label class="rc-label" for="receta-instrucciones">Instrucciones <small class="text-muted">(@(modelo.Instrucciones?.Length ?? 0)/2000)</small></label>
+                        <textarea id="receta-instrucciones" class="form-control" rows="6" maxlength="2000"
                                   value="@modelo.Instrucciones"
                                   @oninput="e => modelo.Instrucciones = e.Value?.ToString()"
                                   placeholder="Paso a paso de la preparación..."></textarea>
@@ -58,7 +61,8 @@
         </div>
 
         <!-- Ingredientes -->
-        <h6 class="rc-section-title">Ingredientes</h6>
+        <h3 class="rc-section-title">Ingredientes</h3>
+        <p class="small text-muted" id="receta-ayuda-merma">Merma es el porcentaje que se pierde al preparar un ingrediente. Ingresa 0 cuando no haya pérdida.</p>
         <div class="table-responsive">
             <table class="table rc-table align-middle">
                 <thead>
@@ -68,19 +72,27 @@
                         <th style="width:110px" title="Porcentaje que se pierde al preparar este ingrediente">Merma %</th>
                         <th style="width:110px">Unidad</th>
                         <th style="width:130px" class="text-end">Costo</th>
-                        <th style="width:50px"></th>
+                        <th style="width:50px"><span class="visually-hidden">Acciones</span></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var fila in modelo.Filas)
                     {
                         var tieneError = erroresFila.ContainsKey(fila);
-                        <tr>
+                        var numero = modelo.Filas.IndexOf(fila) + 1;
+                        var errorId = tieneError ? $"{fila.ControlId}-error" : null;
+                        <tr @key="fila">
                             <td>
                                 @if (fila.InsumoId == 0)
                                 {
+                                    var coincidencias = fila.MostrarLista ? InsumosFiltrados(fila).ToList() : new List<InsumoOpcionDto>();
                                     <div class="rc-combo">
-                                        <input type="text" class="form-control @(tieneError ? "is-invalid" : "")"
+                                        <input @ref="fila.ControlBuscar" type="text" class="form-control @(tieneError ? "is-invalid" : "")"
+                                               aria-label="Buscar insumo del ingrediente @numero" role="combobox" aria-autocomplete="list"
+                                               aria-expanded="@(fila.MostrarLista ? "true" : "false")"
+                                               aria-controls="@(fila.MostrarLista ? fila.ControlId : null)"
+                                               aria-activedescendant="@(fila.MostrarLista && fila.Indice >= 0 && fila.Indice <= coincidencias.Count ? $"{fila.ControlId}-{fila.Indice}" : null)"
+                                               aria-describedby="@errorId" aria-invalid="@(tieneError ? "true" : null)"
                                                placeholder="Buscar insumo..." maxlength="100" autocomplete="off"
                                                value="@fila.Busqueda"
                                                @oninput="e => AlEscribir(fila, e.Value?.ToString())"
@@ -89,31 +101,31 @@
                                                @onkeydown="e => AlTecla(e, fila)" />
                                         @if (fila.MostrarLista)
                                         {
-                                            var coincidencias = InsumosFiltrados(fila).ToList();
-                                            <div class="rc-combo-lista">
+                                            <div class="rc-combo-lista" id="@fila.ControlId" role="listbox" aria-label="Insumos disponibles">
                                                 @for (var n = 0; n < coincidencias.Count; n++)
                                                 {
                                                     var i = coincidencias[n];
-                                                    var activo = n == fila.Indice;
-                                                    var usado = YaElegido(i.Id, fila);
-                                                    <button type="button" class="rc-combo-item @(activo ? "activo" : "")"
-                                                            disabled="@usado"
-                                                            title="@(usado ? "Ya está en otra línea de esta receta" : "")"
-                                                            @onclick="() => SeleccionarInsumo(fila, i)">
+                                                    var indice = n;
+                                                    var activo = indice == fila.Indice;
+                                                    <div id="@($"{fila.ControlId}-{indice}")" role="option" aria-selected="@(activo ? "true" : "false")"
+                                                         class="rc-combo-item @(activo ? "activo" : "")"
+                                                         @onmousedown:preventDefault="true" @onclick="() => SeleccionarInsumoDesdeLista(fila, i)">
                                                         <span class="rc-combo-nombre">@i.Nombre</span>
                                                         <small class="rc-combo-meta">@i.UnidadMedida · @Formato.Moneda(i.CostoUnitario)</small>
-                                                    </button>
+                                                    </div>
                                                 }
-                                                @if (coincidencias.Count == 0)
-                                                {
-                                                    <div class="rc-combo-vacio">Sin coincidencias para "@fila.Busqueda"</div>
-                                                }
-                                                <button type="button" class="rc-combo-item rc-combo-crear"
-                                                        @onclick="() => AbrirNuevoInsumo(fila)">
+                                                <div id="@($"{fila.ControlId}-{coincidencias.Count}")" role="option"
+                                                     aria-selected="@(fila.Indice == coincidencias.Count ? "true" : "false")"
+                                                     class="rc-combo-item rc-combo-crear @(fila.Indice == coincidencias.Count ? "activo" : "")"
+                                                     @onmousedown:preventDefault="true" @onclick="() => AbrirNuevoInsumo(fila)">
                                                     <span class="rc-combo-nombre">+ Crear insumo nuevo</span>
                                                     <small class="rc-combo-meta">Se guarda en tu inventario</small>
-                                                </button>
+                                                </div>
                                             </div>
+                                            @if (coincidencias.Count == 0)
+                                            {
+                                                <span class="visually-hidden" role="status">Sin coincidencias para "@fila.Busqueda"</span>
+                                            }
                                         }
                                     </div>
                                 }
@@ -121,20 +133,22 @@
                                 {
                                     <div class="rc-combo-seleccionado">
                                         <span>@NombreInsumo(fila.InsumoId) <small class="text-muted">(@UnidadDeInsumo(fila.InsumoId))</small></span>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => LimpiarInsumo(fila)">Cambiar</button>
+                                        <button @ref="fila.ControlCambio" type="button" class="btn btn-sm btn-outline-secondary"
+                                                aria-label="Cambiar insumo del ingrediente @numero" @onclick="() => LimpiarInsumo(fila)">Cambiar</button>
                                     </div>
                                 }
                             </td>
                             <td>
-                                <InputNumber class="@ClaseInput(tieneError)" @bind-Value="fila.Cantidad"
+                                <InputNumber class="@ClaseInput(tieneError)" @bind-Value="fila.Cantidad" aria-label="@($"Cantidad del ingrediente {numero}")"
+                                             aria-describedby="@errorId" aria-invalid="@(tieneError ? "true" : null)"
                                              min="0.001" max="100000" step="0.001" />
                             </td>
                             <td>
-                                <InputNumber class="form-control" @bind-Value="fila.PorcentajeMerma"
-                                            min="0" max="100" step="1" title="Se pierde al limpiar, pelar o cocinar. 0 = sin merma." />
+                                <InputNumber class="form-control" @bind-Value="fila.PorcentajeMerma" aria-label="@($"Porcentaje de merma del ingrediente {numero}")"
+                                             min="0" max="100" step="1" aria-describedby="receta-ayuda-merma" />
                             </td>
                             <td>
-                                <select class="form-select" @bind="fila.UnidadMedida">
+                                <select class="form-select" @bind="fila.UnidadMedida" aria-label="Unidad del ingrediente @numero">
                                     @foreach (var u in UnidadesCompatibles(fila))
                                     {
                                         <option value="@u">@u</option>
@@ -144,21 +158,24 @@
                             <td class="text-end">@Formato.Moneda(CostoDeFila(fila))</td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-outline-danger"
-                                        title="Quitar ingrediente" @onclick="() => QuitarFila(fila)">
-                                    ✕
+                                        aria-label="Quitar ingrediente @numero" @onclick="() => QuitarFila(fila)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                                        <path d="m6 6 12 12M18 6 6 18" />
+                                    </svg>
                                 </button>
                             </td>
                         </tr>
                         @if (tieneError)
                         {
-                            <tr class="rc-row-error"><td colspan="6"><div class="rc-error">@erroresFila[fila]</div></td></tr>
+                            <tr class="rc-row-error"><td colspan="6"><div id="@errorId" class="rc-error">@erroresFila[fila]</div></td></tr>
                         }
                     }
                 </tbody>
             </table>
         </div>
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+            <div class="d-flex flex-wrap gap-2">
                 <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AgregarFila"
                         disabled="@(modelo.Filas.Count >= 50)">+ Agregar ingrediente</button>
                 <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AbrirNuevoInsumoDesdeFooter">
@@ -172,12 +189,12 @@
         </div>
         @if (errorGeneral is not null)
         {
-            <div class="rc-error mb-2">@errorGeneral</div>
+            <div class="rc-error mb-2" role="alert">@errorGeneral</div>
         }
 
         @if (errorApi is not null)
         {
-            <div class="alert alert-danger">@errorApi</div>
+            <div class="alert alert-danger" role="alert">@errorApi</div>
         }
 
         <div class="d-flex gap-2 justify-content-end">
@@ -191,33 +208,32 @@
 
 @if (mostrarNuevoInsumo)
 {
-    <div class="confirm-overlay">
-        <div class="socio-modal insumo-rapido-modal">
+    <AccessibleDialog Class="socio-modal insumo-rapido-modal" LabelledBy="receta-insumo-titulo" OnCancel="CerrarNuevoInsumo">
             <div class="d-flex justify-content-between align-items-start gap-3">
                 <div>
-                    <h3 class="onboarding-subtitulo mb-1">Nuevo insumo</h3>
+                    <h2 id="receta-insumo-titulo" class="onboarding-subtitulo mb-1">Nuevo insumo</h2>
                     <p class="text-muted mb-0" style="font-size:.85rem;">
                         Se guardará en tu inventario y quedará seleccionado en esta receta.
                     </p>
                 </div>
                 <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CerrarNuevoInsumo"
-                        disabled="@guardandoNuevoInsumo" title="Cerrar">✕</button>
+                        disabled="@guardandoNuevoInsumo">Cerrar</button>
             </div>
 
             <EditForm Model="nuevoInsumo" OnValidSubmit="CrearInsumoRapido" novalidate class="mt-3">
                 <DataAnnotationsValidator />
 
                 <div class="form-group-sm">
-                    <label class="auth-label">Nombre *</label>
-                    <InputText class="form-control" @bind-Value="nuevoInsumo.Nombre" maxlength="150"
+                    <label class="auth-label" for="receta-insumo-nombre">Nombre *</label>
+                    <InputText id="receta-insumo-nombre" class="form-control" @bind-Value="nuevoInsumo.Nombre" maxlength="150" required
                                placeholder="Ej.: Harina de trigo" />
                     <ValidationMessage For="() => nuevoInsumo.Nombre" class="text-danger msg-error" />
                 </div>
 
                 <div class="onb-grid">
                     <div class="form-group-sm">
-                        <label class="auth-label">Unidad de medida *</label>
-                        <InputSelect class="form-select" @bind-Value="nuevoInsumo.UnidadMedida">
+                        <label class="auth-label" for="receta-insumo-unidad">Unidad de medida *</label>
+                        <InputSelect id="receta-insumo-unidad" class="form-select" @bind-Value="nuevoInsumo.UnidadMedida" required>
                             @foreach (var unidad in ConversorUnidades.Unidades)
                             {
                                 <option value="@unidad">@unidad</option>
@@ -226,8 +242,8 @@
                         <ValidationMessage For="() => nuevoInsumo.UnidadMedida" class="text-danger msg-error" />
                     </div>
                     <div class="form-group-sm">
-                        <label class="auth-label">Categoría *</label>
-                        <InputSelect class="form-select" @bind-Value="nuevoInsumo.Categoria">
+                        <label class="auth-label" for="receta-insumo-categoria">Categoría *</label>
+                        <InputSelect id="receta-insumo-categoria" class="form-select" @bind-Value="nuevoInsumo.Categoria" required>
                             <option value="materia_prima">Materia prima</option>
                             <option value="empaque">Empaque</option>
                             <option value="otro">Otro</option>
@@ -235,8 +251,8 @@
                         <ValidationMessage For="() => nuevoInsumo.Categoria" class="text-danger msg-error" />
                     </div>
                     <div class="form-group-sm">
-                        <label class="auth-label">Densidad (g/ml) opcional</label>
-                        <InputNumber class="form-control" @bind-Value="nuevoInsumo.DensidadGPorMl"
+                        <label class="auth-label" for="receta-insumo-densidad">Densidad (g/ml) opcional</label>
+                        <InputNumber id="receta-insumo-densidad" class="form-control" @bind-Value="nuevoInsumo.DensidadGPorMl"
                                      min="0" max="20" step="0.01" />
                         <small class="text-muted">Solo si compras por peso y usas tazas o cucharadas. Ej.: harina 0,53.</small>
                         <ValidationMessage For="() => nuevoInsumo.DensidadGPorMl" class="text-danger msg-error" />
@@ -245,15 +261,15 @@
 
                 <div class="onb-grid">
                     <div class="form-group-sm">
-                        <label class="auth-label">Cantidad del paquete *</label>
-                        <InputNumber class="form-control" @bind-Value="nuevoInsumo.Cantidad"
+                        <label class="auth-label" for="receta-insumo-cantidad">Cantidad del paquete *</label>
+                        <InputNumber id="receta-insumo-cantidad" class="form-control" @bind-Value="nuevoInsumo.Cantidad" required
                                      min="0" max="999999.99" step="1" />
                         <small class="text-muted">Ej.: 1000 si compras 1 kg y la unidad es g.</small>
                         <ValidationMessage For="() => nuevoInsumo.Cantidad" class="text-danger msg-error" />
                     </div>
                     <div class="form-group-sm">
-                        <label class="auth-label">Costo del paquete *</label>
-                        <InputNumber class="form-control" @bind-Value="nuevoInsumo.CostoUnitario"
+                        <label class="auth-label" for="receta-insumo-costo">Costo del paquete *</label>
+                        <InputNumber id="receta-insumo-costo" class="form-control" @bind-Value="nuevoInsumo.CostoUnitario" required
                                      min="0" max="999999.99" step="1" />
                         <small class="text-muted">Lo que pagas por esa cantidad.</small>
                         <ValidationMessage For="() => nuevoInsumo.CostoUnitario" class="text-danger msg-error" />
@@ -261,8 +277,8 @@
                 </div>
 
                 <div class="form-group-sm">
-                    <label class="auth-label">Proveedor *</label>
-                    <InputText class="form-control" @bind-Value="nuevoInsumo.Proveedor" maxlength="150"
+                    <label class="auth-label" for="receta-insumo-proveedor">Proveedor *</label>
+                    <InputText id="receta-insumo-proveedor" class="form-control" @bind-Value="nuevoInsumo.Proveedor" maxlength="150" required
                                list="proveedores-receta" placeholder="Escribe o elige un proveedor" />
                     <datalist id="proveedores-receta">
                         @foreach (var p in proveedoresSugeridos)
@@ -280,7 +296,7 @@
 
                 @if (errorNuevoInsumo is not null)
                 {
-                    <div class="alert alert-danger py-2">@errorNuevoInsumo</div>
+                    <div class="alert alert-danger py-2" role="alert">@errorNuevoInsumo</div>
                 }
 
                 <div class="d-flex justify-content-end gap-2">
@@ -291,8 +307,7 @@
                     </button>
                 </div>
             </EditForm>
-        </div>
-    </div>
+    </AccessibleDialog>
 }
 
 @code {
@@ -312,6 +327,16 @@
     private string? errorGeneral, errorApi, imagenActual;
     private bool guardando;
     private ImageCropper? cropper;
+    private Fila? filaParaEnfocar;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (filaParaEnfocar is not { } fila)
+            return;
+
+        filaParaEnfocar = null;
+        await (fila.InsumoId == 0 ? fila.ControlBuscar : fila.ControlCambio).FocusAsync();
+    }
 
     // Lista local para poder agregar un insumo sin salir del formulario.
     private List<InsumoOpcionDto> insumosDisponibles = new();
@@ -381,34 +406,40 @@
     private IEnumerable<InsumoOpcionDto> InsumosFiltrados(Fila fila)
     {
         var b = Norm((fila.Busqueda ?? "").Trim());
-        var q = b.Length == 0 ? insumosDisponibles : insumosDisponibles.Where(i => Norm(i.Nombre).Contains(b));
+        var q = insumosDisponibles.Where(i => !YaElegido(i.Id, fila) && (b.Length == 0 || Norm(i.Nombre).Contains(b)));
         return q.OrderByDescending(i => b.Length > 0 && Norm(i.Nombre).StartsWith(b, StringComparison.Ordinal))
                 .ThenBy(i => i.Nombre, StringComparer.OrdinalIgnoreCase);
     }
 
-    private void AbrirLista(Fila f) { f.MostrarLista = true; f.Indice = 0; }
+    private void AbrirLista(Fila f) { f.MostrarLista = true; f.Indice = -1; }
 
     private void AlEscribir(Fila f, string? texto)
     {
         f.Busqueda = texto ?? string.Empty;
         f.MostrarLista = true;
-        f.Indice = 0;
+        f.Indice = -1;
     }
 
-    private void AlTecla(KeyboardEventArgs e, Fila f)
+    private async Task AlTecla(KeyboardEventArgs e, Fila f)
     {
         var lista = InsumosFiltrados(f).ToList();
+        var opciones = lista.Count + 1; // La última opción crea un insumo para esta fila.
         switch (e.Key)
         {
             case "ArrowDown":
-                if (lista.Count > 0) { f.MostrarLista = true; f.Indice = (f.Indice + 1) % lista.Count; }
+                f.Indice = f.MostrarLista ? (f.Indice + 1) % opciones : 0;
+                f.MostrarLista = true;
                 break;
             case "ArrowUp":
-                if (lista.Count > 0) { f.MostrarLista = true; f.Indice = f.Indice <= 0 ? lista.Count - 1 : f.Indice - 1; }
+                f.Indice = !f.MostrarLista || f.Indice <= 0 ? opciones - 1 : f.Indice - 1;
+                f.MostrarLista = true;
                 break;
             case "Enter":
-                if (f.MostrarLista && f.Indice >= 0 && f.Indice < lista.Count && !YaElegido(lista[f.Indice].Id, f))
-                    SeleccionarInsumo(f, lista[f.Indice]);
+                if (f.MostrarLista && f.Indice >= 0)
+                {
+                    if (f.Indice < lista.Count) SeleccionarInsumoDesdeLista(f, lista[f.Indice]);
+                    else await AbrirNuevoInsumo(f);
+                }
                 break;
             case "Escape":
                 f.MostrarLista = false;
@@ -425,21 +456,22 @@
         erroresFila.Remove(fila);
     }
 
+    private void SeleccionarInsumoDesdeLista(Fila fila, InsumoOpcionDto insumo)
+    {
+        SeleccionarInsumo(fila, insumo);
+        filaParaEnfocar = fila;
+    }
+
     private void LimpiarInsumo(Fila fila)
     {
         fila.InsumoId = 0;
         fila.UnidadMedida = "g";
         fila.Busqueda = "";
-        fila.MostrarLista = false;   // se abre al hacer clic en el campo
+        fila.MostrarLista = false;
+        filaParaEnfocar = fila;
     }
 
-    // El blur se procesa con un retardo para que alcance a registrarse el clic en un item.
-    private async Task AlPerderFoco(Fila fila)
-    {
-        await Task.Delay(150);
-        fila.MostrarLista = false;
-        await InvokeAsync(StateHasChanged);
-    }
+    private void AlPerderFoco(Fila fila) => fila.MostrarLista = false;
 
     private string NombreInsumo(int id) =>
         insumosDisponibles.FirstOrDefault(i => i.Id == id)?.Nombre ?? $"Insumo #{id}";
@@ -695,7 +727,10 @@
         // Estado del combo buscable de insumos (no se envía al backend).
         public string Busqueda { get; set; } = "";
         public bool MostrarLista { get; set; }
-        public int Indice { get; set; }
+        public int Indice { get; set; } = -1;
+        public string ControlId { get; } = $"receta-insumos-{Guid.NewGuid():N}";
+        public ElementReference ControlBuscar;
+        public ElementReference ControlCambio;
     }
 
     private sealed class NuevoInsumoModel

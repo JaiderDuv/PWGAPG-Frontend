@@ -6,8 +6,10 @@
 @inject NavigationManager Navigation
 @inject HttpClient Http
 
+<PageTitle>Registro de emprendedor | Chef Metrics</PageTitle>
+
 <div class="auth-card-registro">
-    <h2 class="text-2xl font-bold text-gray-800 text-center">Registro Emprendedor</h2>
+    <h1 class="text-2xl font-bold text-gray-800 text-center">Registro Emprendedor</h1>
     <p class="text-sm text-gray-600 text-center mb-4">
         Los campos marcados con un asterisco (<span class="text-red-500 font-bold">*</span>) son obligatorios.
     </p>
@@ -18,88 +20,106 @@
         <!-- 1. Nombres y Apellidos -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
             <div class="form-group-sm">
-                <label class="auth-label">Nombres del Emprendedor *</label>
-                <InputText @bind-Value="modelo.Nombres" class="form-control" placeholder="Ej: Juan Carlos" />
-                <ValidationMessage For="@(() => modelo.Nombres)" class="text-danger msg-error" />
+                <label for="registro-nombres" class="auth-label">Nombres del Emprendedor *</label>
+                <InputText id="registro-nombres" autocomplete="given-name" aria-required="true" aria-describedby="registro-nombres-error" @bind-Value="modelo.Nombres" class="form-control" placeholder="Ej: Juan Carlos" />
+                <div id="registro-nombres-error" aria-live="polite">
+                    <ValidationMessage For="@(() => modelo.Nombres)" class="text-danger msg-error" />
+                </div>
             </div>
 
             <div class="form-group-sm">
-                <label class="auth-label">Apellidos del Emprendedor *</label>
-                <InputText @bind-Value="modelo.Apellidos" class="form-control" placeholder="Ej: Pérez Gómez" />
-                <ValidationMessage For="@(() => modelo.Apellidos)" class="text-danger msg-error" />
+                <label for="registro-apellidos" class="auth-label">Apellidos del Emprendedor *</label>
+                <InputText id="registro-apellidos" autocomplete="family-name" aria-required="true" aria-describedby="registro-apellidos-error" @bind-Value="modelo.Apellidos" class="form-control" placeholder="Ej: Pérez Gómez" />
+                <div id="registro-apellidos-error" aria-live="polite">
+                    <ValidationMessage For="@(() => modelo.Apellidos)" class="text-danger msg-error" />
+                </div>
             </div>
         </div>
 
         <!-- 2. Tipo de Documento -->
         <div class="form-group-sm">
-            <label class="auth-label">Tipo de Documento *</label>
-            <InputSelect @bind-Value="modelo.TipoDocumento" class="form-select">
+            <label for="registro-tipo-documento" class="auth-label">Tipo de Documento *</label>
+            <InputSelect id="registro-tipo-documento" aria-required="true" aria-describedby="registro-tipo-documento-error" @bind-Value="modelo.TipoDocumento" class="form-select">
                 <option value="">-- Seleccione una opción --</option>
                 <option value="CC">Cédula de Ciudadanía</option>
                 <option value="CE">Cédula de Extranjería</option>
                 <option value="TI">Tarjeta de Identidad</option>
                 <option value="PA">Pasaporte</option>
             </InputSelect>
-            <ValidationMessage For="@(() => modelo.TipoDocumento)" class="text-danger msg-error" />
+            <div id="registro-tipo-documento-error" aria-live="polite">
+                <ValidationMessage For="@(() => modelo.TipoDocumento)" class="text-danger msg-error" />
+            </div>
         </div>
 
         <!-- 3. Documento de Identidad -->
         <div class="form-group-sm">
-            <label class="auth-label">Documento de Identidad *</label>
-            <InputText @bind-Value="modelo.DocumentoIdentidadUe" class="form-control" placeholder="Número de documento" />
-            <ValidationMessage For="@(() => modelo.DocumentoIdentidadUe)" class="text-danger msg-error" />
+            <label for="registro-documento" class="auth-label">Documento de Identidad *</label>
+            <InputText id="registro-documento" aria-required="true" aria-describedby="registro-documento-error" @bind-Value="modelo.DocumentoIdentidadUe" class="form-control" placeholder="Número de documento" />
+            <div id="registro-documento-error" aria-live="polite">
+                <ValidationMessage For="@(() => modelo.DocumentoIdentidadUe)" class="text-danger msg-error" />
+            </div>
         </div>
 
         <!-- 4. Formalizado -->
         <div class="form-group-sm">
-            <label class="auth-label">¿Tu emprendimiento está formalizado? *</label>
-            <InputSelect @bind-Value="modelo.Formalizado" class="form-select" TValue="bool">
+            <label for="registro-formalizado" class="auth-label">¿Tu emprendimiento está formalizado? *</label>
+            <InputSelect id="registro-formalizado" aria-required="true" aria-describedby="registro-formalizado-error" @bind-Value="modelo.Formalizado" class="form-select" TValue="bool">
                 <option value="false">No</option>
                 <option value="true">Sí</option>
             </InputSelect>
-            <ValidationMessage For="@(() => modelo.Formalizado)" class="text-danger msg-error" />
+            <div id="registro-formalizado-error" aria-live="polite">
+                <ValidationMessage For="@(() => modelo.Formalizado)" class="text-danger msg-error" />
+            </div>
         </div>
 
         <!-- 5 y 6. NIT y Razón Social -->
         @if (modelo.Formalizado)
         {
             <div class="form-group-sm">
-                <label class="auth-label">NIT *</label>
-                <InputText @bind-Value="modelo.Nit" class="form-control" placeholder="Ej: 900123456" />
-                <ValidationMessage For="@(() => modelo.Nit)" class="text-danger msg-error" />
+                <label for="registro-nit" class="auth-label">NIT *</label>
+                <InputText id="registro-nit" aria-required="true" aria-describedby="registro-nit-error" @bind-Value="modelo.Nit" class="form-control" placeholder="Ej: 900123456" />
+                <div id="registro-nit-error" aria-live="polite">
+                    <ValidationMessage For="@(() => modelo.Nit)" class="text-danger msg-error" />
+                </div>
             </div>
 
             <div class="form-group-sm">
-                <label class="auth-label">Razón Social *</label>
-                <InputText @bind-Value="modelo.RazonSocial" class="form-control" placeholder="Ej: Mi Empresa S.A.S." />
-                <ValidationMessage For="@(() => modelo.RazonSocial)" class="text-danger msg-error" />
+                <label for="registro-razon-social" class="auth-label">Razón Social *</label>
+                <InputText id="registro-razon-social" autocomplete="organization" aria-required="true" aria-describedby="registro-razon-social-error" @bind-Value="modelo.RazonSocial" class="form-control" placeholder="Ej: Mi Empresa S.A.S." />
+                <div id="registro-razon-social-error" aria-live="polite">
+                    <ValidationMessage For="@(() => modelo.RazonSocial)" class="text-danger msg-error" />
+                </div>
             </div>
         }
 
         <!-- 7. Correo Electrónico de la cuenta -->
         <div class="form-group-sm">
-            <label class="auth-label">Correo Electrónico de la Cuenta *</label>
-            <InputText @bind-Value="modelo.CorreoElectronico" class="form-control" type="email" placeholder="correo@ejemplo.com" />
-            <ValidationMessage For="@(() => modelo.CorreoElectronico)" class="text-danger msg-error" />
+            <label for="registro-correo-cuenta" class="auth-label">Correo Electrónico de la Cuenta *</label>
+            <InputText id="registro-correo-cuenta" autocomplete="username" aria-required="true" aria-describedby="registro-correo-cuenta-error" @bind-Value="modelo.CorreoElectronico" class="form-control" type="email" placeholder="correo@ejemplo.com" />
+            <div id="registro-correo-cuenta-error" aria-live="polite">
+                <ValidationMessage For="@(() => modelo.CorreoElectronico)" class="text-danger msg-error" />
+            </div>
         </div>
 
         <!-- 8. Nombre del Emprendimiento -->
         <div class="form-group-sm">
-            <label class="auth-label">
+            <label for="registro-nombre-emprendimiento" class="auth-label">
                 Nombre del Emprendimiento <span class="auth-label-opcional">(Opcional, puedes completarlo después)</span>
             </label>
-            <InputText Value="@modelo.NombreEmprendimiento"
+            <InputText id="registro-nombre-emprendimiento" aria-describedby="registro-nombre-emprendimiento-error" Value="@modelo.NombreEmprendimiento"
                        ValueChanged="OnNombreEmprendimientoChanged"
                        ValueExpression="@(() => modelo.NombreEmprendimiento)"
                        class="form-control"
                        placeholder="Nombre comercial de tu marca" />
-            <ValidationMessage For="@(() => modelo.NombreEmprendimiento)" class="text-danger msg-error" />
+            <div id="registro-nombre-emprendimiento-error" aria-live="polite">
+                <ValidationMessage For="@(() => modelo.NombreEmprendimiento)" class="text-danger msg-error" />
+            </div>
         </div>
 
         <!-- 9. Categoría Negocio -->
         <div class="form-group-sm">
-            <label class="auth-label">Categoría del Negocio *</label>
-            <InputSelect @bind-Value="modelo.CategoriaNegocio" class="form-select">
+            <label for="registro-categoria" class="auth-label">Categoría del Negocio *</label>
+            <InputSelect id="registro-categoria" aria-required="true" aria-describedby="registro-categoria-error" @bind-Value="modelo.CategoriaNegocio" class="form-select">
                 <option value="">-- Seleccione una categoría --</option>
                 <option value="Panadería">Panadería</option>
                 <option value="Pastelería">Pastelería</option>
@@ -109,31 +129,37 @@
                 <option value="Productos Frescos">Productos frescos</option>
                 <option value="Otros">Otros</option>
             </InputSelect>
-            <ValidationMessage For="@(() => modelo.CategoriaNegocio)" class="text-danger msg-error" />
+            <div id="registro-categoria-error" aria-live="polite">
+                <ValidationMessage For="@(() => modelo.CategoriaNegocio)" class="text-danger msg-error" />
+            </div>
         </div>
 
         <!-- 10. Teléfono Contacto -->
         <div class="form-group-sm">
-            <label class="auth-label">Teléfono de Contacto *</label>
-            <InputText @bind-Value="modelo.TelefonoContacto" class="form-control" placeholder="Ej: 3001234567" />
-            <ValidationMessage For="@(() => modelo.TelefonoContacto)" class="text-danger msg-error" />
+            <label for="registro-telefono" class="auth-label">Teléfono de Contacto *</label>
+            <InputText id="registro-telefono" autocomplete="tel" aria-required="true" aria-describedby="registro-telefono-error" @bind-Value="modelo.TelefonoContacto" type="tel" class="form-control" placeholder="Ej: 3001234567" />
+            <div id="registro-telefono-error" aria-live="polite">
+                <ValidationMessage For="@(() => modelo.TelefonoContacto)" class="text-danger msg-error" />
+            </div>
         </div>
 
         <!-- 11. Correo Electrónico de Contacto -->
         <div class="form-group-sm">
-            <label class="auth-label">Correo Electrónico de Contacto *</label>
-            <InputText @bind-Value="modelo.CorreoElectronicoContacto" class="form-control" type="email" placeholder="contacto@negocio.com" />
-            <ValidationMessage For="@(() => modelo.CorreoElectronicoContacto)" class="text-danger msg-error" />
+            <label for="registro-correo-contacto" class="auth-label">Correo Electrónico de Contacto *</label>
+            <InputText id="registro-correo-contacto" autocomplete="work email" aria-required="true" aria-describedby="registro-correo-contacto-error" @bind-Value="modelo.CorreoElectronicoContacto" class="form-control" type="email" placeholder="contacto@negocio.com" />
+            <div id="registro-correo-contacto-error" aria-live="polite">
+                <ValidationMessage For="@(() => modelo.CorreoElectronicoContacto)" class="text-danger msg-error" />
+            </div>
         </div>
 
         <!-- 12. Contraseña -->
         <div class="form-group-sm">
-            <label class="auth-label">Contraseña *</label>
+            <label for="registro-password" class="auth-label">Contraseña *</label>
             <div class="campo-password-container">
-                <InputText @bind-Value="modelo.HashContrasena" type="@tipoCampoPassword1" class="form-control input-password" placeholder="••••••••" />
+                <InputText id="registro-password" autocomplete="new-password" aria-required="true" aria-describedby="registro-password-error" @bind-Value="modelo.HashContrasena" type="@tipoCampoPassword1" class="form-control input-password" />
 
-                <button type="button" class="btn-ojo-password" @onclick="AlternarVisibilidad1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <button type="button" class="btn-ojo-password" aria-label="Mostrar contraseña" aria-pressed="@(mostrarPassword1 ? "true" : "false")" @onclick="AlternarVisibilidad1">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                         @if (mostrarPassword1)
                         {
                             <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z" />
@@ -148,17 +174,19 @@
                     </svg>
                 </button>
             </div>
-            <ValidationMessage For="@(() => modelo.HashContrasena)" class="text-danger msg-error" />
+            <div id="registro-password-error" aria-live="polite">
+                <ValidationMessage For="@(() => modelo.HashContrasena)" class="text-danger msg-error" />
+            </div>
         </div>
 
         <!-- 13. Confirmar Contraseña -->
         <div class="form-group-sm">
-            <label class="auth-label">Confirmar Contraseña *</label>
+            <label for="registro-confirmar-password" class="auth-label">Confirmar Contraseña *</label>
             <div class="campo-password-container">
-                <InputText @bind-Value="modelo.ConfirmarContrasena" type="@tipoCampoPassword2" class="form-control input-password" placeholder="••••••••" />
+                <InputText id="registro-confirmar-password" autocomplete="new-password" aria-required="true" aria-describedby="registro-confirmar-password-error" @bind-Value="modelo.ConfirmarContrasena" type="@tipoCampoPassword2" class="form-control input-password" />
 
-                <button type="button" class="btn-ojo-password" @onclick="AlternarVisibilidad2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <button type="button" class="btn-ojo-password" aria-label="Mostrar confirmación de contraseña" aria-pressed="@(mostrarPassword2 ? "true" : "false")" @onclick="AlternarVisibilidad2">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                         @if (mostrarPassword2)
                         {
                             <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z" />
@@ -173,20 +201,24 @@
                     </svg>
                 </button>
             </div>
-            <ValidationMessage For="@(() => modelo.ConfirmarContrasena)" class="text-danger msg-error" />
+            <div id="registro-confirmar-password-error" aria-live="polite">
+                <ValidationMessage For="@(() => modelo.ConfirmarContrasena)" class="text-danger msg-error" />
+            </div>
         </div>
 
         @if (mensajeErrorGeneral != null)
         {
-            <div class="text-danger msg-error mb-3 text-center">@mensajeErrorGeneral</div>
+            <div class="text-danger msg-error mb-3 text-center" role="alert">@mensajeErrorGeneral</div>
         }
 
-        @if (registroExitoso)
-        {
-            <div class="alerta-exito mb-3 text-center">
-                Se registró correctamente, para continuar primero verifique la cuenta en su correo.
-            </div>
-        }
+        <div role="status">
+            @if (registroExitoso)
+            {
+                <div class="alerta-exito mb-3 text-center">
+                    Se registró correctamente, para continuar primero verifique la cuenta en su correo.
+                </div>
+            }
+        </div>
 
         <!-- Botón enviar -->
         <button type="submit" class="btn-solid btn-full" disabled="@enviando">

@@ -8,7 +8,9 @@
 @using System.Globalization
 @using System.Text
 
-<div class="inventario-container">
+<PageTitle>Proveedores | Chef Metrics</PageTitle>
+
+<div class="inventario-container inventario-accesible">
     <div class="inventario-header">
         <div>
             <span class="inventario-eyebrow">PROVEEDORES</span>
@@ -17,7 +19,7 @@
                 Los proveedores de tu negocio. Entra a un insumo para ver qué te cobra cada uno.
             </p>
         </div>
-        <div style="display:flex; gap:10px;">
+        <div class="insumos-heading-acciones">
             <button type="button" class="btn-outline"
                     @onclick='() => Navigation.NavigateTo("insumos-proveedores")'>
                 Asignar a un insumo
@@ -36,10 +38,10 @@
     {
         <div class="inventario-toolbar">
             <input type="text" class="form-control inventario-busqueda"
-                   placeholder="Buscar por nombre, teléfono o correo..."
+                   aria-label="Buscar proveedor por nombre, teléfono o correo" placeholder="Buscar por nombre, teléfono o correo..."
                    @bind="textoBusqueda" @bind:event="oninput" />
 
-            <select class="form-select inventario-orden" @bind="orden">
+            <select class="form-select inventario-orden" @bind="orden" aria-label="Ordenar proveedores por nombre">
                 <option value="asc">Nombre (A-Z)</option>
                 <option value="desc">Nombre (Z-A)</option>
             </select>
@@ -47,17 +49,17 @@
 
         @if (mensajeError != null)
         {
-            <div class="text-danger msg-error">@mensajeError</div>
+            <div class="text-danger msg-error" role="alert">@mensajeError</div>
         }
 
-        <div class="inventario-tabla-wrap">
-            <table class="inventario-tabla">
+        <div class="inventario-tabla-wrap" tabindex="0" role="region" aria-label="Listado de proveedores">
+            <table class="inventario-tabla" aria-label="Proveedores">
                 <thead>
                     <tr>
-                        <th>Nombre</th>
-                        <th>Teléfono</th>
-                        <th>Correo</th>
-                        <th>Acciones</th>
+                        <th scope="col">Nombre</th>
+                        <th scope="col">Teléfono</th>
+                        <th scope="col">Correo</th>
+                        <th scope="col">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -71,11 +73,11 @@
                                 <td class="text-muted">@(p.Correo ?? "—")</td>
                                 <td class="inventario-acciones">
                                     <button type="button" class="btn-mini-editar"
-                                            @onclick="() => AbrirModalEditar(p)">
+                                            aria-label="Editar @p.Nombre" @onclick="() => AbrirModalEditar(p)">
                                         Editar
                                     </button>
                                     <button type="button" class="btn-mini-eliminar"
-                                            @onclick="() => PedirEliminar(p)">
+                                            aria-label="Eliminar @p.Nombre" @onclick="() => PedirEliminar(p)">
                                         Eliminar
                                     </button>
                                 </td>
@@ -105,72 +107,75 @@
 @* ── Modal nuevo / editar ── *@
 @if (mostrarModal)
 {
-    <div class="confirm-overlay">
-        <div class="socio-modal">
-            <h3 class="onboarding-subtitulo">
-                @(proveedorEditando != null ? "Editar proveedor" : "Nuevo proveedor")
-            </h3>
-            <p class="text-muted" style="font-size:0.8rem; margin-top:-8px; margin-bottom:14px;">
-                Los campos marcados con * son obligatorios.
-            </p>
+    <AccessibleDialog Class="socio-modal inventario-accesible" LabelledBy="proveedor-form-titulo" DescribedBy="proveedor-form-requeridos" OnCancel="() => mostrarModal = false">
+        <h2 id="proveedor-form-titulo" class="onboarding-subtitulo">
+            @(proveedorEditando != null ? "Editar proveedor" : "Nuevo proveedor")
+        </h2>
+        <p id="proveedor-form-requeridos" class="text-muted" style="font-size:0.8rem; margin-top:-8px; margin-bottom:14px;">
+            Los campos marcados con * son obligatorios.
+        </p>
 
-            <EditForm EditContext="@editContext" OnValidSubmit="@Guardar" novalidate>
-                <DataAnnotationsValidator />
+        <EditForm EditContext="@editContext" OnValidSubmit="@Guardar" novalidate>
+            <DataAnnotationsValidator />
 
-                <div class="form-group-sm">
-                    <label class="auth-label">Nombre *</label>
-                    <input type="text"
-                           class="form-control"
-                           value="@formulario.Nombre"
-                           @oninput="AlEscribirNombre" />
-                    <ValidationMessage For="@(() => formulario.Nombre)"
-                                       class="text-danger msg-error" />
-
-                    @if (sugerenciasNombre.Any())
-                    {
-                        <div class="sugerencias-proveedor">
-                            <span class="sugerencias-proveedor-titulo">
-                                Proveedores similares que ya tienes:
-                            </span>
-                            @foreach (var s in sugerenciasNombre)
-                            {
-                                <div class="sugerencias-proveedor-item">@s.Nombre</div>
-                            }
-                        </div>
-                    }
+            <div class="form-group-sm">
+                <label class="auth-label" for="proveedor-nombre">Nombre *</label>
+                <input type="text" id="proveedor-nombre" aria-required="true" autofocus
+                       aria-invalid="@(editContext?.GetValidationMessages(() => formulario.Nombre).Any() == true ? "true" : null)"
+                       aria-describedby="proveedor-nombre-validacion"
+                       class="form-control"
+                       value="@formulario.Nombre"
+                       @oninput="AlEscribirNombre" />
+                <div id="proveedor-nombre-validacion" aria-live="polite">
+                    <ValidationMessage For="@(() => formulario.Nombre)" class="text-danger msg-error" />
                 </div>
 
-                <div class="form-group-sm">
-                    <label class="auth-label">Teléfono</label>
-                    <InputText @bind-Value="formulario.Telefono" class="form-control"
-                               placeholder="Opcional" />
-                    <ValidationMessage For="@(() => formulario.Telefono)"
-                                       class="text-danger msg-error" />
-                </div>
-
-                <div class="form-group-sm">
-                    <label class="auth-label">Correo</label>
-                    <InputText @bind-Value="formulario.Correo" class="form-control"
-                               placeholder="Opcional" />
-                    <ValidationMessage For="@(() => formulario.Correo)"
-                                       class="text-danger msg-error" />
-                </div>
-
-                @if (mensajeErrorModal != null)
+                @if (sugerenciasNombre.Any())
                 {
-                    <div class="text-danger msg-error">@mensajeErrorModal</div>
+                    <div class="sugerencias-proveedor">
+                        <span class="sugerencias-proveedor-titulo">
+                            Proveedores similares que ya tienes:
+                        </span>
+                        @foreach (var s in sugerenciasNombre)
+                        {
+                            <div class="sugerencias-proveedor-item">@s.Nombre</div>
+                        }
+                    </div>
                 }
+            </div>
 
-                <div class="confirm-acciones" style="margin-top:16px;">
-                    <button type="button" class="btn-outline"
-                            @onclick="() => mostrarModal = false">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="btn-solid">Guardar</button>
+            <div class="form-group-sm">
+                <label class="auth-label" for="proveedor-telefono">Teléfono</label>
+                <InputText type="tel" id="proveedor-telefono" aria-describedby="proveedor-telefono-validacion" @bind-Value="formulario.Telefono" class="form-control"
+                           placeholder="Opcional" />
+                <div id="proveedor-telefono-validacion" aria-live="polite">
+                    <ValidationMessage For="@(() => formulario.Telefono)" class="text-danger msg-error" />
                 </div>
-            </EditForm>
-        </div>
-    </div>
+            </div>
+
+            <div class="form-group-sm">
+                <label class="auth-label" for="proveedor-correo">Correo</label>
+                <InputText type="email" id="proveedor-correo" aria-describedby="proveedor-correo-validacion" @bind-Value="formulario.Correo" class="form-control"
+                           placeholder="Opcional" />
+                <div id="proveedor-correo-validacion" aria-live="polite">
+                    <ValidationMessage For="@(() => formulario.Correo)" class="text-danger msg-error" />
+                </div>
+            </div>
+
+            @if (mensajeErrorModal != null)
+            {
+                <div class="text-danger msg-error" role="alert">@mensajeErrorModal</div>
+            }
+
+            <div class="confirm-acciones" style="margin-top:16px;">
+                <button type="button" class="btn-outline"
+                        @onclick="() => mostrarModal = false">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn-solid">Guardar</button>
+            </div>
+        </EditForm>
+    </AccessibleDialog>
 }
 
 @* ── Confirmación eliminar sin insumos ── *@
@@ -182,53 +187,58 @@
 @* ── Confirmación eliminar CON insumos ligados ── *@
 @if (mostrarConfirmConInsumos && chequeoActual is not null)
 {
-    <div class="confirm-overlay">
-        <div class="socio-modal">
-            <h3 class="onboarding-subtitulo" style="color:#DC2626;">
-                Proveedor ligado a insumos
-            </h3>
+    <AccessibleDialog Class="socio-modal inventario-accesible" LabelledBy="proveedor-borrar-titulo" DescribedBy="proveedor-borrar-descripcion" OnCancel="CerrarConfirmacionConInsumos">
+        <h2 id="proveedor-borrar-titulo" class="onboarding-subtitulo" style="color:#B91C1C;">
+            Proveedor ligado a insumos
+        </h2>
 
-            <p style="font-size:0.9rem; margin-bottom:8px;">
-                <strong>«@chequeoActual.Nombre»</strong> está asociado a
-                @chequeoActual.NombresInsumos.Count insumo(s):
-            </p>
+        <p style="font-size:0.9rem; margin-bottom:8px;">
+            <strong>«@chequeoActual.Nombre»</strong> está asociado a
+            @chequeoActual.NombresInsumos.Count insumo(s):
+        </p>
 
-            <ul style="margin:0 0 12px 18px; font-size:0.88rem; color:#4A5568;">
-                @foreach (var nombre in chequeoActual.NombresInsumos)
-                {
-                    <li>@nombre</li>
-                }
-            </ul>
-
-            <p style="font-size:0.88rem; color:#4A5568; margin-bottom:16px;">
-                Si continúas, el proveedor se eliminará permanentemente y se desvinculará
-                de todos esos insumos. Esta acción <strong>no se puede deshacer</strong>.
-            </p>
-
-            @if (mensajeErrorEliminar != null)
+        <ul style="margin:0 0 12px 18px; font-size:0.88rem; color:#4A5568;">
+            @foreach (var nombre in chequeoActual.NombresInsumos)
             {
-                <div class="text-danger msg-error" style="margin-bottom:8px;">
-                    @mensajeErrorEliminar
-                </div>
+                <li>@nombre</li>
             }
+        </ul>
 
-            <div class="confirm-acciones">
-                <button type="button" class="btn-outline"
-                        @onclick="() => { mostrarConfirmConInsumos = false; chequeoActual = null; }">
-                    Cancelar
-                </button>
-                <button type="button" class="btn-solid"
-                        style="background:#DC2626; border-color:#DC2626;"
-                        disabled="@eliminando"
-                        @onclick="ConfirmarEliminarConInsumos">
-                    @(eliminando ? "Eliminando..." : "Sí, eliminar")
-                </button>
+        <p id="proveedor-borrar-descripcion" style="font-size:0.88rem; color:#4A5568; margin-bottom:16px;">
+            Si continúas, el proveedor se eliminará permanentemente y se desvinculará
+            de todos esos insumos. Esta acción <strong>no se puede deshacer</strong>.
+        </p>
+
+        @if (mensajeErrorEliminar != null)
+        {
+            <div class="text-danger msg-error" role="alert" style="margin-bottom:8px;">
+                @mensajeErrorEliminar
             </div>
+        }
+
+        <div class="confirm-acciones">
+            <button type="button" class="btn-outline"
+                    @onclick="CerrarConfirmacionConInsumos">
+                Cancelar
+            </button>
+            <button type="button" class="btn-solid"
+                    style="background:#B91C1C; border-color:#B91C1C;"
+                    disabled="@eliminando"
+                    @onclick="ConfirmarEliminarConInsumos">
+                @(eliminando ? "Eliminando..." : "Sí, eliminar")
+            </button>
         </div>
-    </div>
+    </AccessibleDialog>
 }
 
 @code {
+    private void CerrarConfirmacionConInsumos()
+    {
+        if (eliminando) return;
+        mostrarConfirmConInsumos = false;
+        chequeoActual = null;
+    }
+
     private bool cargando = true;
     private string? mensajeError;
     private List<ProveedorDTO> proveedores = new();

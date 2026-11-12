@@ -148,7 +148,11 @@
 }
 
 .cs-inactivo {
-    opacity: .55;
+    background-color: #F7F5F2;
+}
+
+.cs-preview-title {
+    font-size: 1rem;
 }
 
 .cs-preview {

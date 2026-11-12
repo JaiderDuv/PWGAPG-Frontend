@@ -4,8 +4,10 @@
 @inject NavigationManager Navigation
 @inject HttpClient Http
 
+<PageTitle>Recuperar contraseña | Chef Metrics</PageTitle>
+
 <div class="recuperar-card">
-    <h2 class="recuperar-titulo">Recuperar Contraseña</h2>
+    <h1 class="recuperar-titulo">Recuperar Contraseña</h1>
 
     <p class="recuperar-subtitulo">
         Ingresa tu correo electrónico registrado y te enviaremos las instrucciones para restablecer tu contraseña.
@@ -16,21 +18,25 @@
 
         <!-- Campo Correo Electrónico -->
         <div class="form-group">
-            <label class="form-label">Correo Electrónico *</label>
-            <InputText @bind-Value="modelo.Correo" class="form-control-custom" placeholder="ejemplo@correo.com" />
-            <ValidationMessage For="@(() => modelo.Correo)" class="text-danger" style="font-size: 0.82rem; margin-top: 4px;" />
+            <label class="form-label" for="recuperar-correo">Correo Electrónico *</label>
+            <InputText id="recuperar-correo" @bind-Value="modelo.Correo" class="form-control-custom" inputmode="email" autocomplete="email" aria-required="true" aria-describedby="recuperar-correo-error" placeholder="ejemplo@correo.com" />
+            <div id="recuperar-correo-error" aria-live="polite">
+                <ValidationMessage For="@(() => modelo.Correo)" class="text-danger msg-error" />
+            </div>
         </div>
 
-        @if (mensajeEnviado)
-        {
-            <div class="alerta-box alerta-exito">
-                ¡Correo enviado con éxito! Revisa tu bandeja de entrada.
-            </div>
-        }
+        <div role="status">
+            @if (mensajeEnviado)
+            {
+                <div class="alerta-box alerta-exito">
+                    ¡Correo enviado con éxito! Revisa tu bandeja de entrada.
+                </div>
+            }
+        </div>
 
         @if (mensajeError != null)
         {
-            <div class="alerta-box alerta-error">
+            <div class="alerta-box alerta-error" role="alert">
                 @mensajeError
             </div>
         }

@@ -24,7 +24,6 @@
 .hero-titulo {
     font-size: 2.2rem;
     margin: 15px 0 10px 0;
-    outline: none;
     border: none;
 }
 
@@ -68,23 +67,9 @@
     overflow: hidden;
     padding: 56px 52px;
     border-radius: 24px;
-    background:
-        radial-gradient(circle at 84% 12%, rgba(255, 213, 154, 0.24), transparent 32%),
-        radial-gradient(circle at 8% 92%, rgba(255, 255, 255, 0.08), transparent 28%),
-        linear-gradient(135deg, #2a170c 0%, #6f3512 52%, #c07a35 100%);
+    background: #54270f;
     box-shadow: 0 22px 55px rgba(94, 45, 13, 0.24);
     margin-bottom: 34px;
-}
-
-.landing-hero::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.22;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.5) 0.7px, transparent 0.7px);
-    background-size: 18px 18px;
-    mask-image: linear-gradient(90deg, transparent, #000 55%, #000);
 }
 
 .landing-hero-copy {
@@ -110,7 +95,7 @@
     max-width: 610px;
     font-size: 1.06rem;
     line-height: 1.7;
-    opacity: 0.9;
+    opacity: 1;
     margin-bottom: 0;
 }
 
@@ -128,10 +113,19 @@
 
 .landing-hero .btn-banner-primary {
     box-shadow: 0 10px 24px rgba(28, 12, 3, 0.18);
+    color: #8f4a12 !important;
+}
+
+.landing-hero .btn-banner-primary:hover {
+    color: #fff !important;
 }
 
 .landing-hero .btn-banner-secondary {
     border-color: rgba(255, 255, 255, 0.72);
+}
+
+.landing-hero .btn-banner-secondary:hover {
+    color: #8f4a12 !important;
 }
 
 .hero-beneficios {
@@ -141,7 +135,7 @@
     gap: 10px 20px;
     padding: 0;
     margin: 26px 0 0;
-    color: rgba(255, 255, 255, 0.82);
+    color: #f4e6da;
     font-size: 0.86rem;
 }
 
@@ -151,10 +145,14 @@
     gap: 8px;
 }
 
-.hero-beneficios li::before {
-    content: "✓";
-    color: #ffd39b;
-    font-weight: 900;
+.hero-check {
+    flex: none;
+    width: 0.42rem;
+    height: 0.7rem;
+    margin: 0 2px 3px;
+    border: solid #ffd39b;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
 }
 
 /* Visual de ejemplo del hero */
@@ -174,7 +172,7 @@
     width: min(100%, 400px);
     padding: 18px;
     border-radius: 18px;
-    background: rgba(255, 255, 255, 0.97);
+    background: #fff;
     color: #2b211b;
     box-shadow: 0 24px 55px rgba(29, 13, 4, 0.28);
     transform: rotate(-1.5deg);
@@ -183,8 +181,8 @@
 
 .mock-topbar {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 10px;
     margin-bottom: 16px;
     font-size: 0.76rem;
     font-weight: 700;
@@ -214,7 +212,7 @@
     padding: 3px 8px;
     border-radius: 999px;
     background: #fff2df;
-    color: #a05a18;
+    color: #8f4a12;
     font-size: 0.6rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -237,7 +235,7 @@
 .mock-kpi small {
     display: block;
     margin-bottom: 4px;
-    color: #8a7668;
+    color: #6b5a4f;
     font-size: 0.61rem;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -251,7 +249,7 @@
 }
 
 .mock-kpi span {
-    color: #9a8778;
+    color: #6b5a4f;
     font-size: 0.64rem;
 }
 
@@ -321,7 +319,7 @@
 
 .mock-float span {
     display: block;
-    color: #927e6d;
+    color: #6b5a4f;
     font-size: 0.6rem;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -336,7 +334,7 @@
 }
 
 .mock-float small {
-    color: #a18d7b;
+    color: #6b5a4f;
     font-size: 0.61rem;
 }
 
@@ -366,7 +364,7 @@
 .landing-eyebrow {
     display: inline-block;
     margin-bottom: 10px;
-    color: #b26a2c;
+    color: #8f4a12;
     font-size: 0.72rem;
     font-weight: 900;
     letter-spacing: 0.13em;
@@ -406,7 +404,7 @@
 }
 
 .landing-pillar-number {
-    color: #d58b45;
+    color: #8f4a12;
     font-size: 0.78rem;
     font-weight: 900;
     letter-spacing: 0.1em;
@@ -471,7 +469,7 @@
 }
 
 .landing-feature-tag {
-    color: #b26a2c;
+    color: #8f4a12;
     font-size: 0.67rem;
     font-weight: 900;
     letter-spacing: 0.1em;
@@ -524,7 +522,7 @@
     height: 42px;
     border-radius: 50%;
     background: #fff1df;
-    color: #a95b1c;
+    color: #8f4a12;
     font-size: 0.8rem;
     font-weight: 900;
 }
@@ -545,9 +543,7 @@
 .landing-example-card {
     padding: 28px;
     border-radius: 20px;
-    background:
-        radial-gradient(circle at 90% 8%, rgba(255, 211, 155, 0.16), transparent 35%),
-        linear-gradient(145deg, #2b1a10, #6f3a16);
+    background: #54270f;
     color: #fff;
     box-shadow: 0 18px 40px rgba(47, 25, 11, 0.2);
 }
@@ -574,7 +570,7 @@
     gap: 12px;
     padding: 10px 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-    color: rgba(255, 255, 255, 0.78);
+    color: #f4e6da;
     font-size: 0.88rem;
 }
 
@@ -600,7 +596,7 @@
 
 .landing-example-card p {
     margin: 12px 0 0;
-    color: rgba(255, 255, 255, 0.72);
+    color: #f4e6da;
     font-size: 0.84rem;
     line-height: 1.6;
 }
@@ -614,7 +610,7 @@
     padding: 38px 40px;
     border: 1px solid #f1d3aa;
     border-radius: 22px;
-    background: linear-gradient(120deg, #fff4e6, #f9e2c4);
+    background: #fff1df;
 }
 
 .landing-cta h2 {
@@ -635,19 +631,19 @@
 }
 
 .landing-cta .btn-banner-primary {
-    border-color: #b9651f;
-    background: #b9651f;
+    border-color: #8f4a12;
+    background: #8f4a12;
     color: #fff !important;
 }
 
 .landing-cta .btn-banner-primary:hover {
-    border-color: #8f4a12;
-    background: #8f4a12 !important;
+    border-color: #76390d;
+    background: #76390d !important;
     color: #fff !important;
 }
 
 .landing-cta .btn-banner-secondary {
-    border-color: #c98a4c;
+    border-color: #8f4a12;
     color: #8f4a12 !important;
 }
 

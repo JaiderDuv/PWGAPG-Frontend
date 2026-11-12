@@ -5,8 +5,10 @@
 @inject NavigationManager Navigation
 @inject HttpClient Http
 
+<PageTitle>Restablecer contraseña | Chef Metrics</PageTitle>
+
 <div class="auth-card-login">
-    <h2 class="auth-titulo">Restablecer Contraseña</h2>
+    <h1 class="auth-titulo">Restablecer Contraseña</h1>
     <p class="auth-subtitulo">Ingresa y confirma tu nueva contraseña</p>
     <p class="auth-subtitulo">
         Los campos marcados con un asterisco (<span class="text-red-500 font-bold">*</span>) son obligatorios.
@@ -14,7 +16,7 @@
 
     @if (mensajeError != null)
     {
-        <div class="alerta-box alerta-error">
+        <div class="alerta-box alerta-error" role="alert">
             @mensajeError
         </div>
     }
@@ -24,12 +26,11 @@
 
         <!-- Campo 1: Nueva Contraseña -->
         <div class="form-group-sm">
-            <label class="auth-label">Nueva Contraseña *</label>
+            <label for="restablecer-password" class="auth-label">Nueva Contraseña *</label>
             <div class="campo-password-container">
-                <InputText @bind-Value="modelo.NuevaPassword" type="@tipoCampoPassword1" class="form-control input-password" placeholder="••••••••" />
-                <button type="button" class="btn-ojo-password" @onclick="AlternarVisibilidad1">
-                    <i class="bi @(mostrarPassword1 ? "bi-eye" : "bi-eye-slash")"></i>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <InputText id="restablecer-password" autocomplete="new-password" aria-required="true" aria-describedby="restablecer-password-error" @bind-Value="modelo.NuevaPassword" type="@tipoCampoPassword1" class="form-control input-password" />
+                <button type="button" class="btn-ojo-password" aria-label="Mostrar nueva contraseña" aria-pressed="@(mostrarPassword1 ? "true" : "false")" @onclick="AlternarVisibilidad1">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                         @if (mostrarPassword1)
                         {
                             <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z" />
@@ -44,16 +45,18 @@
                     </svg>
                 </button>
             </div>
-            <ValidationMessage For="@(() => modelo.NuevaPassword)" class="text-danger msg-error" />
+            <div id="restablecer-password-error" aria-live="polite">
+                <ValidationMessage For="@(() => modelo.NuevaPassword)" class="text-danger msg-error" />
+            </div>
         </div>
 
         <!-- Campo 2: Confirmar Contraseña -->
         <div class="form-group">
-            <label class="auth-label">Confirmar Nueva Contraseña *</label>
+            <label for="restablecer-confirmar-password" class="auth-label">Confirmar Nueva Contraseña *</label>
             <div class="campo-password-container">
-                <InputText @bind-Value="modelo.ConfirmarPassword" type="@tipoCampoPassword2" class="form-control input-password" placeholder="••••••••" />
-                <button type="button" class="btn-ojo-password" @onclick="AlternarVisibilidad2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <InputText id="restablecer-confirmar-password" autocomplete="new-password" aria-required="true" aria-describedby="restablecer-confirmar-password-error" @bind-Value="modelo.ConfirmarPassword" type="@tipoCampoPassword2" class="form-control input-password" />
+                <button type="button" class="btn-ojo-password" aria-label="Mostrar confirmación de contraseña" aria-pressed="@(mostrarPassword2 ? "true" : "false")" @onclick="AlternarVisibilidad2">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                         @if (mostrarPassword2)
                         {
                             <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z" />
@@ -68,7 +71,9 @@
                     </svg>
                 </button>
             </div>
-            <ValidationMessage For="@(() => modelo.ConfirmarPassword)" class="alerta-box alerta-error" />
+            <div id="restablecer-confirmar-password-error" aria-live="polite">
+                <ValidationMessage For="@(() => modelo.ConfirmarPassword)" class="text-danger msg-error" />
+            </div>
         </div>
 
         <!-- Botones de Acción -->

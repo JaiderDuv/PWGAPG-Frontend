@@ -6,11 +6,13 @@
 @inject CosteoApiService CosteoApi
 @inject SimuladorVentasApiService SimuladorApi
 
+<PageTitle>Simulador de ventas | Chef Metrics</PageTitle>
+
 <div class="rc-page container py-4 sim-page">
     <div class="rc-header">
         <div>
             <div class="sim-eyebrow">SIMULACIÓN MENSUAL · SIN GUARDAR</div>
-            <h2 class="rc-title">Simulador de ventas</h2>
+            <h1 class="rc-title">Simulador de ventas</h1>
             <p class="rc-subtitle">
                 Ingresa cuánto vendes en el mes. Calculamos tus ventas, el costo directo,
                 el margen de contribución y si alcanzas a cubrir los costos fijos.
@@ -44,7 +46,7 @@
 
     @if (error is not null)
     {
-        <div class="alert alert-danger">@error</div>
+        <div class="alert alert-danger" role="alert">@error</div>
     }
 
     @if (cargando)
@@ -61,7 +63,7 @@
     else
     {
         <div class="rc-toolbar sim-toolbar">
-            <input class="form-control" placeholder="Buscar producto por nombre..."
+            <input class="form-control" aria-label="Buscar producto por nombre" placeholder="Buscar producto por nombre..."
                    @bind="busqueda" @bind:event="oninput" />
             <span class="sim-toolbar-meta">
                 @FilasVisibles.Count() producto(s) · @TotalUnidades unidad(es)
@@ -69,7 +71,7 @@
         </div>
 
         <div class="rc-card sim-card">
-            <div class="table-responsive">
+            <div class="table-responsive" role="region" aria-label="Productos de la simulación" tabindex="0">
                 <table class="table cs-table sim-table align-middle mb-0">
                     <thead>
                         <tr>
@@ -147,7 +149,7 @@
 
         @if (errorCalculo is not null)
         {
-            <div class="alert alert-danger">@errorCalculo</div>
+            <div class="alert alert-danger" role="alert">@errorCalculo</div>
         }
         else if (resultado is null)
         {
@@ -205,7 +207,7 @@
                         <span>Cobertura de costos fijos</span>
                         <strong>@cobertura.ToString("0.##") %</strong>
                     </div>
-                    <div class="sim-progress">
+                    <div class="sim-progress" aria-hidden="true">
                         <div class="sim-progress-bar @CoberturaClase" style="width:@AnchoCobertura%"></div>
                     </div>
                 </div>
@@ -264,7 +266,7 @@
 
             @if (resultado.Advertencias.Count > 0)
             {
-                <div class="sim-warnings">
+                <div class="sim-warnings" role="status">
                     @foreach (var aviso in resultado.Advertencias)
                     {
                         <div class="cs-aviso cs-aviso-info"><div>@aviso</div></div>
@@ -274,7 +276,7 @@
 
             <div class="rc-card sim-explain">
                 <div class="rc-card-header">
-                    <h5 class="mb-0">Cómo se calcula</h5>
+                    <h2 class="mb-0">Cómo se calcula</h2>
                 </div>
                 <div class="rc-card-body">
                     <p class="mb-2">

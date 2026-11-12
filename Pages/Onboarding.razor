@@ -4,28 +4,34 @@
 @inject NavigationManager Navigation
 @inject PWGAPG_Frontend.Services.AuthService AuthService
 
+<PageTitle>Configura tu negocio | Chef Metrics</PageTitle>
+
 <div class="onboarding-container">
-    <h2 class="auth-titulo">Configura tu negocio</h2>
+    <h1 class="auth-titulo">Configura tu negocio</h1>
     <p class="auth-subtitulo">Revisa la información con la que creaste tu cuenta y confirma para comenzar a usar Chef Metrics.</p>
 
-    <div class="onboarding-tabs">
+    <div class="onboarding-tabs" role="group" aria-label="Pasos de configuración">
         @for (int i = 0; i < NombresPestanas.Length; i++)
         {
             var index = i;
             <button type="button"
                     class="onboarding-tab @(PestanaActiva == index ? "activa" : "") @(index > MaximaPestanaHabilitada ? "deshabilitada" : "")"
                     disabled="@(index > MaximaPestanaHabilitada)"
-                    @onclick="() => PestanaActiva = index">
+                    aria-current="@(PestanaActiva == index ? "step" : null)"
+                    aria-controls="@($"onboarding-paso-{index}")"
+                    @onclick="() => SeleccionarPestana(index)">
                 @NombresPestanas[index]
             </button>
         }
     </div>
 
     <div class="onboarding-contenido">
-        <div style="display: @(PestanaActiva == 0 ? "block" : "none")">
+        <div id="onboarding-paso-0" hidden="@(PestanaActiva != 0)">
+            <h2 class="onboarding-subtitulo" tabindex="-1" @ref="encabezadoPersonal">Dueño del negocio</h2>
             <InformacionPersonalTab OnGuardado="AvanzarPestana" />
         </div>
-        <div style="display: @(PestanaActiva == 1 ? "block" : "none")">
+        <div id="onboarding-paso-1" hidden="@(PestanaActiva != 1)">
+            <h2 class="onboarding-subtitulo" tabindex="-1" @ref="encabezadoNegocio">Información del negocio</h2>
             <InformacionNegocioTab OnGuardado="FinalizarOnboarding" />
         </div>
     </div>
@@ -40,6 +46,23 @@
 
     private int PestanaActiva = 0;
     private int MaximaPestanaHabilitada = 0;
+    private bool enfocarPaso;
+    private ElementReference encabezadoPersonal;
+    private ElementReference encabezadoNegocio;
+
+    private void SeleccionarPestana(int indice)
+    {
+        if (PestanaActiva == indice) return;
+        PestanaActiva = indice;
+        enfocarPaso = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!enfocarPaso) return;
+        enfocarPaso = false;
+        await (PestanaActiva == 0 ? encabezadoPersonal : encabezadoNegocio).FocusAsync();
+    }
 
     private void AvanzarPestana()
     {
@@ -50,7 +73,7 @@
 
         if (PestanaActiva < NombresPestanas.Length - 1)
         {
-            PestanaActiva++;
+            SeleccionarPestana(PestanaActiva + 1);
         }
     }
 

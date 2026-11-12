@@ -149,7 +149,7 @@
 
 .perfil-campo-readonly {
     background-color: #F3F4F6;
-    color: var(--text-muted);
+    color: var(--text-main);
     cursor: not-allowed;
 }
 
@@ -218,6 +218,7 @@
 .perfil-socio-row strong,
 .perfil-socio-row span {
     display: block;
+    overflow-wrap: anywhere;
 }
 
 .perfil-socio-row strong {
@@ -243,6 +244,7 @@
     font-weight: 700;
     cursor: pointer;
     padding: 4px;
+    min-height: 28px;
 }
 
 .btn-texto-peligro {
@@ -259,6 +261,12 @@
 
 .perfil-socio-editor-heading {
     margin-bottom: 14px;
+}
+
+.perfil-socio-editor-heading h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
 }
 
 .perfil-spinner {

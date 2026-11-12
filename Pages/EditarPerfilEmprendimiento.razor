@@ -28,7 +28,11 @@
     @if (fase == FaseEdicion.ConfirmarIdentidad)
     {
         <section class="perfil-verificacion-card">
-            <div class="perfil-verificacion-icon" aria-hidden="true">✓</div>
+            <div class="perfil-verificacion-icon" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" focusable="false">
+                    <path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </div>
             <span class="perfil-kicker">PASO 1 DE 2</span>
             <h2>Confirma tu identidad</h2>
             <p>Por seguridad, ingresa la contraseña actual de tu cuenta antes de consultar o modificar tus datos.</p>
@@ -42,7 +46,7 @@
                                    @bind-Value="confirmacion.Password"
                                    type="@(mostrarPassword ? "text" : "password")"
                                    class="form-control input-password"
-                                   autocomplete="off" />
+                                   autocomplete="current-password" aria-describedby="password-edicion-error" />
                         <button type="button"
                                 class="btn-ojo-password"
                                 @onclick="AlternarPassword"
@@ -65,7 +69,9 @@
                             }
                         </button>
                     </div>
-                    <ValidationMessage For="@(() => confirmacion.Password)" class="text-danger msg-error" />
+                    <div id="password-edicion-error" role="status">
+                        <ValidationMessage For="@(() => confirmacion.Password)" class="text-danger msg-error" />
+                    </div>
                 </div>
 
                 @if (!string.IsNullOrWhiteSpace(mensajeError))
@@ -95,7 +101,7 @@
             <div class="perfil-formulario-topline">
                 <div>
                     <span class="perfil-kicker">PASO 2 DE 2</span>
-                    <h2>Información editable</h2>
+                    <h2 tabindex="-1" @ref="tituloFormulario">Información editable</h2>
                 </div>
                 <span class="perfil-sello">Datos cargados desde tu cuenta</span>
             </div>
@@ -152,7 +158,8 @@
                     </div>
                     <span>Información comercial</span>
                 </div>
-                <ImageUpload @bind-ImagenBase64="perfil.LogoUrl" Forma="cuadrado" Texto="Logo de la empresa (opcional)" InputId="logoEmpresaPerfil" />
+                <ImageUpload @bind-ImagenBase64="perfil.LogoUrl" Forma="cuadrado" Texto="Logo de la empresa (opcional)"
+                             DescripcionImagen="Vista previa del logo de la empresa" InputId="logoEmpresaPerfil" />
                 <div class="perfil-grid">
                     <div class="form-group perfil-switch-group">
                         <label class="auth-label" for="formalizado">¿Está formalizado?</label>
@@ -281,11 +288,11 @@
                                     <span>@NombreRol(empleado) · @(string.IsNullOrWhiteSpace(empleado.EstadoInvitacion) ? "pendiente" : empleado.EstadoInvitacion) · @(string.Equals(empleado.EstadoInvitacion, "pendiente", StringComparison.OrdinalIgnoreCase) ? "Acceso pendiente de aceptación" : empleado.Activo ? "Activo" : "Inactivo")</span>
                                 </div>
                                 <div class="perfil-socio-acciones">
-                                    <button type="button" class="btn-texto" @onclick="() => IniciarEdicionEmpleado(empleado)" disabled="@(actualizandoEstadoEmpleado || eliminandoEmpleado)">Editar</button>
+                                    <button type="button" class="btn-texto" @onclick="() => IniciarEdicionEmpleado(empleado)" aria-label="@($"Editar a {empleado.CorreoInvitado}")" disabled="@(actualizandoEstadoEmpleado || eliminandoEmpleado)">Editar</button>
                                     <button type="button" class="btn-texto" @onclick="() => CambiarEstadoEmpleado(empleado)" disabled="@(actualizandoEstadoEmpleado || eliminandoEmpleado)">
                                         @(empleado.Activo ? "Desactivar acceso" : "Activar acceso")
                                     </button>
-                                    <button type="button" class="btn-texto btn-texto-peligro" @onclick="() => SolicitarEliminarEmpleado(empleado)" disabled="@(actualizandoEstadoEmpleado || eliminandoEmpleado)">Eliminar</button>
+                                    <button type="button" class="btn-texto btn-texto-peligro" @onclick="() => SolicitarEliminarEmpleado(empleado)" aria-label="@($"Eliminar a {empleado.CorreoInvitado}")" disabled="@(actualizandoEstadoEmpleado || eliminandoEmpleado)">Eliminar</button>
                                 </div>
                             </div>
                         }
@@ -296,37 +303,41 @@
                 {
                     <div class="perfil-socio-editor">
                         <div class="perfil-socio-editor-heading">
-                            <strong>@(editandoEmpleado ? "Editar empleado" : "Nueva invitación de empleado")</strong>
+                            <h4 tabindex="-1" @ref="tituloEmpleado">@(editandoEmpleado ? "Editar empleado" : "Nueva invitación de empleado")</h4>
                             <button type="button" class="btn-texto" @onclick="CancelarEmpleado">Cancelar</button>
                         </div>
                         <div class="perfil-grid">
                             <div class="form-group">
                                 <label class="auth-label" for="correo-empleado">Correo del empleado *</label>
-                                <input id="correo-empleado" @bind="CorreoEmpleadoFormulario" @bind:event="oninput" @bind:after="LimpiarErrorCorreoEmpleado" type="email" maxlength="255" required pattern="@PatronCorreoEmpleado" autocomplete="email" class="form-control" placeholder="empleado@correo.com" />
-                                @if (ErrorCorreoEmpleado() is { } correoError) { <div class="text-danger msg-error">@correoError</div> }
-                                @if (editandoEmpleado) { <small class="text-muted">Si cambias el correo, enviaremos una nueva invitación y el acceso quedará pendiente hasta que se acepte.</small> }
+                                <input id="correo-empleado" @bind="CorreoEmpleadoFormulario" @bind:event="oninput" @bind:after="LimpiarErrorCorreoEmpleado" type="email" maxlength="255" required pattern="@PatronCorreoEmpleado" autocomplete="section-empleado email" class="form-control" placeholder="empleado@correo.com"
+                                       aria-describedby="correo-empleado-error correo-empleado-ayuda" aria-invalid="@(ErrorCorreoEmpleado() is not null ? "true" : null)" />
+                                <div id="correo-empleado-error" class="text-danger msg-error" role="status">@ErrorCorreoEmpleado()</div>
+                                <small id="correo-empleado-ayuda" class="text-muted">@(editandoEmpleado ? "Si cambias el correo, enviaremos una nueva invitación y el acceso quedará pendiente hasta que se acepte." : null)</small>
                             </div>
                             <div class="form-group">
                                 <label class="auth-label" for="rol-empleado">Rol *</label>
-                                <select id="rol-empleado" @bind="RolEmpleadoFormulario" @bind:after="LimpiarErrorRolEmpleado" class="form-select" required>
+                                <select id="rol-empleado" @bind="RolEmpleadoFormulario" @bind:after="LimpiarErrorRolEmpleado" class="form-select" required
+                                        aria-describedby="rol-empleado-error" aria-invalid="@(ErrorRolEmpleado() is not null ? "true" : null)">
                                     <option value="0">Selecciona un rol</option>
                                     @foreach (var rol in roles)
                                     {
                                         <option value="@rol.Id">@rol.Nombre</option>
                                     }
                                 </select>
-                                @if (ErrorRolEmpleado() is { } rolError) { <div class="text-danger msg-error">@rolError</div> }
+                                <div id="rol-empleado-error" class="text-danger msg-error" role="status">@ErrorRolEmpleado()</div>
                             </div>
                             <div class="form-group">
                                 <label class="auth-label" for="password-empleado">@(editandoEmpleado ? "Nueva contraseña" : "Contraseña *")</label>
-                                <input id="password-empleado" @bind="PasswordEmpleadoFormulario" @bind:event="oninput" @bind:after="LimpiarErroresPasswordEmpleado" type="password" minlength="8" maxlength="72" pattern="@PatronContrasenaEmpleado" autocomplete="new-password" class="form-control" required="@(!editandoEmpleado)" />
-                                @if (ErrorPasswordEmpleado() is { } passwordError) { <div class="text-danger msg-error">@passwordError</div> }
-                                <small class="text-muted">@(editandoEmpleado ? "Déjala vacía para conservar la contraseña actual." : "8–72 caracteres, con mayúscula, minúscula, número y símbolo especial.")</small>
+                                <input id="password-empleado" @bind="PasswordEmpleadoFormulario" @bind:event="oninput" @bind:after="LimpiarErroresPasswordEmpleado" type="password" minlength="8" maxlength="72" pattern="@PatronContrasenaEmpleado" autocomplete="section-empleado new-password" class="form-control" required="@(!editandoEmpleado)"
+                                       aria-describedby="password-empleado-error password-empleado-ayuda" aria-invalid="@(ErrorPasswordEmpleado() is not null ? "true" : null)" />
+                                <div id="password-empleado-error" class="text-danger msg-error" role="status">@ErrorPasswordEmpleado()</div>
+                                <small id="password-empleado-ayuda" class="text-muted">@(editandoEmpleado ? "Déjala vacía para conservar la contraseña actual." : "8–72 caracteres, con mayúscula, minúscula, número y símbolo especial.")</small>
                             </div>
                             <div class="form-group">
                                 <label class="auth-label" for="confirmar-password-empleado">@(editandoEmpleado ? "Confirmar nueva contraseña" : "Confirmar contraseña *")</label>
-                                <input id="confirmar-password-empleado" @bind="ConfirmarPasswordEmpleadoFormulario" @bind:event="oninput" @bind:after="LimpiarErrorConfirmacionEmpleado" type="password" minlength="8" maxlength="72" autocomplete="new-password" class="form-control" required="@(!editandoEmpleado)" />
-                                @if (ErrorConfirmarPasswordEmpleado() is { } confirmarError) { <div class="text-danger msg-error">@confirmarError</div> }
+                                <input id="confirmar-password-empleado" @bind="ConfirmarPasswordEmpleadoFormulario" @bind:event="oninput" @bind:after="LimpiarErrorConfirmacionEmpleado" type="password" minlength="8" maxlength="72" autocomplete="section-empleado new-password" class="form-control" required="@(!editandoEmpleado)"
+                                       aria-describedby="confirmar-password-empleado-error" aria-invalid="@(ErrorConfirmarPasswordEmpleado() is not null ? "true" : null)" />
+                                <div id="confirmar-password-empleado-error" class="text-danger msg-error" role="status">@ErrorConfirmarPasswordEmpleado()</div>
                             </div>
                         </div>
                         @if (!string.IsNullOrWhiteSpace(mensajeEmpleado))
@@ -351,14 +362,14 @@
 
         @if (mostrarConfirmDesformalizar)
         {
-            <div class="confirm-overlay">
-                <div class="confirm-box confirm-box-advertencia">
+            <AccessibleDialog Class="confirm-box confirm-box-advertencia" LabelledBy="confirmar-desformalizar-titulo"
+                              OnCancel="() => mostrarConfirmDesformalizar = false">
                     <div class="confirm-icono-advertencia" aria-hidden="true">
                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" />
                         </svg>
                     </div>
-                    <h3 class="confirm-titulo-advertencia">Pasar a no formalizado</h3>
+                    <h2 id="confirmar-desformalizar-titulo" class="confirm-titulo-advertencia">Pasar a no formalizado</h2>
                     <p class="confirm-mensaje">¿Estás seguro de querer pasar el emprendimiento a <strong>no formalizado</strong>?</p>
                     <ul class="confirm-lista-advierte">
                         <li>Se revocarán los privilegios de formalizado.</li>
@@ -366,33 +377,31 @@
                         <li>Se eliminarán los empleados del negocio.</li>
                     </ul>
                     <div class="confirm-acciones">
-                        <button type="button" class="btn-outline" @onclick="() => mostrarConfirmDesformalizar = false">Cancelar</button>
+                        <button type="button" class="btn-outline" @onclick="() => mostrarConfirmDesformalizar = false" autofocus>Cancelar</button>
                         <button type="button" class="btn-solid btn-confirmar-peligro" @onclick="ConfirmarDesformalizacion">Sí, continuar</button>
                     </div>
-                </div>
-            </div>
+            </AccessibleDialog>
         }
 
         @if (empleadoPendienteEliminar is not null)
         {
-            <div class="confirm-overlay">
-                <div class="confirm-box confirm-box-advertencia" role="dialog" aria-modal="true" aria-labelledby="confirmar-eliminar-empleado-titulo">
+            <AccessibleDialog Class="confirm-box confirm-box-advertencia" LabelledBy="confirmar-eliminar-empleado-titulo"
+                              DescribedBy="confirmar-eliminar-empleado-texto" OnCancel="CancelarEliminarEmpleado">
                     <div class="confirm-icono-advertencia" aria-hidden="true">
                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" />
                         </svg>
                     </div>
-                    <h3 id="confirmar-eliminar-empleado-titulo" class="confirm-titulo-advertencia">Eliminar empleado</h3>
-                    <p class="confirm-mensaje">¿Eliminar a <strong>@empleadoPendienteEliminar.CorreoInvitado</strong>?</p>
+                    <h2 id="confirmar-eliminar-empleado-titulo" class="confirm-titulo-advertencia">Eliminar empleado</h2>
+                    <p id="confirmar-eliminar-empleado-texto" class="confirm-mensaje">¿Eliminar a <strong>@empleadoPendienteEliminar.CorreoInvitado</strong>?</p>
                     <p class="confirm-mensaje">Se borrarán su acceso y los datos asociados. Esta acción no se puede deshacer.</p>
                     <div class="confirm-acciones">
-                        <button type="button" class="btn-outline" @onclick="CancelarEliminarEmpleado" disabled="@eliminandoEmpleado">Cancelar</button>
+                        <button type="button" class="btn-outline" @onclick="CancelarEliminarEmpleado" disabled="@eliminandoEmpleado" autofocus>Cancelar</button>
                         <button type="button" class="btn-solid btn-confirmar-peligro" @onclick="ConfirmarEliminarEmpleado" disabled="@eliminandoEmpleado">
                             @(eliminandoEmpleado ? "Eliminando..." : "Sí, eliminar")
                         </button>
                     </div>
-                </div>
-            </div>
+            </AccessibleDialog>
         }
 
     }
@@ -415,6 +424,10 @@
     private bool formalizadoOriginal;
     private bool mostrarEmpleadoForm;
     private bool editandoEmpleado;
+    private bool enfocarFormulario;
+    private bool enfocarEmpleado;
+    private ElementReference tituloFormulario;
+    private ElementReference tituloEmpleado;
     private int? empleadoIdEnEdicion;
     private InvitarEmpleadoDto empleadoFormulario = new();
     private ActualizarEmpleadoDto editarEmpleadoFormulario = new();
@@ -517,6 +530,7 @@
             perfil = perfilResultado.Data;
             formalizadoOriginal = perfil.Formalizado;
             fase = FaseEdicion.Formulario;
+            enfocarFormulario = true;
             if (formalizadoOriginal)
             {
                 await CargarRolesAsync();
@@ -696,6 +710,7 @@
     private void IniciarNuevoEmpleado()
     {
         mostrarEmpleadoForm = true;
+        enfocarEmpleado = true;
         editandoEmpleado = false;
         empleadoIdEnEdicion = null;
         empleadoFormulario = new InvitarEmpleadoDto();
@@ -709,6 +724,7 @@
     {
         if (!empleado.Id.HasValue) return;
         mostrarEmpleadoForm = true;
+        enfocarEmpleado = true;
         editandoEmpleado = true;
         empleadoIdEnEdicion = empleado.Id.Value;
         editarEmpleadoFormulario = new ActualizarEmpleadoDto
@@ -724,6 +740,20 @@
 
     private string? ErrorEmpleado(string propiedad) =>
         erroresEmpleado.TryGetValue(propiedad, out var error) ? error : null;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (enfocarFormulario)
+        {
+            enfocarFormulario = false;
+            await tituloFormulario.FocusAsync();
+        }
+        if (enfocarEmpleado)
+        {
+            enfocarEmpleado = false;
+            await tituloEmpleado.FocusAsync();
+        }
+    }
 
     private string? ErrorCorreoEmpleado() => ErrorEmpleado(editandoEmpleado
         ? nameof(ActualizarEmpleadoDto.Correo)

@@ -1,17 +1,18 @@
 ﻿@using Microsoft.AspNetCore.Components.Forms
 
 <div class="img-upload-container">
+    <InputFile id="@InputId" OnChange="CargarImagen" class="img-upload-input" accept="image/*" @key="inputKey"
+               aria-label="@NombreCampo" />
     <label class="img-upload-label" for="@InputId">
         @if (!string.IsNullOrEmpty(ImagenBase64))
         {
-            <img src="@ImagenBase64" class="img-upload-preview @FormaClass" />
+            <img src="@ImagenBase64" class="img-upload-preview @FormaClass" alt="@DescripcionImagen" />
         }
         else
         {
-            <span class="img-upload-placeholder @FormaClass">+</span>
+            <span class="img-upload-placeholder @FormaClass" aria-hidden="true">+</span>
         }
     </label>
-    <InputFile id="@InputId" OnChange="CargarImagen" class="img-upload-input" accept="image/*" @key="inputKey" />
     @if (!string.IsNullOrEmpty(Texto))
     {
         <span class="img-upload-texto">@Texto</span>
@@ -28,7 +29,9 @@
     [Parameter] public string InputId { get; set; } = Guid.NewGuid().ToString();
     [Parameter] public string Texto { get; set; } = "";
     [Parameter] public string Forma { get; set; } = "circular"; // "circular" o "cuadrado"
+    [Parameter] public string DescripcionImagen { get; set; } = "Vista previa de la imagen seleccionada";
 
+    private string NombreCampo => string.IsNullOrWhiteSpace(Texto) ? "Seleccionar imagen" : Texto;
     private string FormaClass => Forma == "cuadrado" ? "img-upload-cuadrado" : "img-upload-circular";
 
     private string? mensajeError;

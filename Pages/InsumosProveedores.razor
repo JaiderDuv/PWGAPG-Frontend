@@ -9,7 +9,9 @@
 @inject NavigationManager Navigation
 @using PWGAPG_Frontend.Components
 
-<div class="inventario-container">
+<PageTitle>Asignar proveedor a un insumo | Chef Metrics</PageTitle>
+
+<div class="inventario-container inventario-accesible">
     <button type="button" class="btn-outline" @onclick='() => Navigation.NavigateTo("proveedores")'>
         ← Volver a proveedores
     </button>
@@ -24,16 +26,16 @@
 
     <section class="insumos-toolbar pm-toolbar">
         <div class="pm-filtro-item pm-filtro-busqueda">
-            <label class="pm-filtro-label">Buscar</label>
-            <input class="form-control insumos-buscador"
+            <label class="pm-filtro-label" for="asignar-buscar">Buscar</label>
+            <input id="asignar-buscar" class="form-control insumos-buscador"
                    placeholder="Nombre o proveedor..."
                    value="@textoBusqueda"
                    @oninput="e => textoBusqueda = e.Value?.ToString() ?? string.Empty" />
         </div>
 
         <div class="pm-filtro-item">
-            <label class="pm-filtro-label">Unidad</label>
-            <select class="form-select" @bind="unidadFiltro">
+            <label class="pm-filtro-label" for="asignar-unidad">Unidad</label>
+            <select id="asignar-unidad" class="form-select" @bind="unidadFiltro">
                 <option value="">Todas las unidades</option>
                 @foreach (var unidad in ConversorUnidades.Unidades)
                 {
@@ -43,23 +45,22 @@
         </div>
 
         <div class="pm-filtro-item">
-            <label class="pm-filtro-label">Costo mín.</label>
-            <input type="number" class="form-control pm-input-numero" min="0" step="1" @bind="costoMin" @bind:event="oninput" />
+            <label class="pm-filtro-label" for="asignar-costo-min">Costo mínimo</label>
+            <input type="number" class="form-control pm-input-numero" min="0" step="1" id="asignar-costo-min" @bind="costoMin" @bind:event="oninput" />
         </div>
         <div class="pm-filtro-item">
-            <label class="pm-filtro-label">Costo máx.</label>
-            <input type="number" class="form-control pm-input-numero" min="0" step="1" @bind="costoMax" @bind:event="oninput" />
+            <label class="pm-filtro-label" for="asignar-costo-max">Costo máximo</label>
+            <input type="number" class="form-control pm-input-numero" min="0" step="1" id="asignar-costo-max" @bind="costoMax" @bind:event="oninput" />
         </div>
 
         <div class="pm-filtro-item pm-filtro-acciones">
-            <label class="pm-filtro-label">&nbsp;</label>
             <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarFiltrosLocales">Limpiar</button>
         </div>
     </section>
 
     @if (mensajeError != null)
     {
-        <div class="text-danger msg-error">@mensajeError</div>
+        <div class="text-danger msg-error" role="alert">@mensajeError</div>
     }
 
     @if (cargando && !insumos.Any())
@@ -72,16 +73,16 @@
             Mostrando @insumosFiltrados.Count de @insumos.Count insumo(s) en esta página (@total en total).
         </p>
 
-        <div class="inventario-tabla-wrap">
-            <table class="inventario-tabla">
+        <div class="inventario-tabla-wrap" tabindex="0" role="region" aria-label="Insumos para asignar proveedores">
+            <table class="inventario-tabla" aria-label="Insumos">
                 <thead>
                     <tr>
-                        <th>Nombre</th>
-                        <th>Cantidad</th>
-                        <th>Unidad</th>
-                        <th>Proveedor actual</th>
-                        <th>Costo</th>
-                        <th></th>
+                        <th scope="col">Nombre</th>
+                        <th scope="col">Cantidad</th>
+                        <th scope="col">Unidad</th>
+                        <th scope="col">Proveedor actual</th>
+                        <th scope="col">Costo</th>
+                        <th scope="col">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -99,7 +100,7 @@
                                 <td class="text-muted">$@i.CostoUnitario.ToString("N0")</td>
                                 <td>
                                     <button type="button" class="btn-mini-editar"
-                                            @onclick="() => IrAProveedores(i.Id)">
+                                            aria-label="Gestionar proveedores de @i.Nombre" @onclick="() => IrAProveedores(i.Id)">
                                         Gestionar proveedores
                                     </button>
                                 </td>
