@@ -5,6 +5,7 @@
 @using PWGAPG_Frontend.Components
 @using System.Globalization
 @using System.Text
+@implements IAsyncDisposable
 @inject EvaluacionMenuApiService Api
 @inject MenuApiService MenuApi
 @inject NavigationManager Navigation
@@ -579,7 +580,7 @@
     private decimal umbralEditado = 30;
     private bool guardandoUmbral;
     private string? errorUmbral;
-    private CancellationTokenSource? debounceCts;
+    private readonly OperacionCancelable debounceUmbral = new();
 
     private string textoBusqueda = string.Empty;
     private decimal? costoMin, costoMax, precioMin, precioMax, margenMin, margenMax;
@@ -629,7 +630,7 @@
     private bool calculandoSugerencia;
     private bool guardandoEdicion;
     private string? errorEdicion;
-    private CancellationTokenSource? debounceModalCts;
+    private readonly OperacionCancelable debounceModal = new();
 
     protected override async Task OnInitializedAsync() => await Cargar();
 
@@ -686,7 +687,8 @@
     private async Task AlCambiarUmbral()
     {
         errorUmbral = null;
-        debounceCts?.Cancel();
+        var token = await debounceUmbral.ReiniciarAsync();
+        if (token.IsCancellationRequested) return;
 
         if (umbralEditado < 0 || umbralEditado > 100)
         {
@@ -694,16 +696,17 @@
             return;
         }
 
-        debounceCts = new CancellationTokenSource();
-        var token = debounceCts.Token;
         try { await Task.Delay(500, token); }
         catch (TaskCanceledException) { return; }
+        if (token.IsCancellationRequested) return;
 
         guardandoUmbral = true;
         StateHasChanged();
 
-        var res = await Api.ActualizarUmbralAsync(umbralEditado);
+        var umbralEnviado = umbralEditado;
+        var res = await Api.ActualizarUmbralAsync(umbralEnviado);
         guardandoUmbral = false;
+        if (token.IsCancellationRequested) return;
 
         if (!res.Exito)
         {
@@ -713,10 +716,10 @@
 
         if (evaluacion is not null)
         {
-            evaluacion.UmbralMargenMinimo = umbralEditado;
+            evaluacion.UmbralMargenMinimo = umbralEnviado;
             foreach (var p in evaluacion.Productos)
             {
-                p.EnRiesgo = EstaEnRiesgo(p.MargenDirecto, umbralEditado);
+                p.EnRiesgo = EstaEnRiesgo(p.MargenDirecto, umbralEnviado);
             }
             AplicarFiltros();
         }
@@ -816,7 +819,7 @@
 
     // ---------- Editar margen ----------
 
-    private void AbrirModalEditar(ProductoEvaluacionDto p)
+    private async Task AbrirModalEditar(ProductoEvaluacionDto p)
     {
         productoEditando = p;
         var margenBase = p.EnRiesgo
@@ -827,46 +830,48 @@
         errorEdicion = null;
         mensajeExito = null;
         mostrarModalEditar = true;
-        _ = CalcularSugerencia();
+        await CalcularSugerencia(await debounceModal.ReiniciarAsync());
     }
 
-    private void CerrarModalEditar()
+    private async Task CerrarModalEditar()
     {
         mostrarModalEditar = false;
         productoEditando = null;
         precioSugerido = null;
+        calculandoSugerencia = false;
+        await debounceModal.CancelarAsync();
     }
 
     private async Task AlCambiarMargenNuevo()
     {
         errorEdicion = null;
         precioSugerido = null;
+        var token = await debounceModal.ReiniciarAsync();
+        if (token.IsCancellationRequested) return;
 
         if (margenNuevo <= 0 || margenNuevo >= 100)
         {
             errorEdicion = "El margen debe estar entre 0 y 100.";
-            precioSugerido = null;
+            calculandoSugerencia = false;
             return;
         }
 
-        debounceModalCts?.Cancel();
-        debounceModalCts = new CancellationTokenSource();
-        var token = debounceModalCts.Token;
         try { await Task.Delay(400, token); }
         catch (TaskCanceledException) { return; }
 
-        await CalcularSugerencia();
+        await CalcularSugerencia(token);
     }
 
-    private async Task CalcularSugerencia()
+    private async Task CalcularSugerencia(CancellationToken token)
     {
-        if (productoEditando is null) return;
+        if (token.IsCancellationRequested || productoEditando is null) return;
 
         calculandoSugerencia = true;
         StateHasChanged();
 
         // Lista vacía = precio con costo directo, sin cargar los fijos al producto.
         var res = await MenuApi.PrecioSugeridoAsync(productoEditando.ProductoId, margenNuevo, new List<int>());
+        if (token.IsCancellationRequested) return;
         calculandoSugerencia = false;
 
         if (!res.Exito || res.Datos is null)
@@ -922,7 +927,13 @@
 
         AplicarFiltros();
         mensajeExito = $"El precio de \"{productoEditando.Nombre}\" se actualizó a {Formato.Moneda(actualizado.PrecioVenta ?? 0)}. Ya se refleja en la página de Menú.";
-        CerrarModalEditar();
+        await CerrarModalEditar();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await debounceUmbral.DisposeAsync();
+        await debounceModal.DisposeAsync();
     }
 
     // La evaluación usa el margen directo. Los costos fijos se cubren con el

@@ -66,14 +66,13 @@
                     @if (AuthService.EsEmprendedor)
                     {
                         <button type="button" class="mn-btn mn-btn-ghost" @onclick="ActualizarCostosAsync"
-                                disabled="@cargando"
                                 title="Recalcula el costo directo y el margen con los precios actuales de los insumos. No modifica el precio de venta.">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="M20 11a8 8 0 1 0-2.3 5.7" />
                                 <path d="M20 4v7h-7" />
                             </svg>
-                            @(cargando ? "Actualizando..." : "Actualizar costos")
+                            Actualizar costos
                         </button>
                     }
                 </div>
@@ -232,7 +231,7 @@
 
     private async Task ActualizarCostosAsync()
     {
-        if (!AuthService.EsEmprendedor) return;
+        if (!AuthService.EsEmprendedor || cargando) return;
         mensajeOk = null;
         await Cargar();
         if (error is null)

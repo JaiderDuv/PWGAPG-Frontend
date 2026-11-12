@@ -309,7 +309,7 @@
                 {
                     messageStore?.Add(nitField, "El NIT es obligatorio para empresas formalizadas.");
                 }
-                else if (!System.Text.RegularExpressions.Regex.IsMatch(modelo.Nit, @"^\d{9,10}$"))
+                else if (modelo.Nit.Length is < 9 or > 10 || !modelo.Nit.All(char.IsDigit))
                 {
                     messageStore?.Add(nitField, "El NIT debe contener únicamente entre 9 y 10 dígitos numéricos.");
                 }
