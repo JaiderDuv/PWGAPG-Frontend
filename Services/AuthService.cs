@@ -12,6 +12,7 @@ namespace PWGAPG_Frontend.Services
         private readonly HttpClient _httpClient;
         private readonly IJSRuntime _jsRuntime;
         private readonly SemaphoreSlim _refreshLock = new(1, 1);
+        private int _sessionVersion;
 
         public bool IsAuthenticated { get; private set; } = false;
         public string NombreEmpresa { get; private set; } = string.Empty;
@@ -64,6 +65,7 @@ namespace PWGAPG_Frontend.Services
 
                 if (resultado is { Exito: true })
                 {
+                    _sessionVersion++;
                     await GuardarSesionAsync(resultado);
                     if (EsEmprendedor)
                         await RefrescarDatosPersonalesAsync();
@@ -72,7 +74,7 @@ namespace PWGAPG_Frontend.Services
 
                 return resultado;
             }
-            catch (HttpRequestException)
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
                 return new LoginResponseDto
                 {
@@ -100,12 +102,16 @@ namespace PWGAPG_Frontend.Services
             var onboardingGuardado = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "onboardingCompletado");
             OnboardingCompletado = onboardingGuardado == "True";
 
-            if (EsEmprendedor)
-            {
-                await ActualizarOnboardingCompletadoAsync();
-                await RefrescarDatosPersonalesAsync();
-            }
+            NotifyStateChanged();
+        }
 
+        public async Task ActualizarSesionAsync()
+        {
+            if (!IsAuthenticated || !EsEmprendedor) return;
+
+            await Task.WhenAll(
+                ActualizarOnboardingCompletadoAsync(),
+                RefrescarDatosPersonalesAsync());
             NotifyStateChanged();
         }
 
@@ -117,6 +123,7 @@ namespace PWGAPG_Frontend.Services
 
         private async Task RefrescarDatosPersonalesAsync()
         {
+            var sessionVersion = _sessionVersion;
             try
             {
                 using var resp = await EnviarConTokenAsync(HttpMethod.Get, "api/onboarding/datos-personales");
@@ -126,6 +133,7 @@ namespace PWGAPG_Frontend.Services
                 }
 
                 using var doc = await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync());
+                if (sessionVersion != _sessionVersion || !IsAuthenticated) return;
 
                 var nombres = doc.RootElement.TryGetProperty("nombres", out var n) && n.ValueKind == JsonValueKind.String
                     ? n.GetString() : null;
@@ -141,7 +149,7 @@ namespace PWGAPG_Frontend.Services
                     ? "images/default-avatar.png"
                     : foto;
             }
-            catch (HttpRequestException)
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
                 // Sin conexión: se conservan los valores previos.
             }
@@ -153,6 +161,7 @@ namespace PWGAPG_Frontend.Services
 
         private async Task ActualizarOnboardingCompletadoAsync()
         {
+            var sessionVersion = _sessionVersion;
             for (var intento = 1; intento <= 2; intento++)
             {
                 try
@@ -166,6 +175,7 @@ namespace PWGAPG_Frontend.Services
                     if (resp.IsSuccessStatusCode)
                     {
                         using var doc = await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync());
+                        if (sessionVersion != _sessionVersion || !IsAuthenticated) return;
                         OnboardingCompletado = doc.RootElement.TryGetProperty("onboardingCompletado", out var prop) &&
                                                prop.ValueKind == JsonValueKind.True;
                         await _jsRuntime.InvokeVoidAsync(
@@ -173,7 +183,7 @@ namespace PWGAPG_Frontend.Services
                         return;
                     }
                 }
-                catch (HttpRequestException)
+                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
                 {
                     // Se reintenta abajo.
                 }
@@ -245,11 +255,21 @@ namespace PWGAPG_Frontend.Services
             }
         }
 
-        public async Task<bool> RenovarSesionAsync()
+        public Task<bool> RenovarSesionAsync() => RenovarSesionAsync(null);
+
+        public async Task<bool> RenovarSesionAsync(string? accessTokenUsado)
         {
             await _refreshLock.WaitAsync();
             try
             {
+                var sessionVersion = _sessionVersion;
+                var accessTokenActual = await ObtenerAccessTokenAsync();
+                if (!string.IsNullOrWhiteSpace(accessTokenUsado) &&
+                    !string.IsNullOrWhiteSpace(accessTokenActual) && accessTokenActual != accessTokenUsado)
+                {
+                    return true;
+                }
+
                 var refreshToken = await ObtenerRefreshTokenAsync();
                 if (string.IsNullOrWhiteSpace(refreshToken))
                 {
@@ -262,13 +282,17 @@ namespace PWGAPG_Frontend.Services
                     using var response = await _httpClient.PostAsJsonAsync(
                         "api/auth/refresh", new { Token = refreshToken });
 
+                    if (sessionVersion != _sessionVersion) return false;
+
                     if (!response.IsSuccessStatusCode)
                     {
-                        await LimpiarSesionAsync();
+                        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.BadRequest)
+                            await LimpiarSesionAsync();
                         return false;
                     }
 
                     var session = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
+                    if (sessionVersion != _sessionVersion) return false;
                     if (session is not { Exito: true } || string.IsNullOrWhiteSpace(session.AccessToken ?? session.Token))
                     {
                         await LimpiarSesionAsync();
@@ -278,7 +302,7 @@ namespace PWGAPG_Frontend.Services
                     await GuardarSesionAsync(session);
                     return true;
                 }
-                catch (HttpRequestException)
+                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
                 {
                     return false;
                 }
@@ -321,7 +345,7 @@ namespace PWGAPG_Frontend.Services
             HttpMethod method,
             string url)
         {
-            var request = new HttpRequestMessage(method, url);
+            using var request = new HttpRequestMessage(method, url);
             await AgregarBearerAsync(request);
             var response = await _httpClient.SendAsync(request);
 
@@ -330,13 +354,13 @@ namespace PWGAPG_Frontend.Services
                 return response;
             }
 
-            if (!await RenovarSesionAsync())
+            if (!await RenovarSesionAsync(request.Headers.Authorization?.Parameter))
             {
                 return response;
             }
 
             response.Dispose();
-            var retry = new HttpRequestMessage(method, url);
+            using var retry = new HttpRequestMessage(method, url);
             await AgregarBearerAsync(retry);
             return await _httpClient.SendAsync(retry);
         }
@@ -390,6 +414,7 @@ namespace PWGAPG_Frontend.Services
 
         private async Task LimpiarSesionAsync()
         {
+            _sessionVersion++;
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "refreshToken");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "nombreEmpresa");

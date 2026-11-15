@@ -101,14 +101,25 @@
 @code {
     private bool mostrarMenu = false;
     private bool mostrarNavegacion;
+    private bool restaurandoSesion;
     private ElementReference botonNavegacion;
     private ElementReference botonUsuario;
     private ElementReference contenidoPrincipal;
 
     protected override void OnInitialized()
     {
+        restaurandoSesion = AuthService.IsAuthenticated;
         AuthService.OnChange += StateHasChanged;
         Navigation.LocationChanged += OnLocationChanged;
+        VerificarOnboardingPendiente();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !restaurandoSesion) return;
+
+        await AuthService.ActualizarSesionAsync();
+        restaurandoSesion = false;
         VerificarOnboardingPendiente();
     }
 
@@ -121,7 +132,7 @@
 
     private void VerificarOnboardingPendiente()
     {
-        if (AuthService.IsAuthenticated &&
+        if (!restaurandoSesion && AuthService.IsAuthenticated &&
             !AuthService.OnboardingCompletado &&
             !Navigation.Uri.Contains("/onboarding", StringComparison.OrdinalIgnoreCase))
         {

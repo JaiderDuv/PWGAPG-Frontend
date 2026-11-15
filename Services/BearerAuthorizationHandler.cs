@@ -22,13 +22,13 @@ public sealed class BearerAuthorizationHandler : DelegatingHandler
         if (response.StatusCode != HttpStatusCode.Unauthorized ||
             request.RequestUri?.AbsolutePath.Contains("/api/auth/", StringComparison.OrdinalIgnoreCase) == true ||
             request.RequestUri?.AbsolutePath.Contains("/api/perfil/confirmar-identidad", StringComparison.OrdinalIgnoreCase) == true ||
-            !await _authService.RenovarSesionAsync())
+            !await _authService.RenovarSesionAsync(request.Headers.Authorization?.Parameter))
         {
             return response;
         }
 
         response.Dispose();
-        var retry = await CloneRequestAsync(request, cancellationToken);
+        using var retry = await CloneRequestAsync(request, cancellationToken);
         await AddBearerAsync(retry);
         return await base.SendAsync(retry, cancellationToken);
     }

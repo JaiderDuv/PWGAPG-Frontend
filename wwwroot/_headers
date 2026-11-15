@@ -1,0 +1,13 @@
+# Los archivos .wasm y .dat de publish llevan huella de contenido en .NET 9.
+/_framework/*.wasm
+  Cache-Control: public, max-age=31536000, immutable
+
+/_framework/*.dat
+  Cache-Control: public, max-age=31536000, immutable
+
+# Configuración y manifiesto deben reflejar cada despliegue.
+/appsettings.json
+  Cache-Control: no-cache
+
+/_framework/blazor.boot.json
+  Cache-Control: no-cache

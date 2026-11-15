@@ -241,18 +241,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Primera tanda: lo que se ve arriba del todo.
+        // Estas lecturas son independientes y cada petición tiene su propio DbContext.
         await Task.WhenAll(
             CargarDatosNegocio(),
-            CargarRiesgo());
-
-        // Segunda tanda: los KPIs de en medio.
-        await Task.WhenAll(
+            CargarRiesgo(),
             CargarResumenMenu(),
-            CargarCostosFijos());
-
-        // Tercera tanda: el resto.
-        await Task.WhenAll(
+            CargarCostosFijos(),
             CargarInsumos(),
             CargarProveedores(),
             CargarRecetas(),
@@ -338,8 +332,11 @@
         cargandoCostos = true;
         for (var intento = 1; intento <= 2; intento++)
         {
-            var res = await CosteoApi.ListarCostosFijosAsync();
-            var equilibrio = await CosteoApi.ObtenerPuntoEquilibrioAsync();
+            var costosTask = CosteoApi.ListarCostosFijosAsync();
+            var equilibrioTask = CosteoApi.ObtenerPuntoEquilibrioAsync();
+            await Task.WhenAll(costosTask, equilibrioTask);
+            var res = await costosTask;
+            var equilibrio = await equilibrioTask;
 
             var huboExito = false;
             if (res.Exito && res.Datos is not null)
