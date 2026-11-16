@@ -4,7 +4,7 @@ Aplicación Blazor de ChefMetrics. Consume la API del repositorio `../ChefMetric
 
 ## Requisitos
 
-- .NET SDK 9
+- .NET SDK 10
 - Backend de ChefMetrics en ejecución
 
 ## Comandos útiles
