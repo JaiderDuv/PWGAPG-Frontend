@@ -1,5 +1,5 @@
-﻿@page "/editar-perfil-usuario"
-@attribute [Authorize(Roles = "Emprendedor")]
+@page "/editar-perfil-usuario"
+@attribute [Authorize(Roles = "Emprendedor,Chef,Cajero")]
 @using PWGAPG_Frontend.Models
 @inject PWGAPG_Frontend.Services.PerfilService PerfilService
 @inject PWGAPG_Frontend.Services.AuthService AuthService
@@ -11,7 +11,7 @@
     <div class="perfil-edicion-heading">
         <div>
             <span class="perfil-kicker">CUENTA</span>
-            <h1>Editar perfil de usuario</h1>
+            <h1>Mi perfil</h1>
             <p>Revisa y actualiza tu información personal. Los datos se cargan automáticamente.</p>
         </div>
         <button type="button" class="btn-outline perfil-cancelar" @onclick="VolverAlDashboard">
@@ -30,12 +30,6 @@
     else
     {
         <EditForm Model="perfil" OnSubmit="GuardarAsync" class="perfil-formulario">
-            <div class="perfil-formulario-topline">
-                <div>
-                    <h2>Bienvenido Usuario</h2>
-                </div>
-            </div>
-
             @if (!string.IsNullOrWhiteSpace(mensajeError))
             {
                 <div class="perfil-alerta perfil-alerta-error" role="alert">@mensajeError</div>
@@ -50,45 +44,58 @@
 
             <section class="perfil-seccion">
                 <div class="perfil-seccion-heading">
-                </div>
-            </section>
-
-            <section class="perfil-seccion">
-                <div class="perfil-seccion-heading">
-                    <span>Información del titular</span>
+                    <span>Información personal</span>
                 </div>
 
                 <div class="perfil-grid">
-                    <div class="form-group">
-                        <PWGAPG_Frontend.Components.ImageUpload @bind-ImagenBase64="perfil.FotoPerfilUrl"
-                                                                Texto="Cambiar foto de perfil"
-                                                                DescripcionImagen="Vista previa de la foto de perfil" />
-                    </div>
-                    <div class="form-group">
-                        <label class="auth-label" for="nombres">Nombres</label>
-                        <InputText id="nombres" @bind-Value="perfil.Nombres" type="text" class="form-control" />
-                    </div>
-                    <div class="form-group">
-                        <label class="auth-label" for="apellidos">Apellidos</label>
-                        <InputText id="apellidos" @bind-Value="perfil.Apellidos" type="text" class="form-control" />
-                    </div>
-                    <div class="form-group">
-                        <label class="auth-label" for="tipo-documento">Tipo de documento</label>
-                        <InputSelect id="tipo-documento" @bind-Value="perfil.TipoDocumento" class="form-select">
-                            <option value="">Selecciona una opción</option>
-                            <option value="CC">Cédula de ciudadanía</option>
-                            <option value="CE">Cédula de extranjería</option>
-                            <option value="TI">Tarjeta de identidad</option>
-                            <option value="PA">Pasaporte</option>
-                        </InputSelect>
-                    </div>
-                    <div class="form-group">
-                        <label class="auth-label" for="numero-documento">Documento de identidad</label>
-                        <InputText id="numero-documento" @bind-Value="perfil.NumeroDocumento" class="form-control" />
-                    </div>
+                    @if (AuthService.EsEmprendedor)
+                    {
+                        <div class="form-group">
+                            <PWGAPG_Frontend.Components.ImageUpload @bind-ImagenBase64="perfil.FotoPerfilUrl"
+                                                                    Texto="Cambiar foto de perfil"
+                                                                    DescripcionImagen="Vista previa de la foto de perfil" />
+                        </div>
+                        <div class="form-group">
+                            <label class="auth-label" for="nombres">Nombres</label>
+                            <InputText id="nombres" @bind-Value="perfil.Nombres" type="text" class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label class="auth-label" for="apellidos">Apellidos</label>
+                            <InputText id="apellidos" @bind-Value="perfil.Apellidos" type="text" class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label class="auth-label" for="tipo-documento">Tipo de documento</label>
+                            <InputSelect id="tipo-documento" @bind-Value="perfil.TipoDocumento" class="form-select">
+                                <option value="">Selecciona una opción</option>
+                                <option value="CC">Cédula de ciudadanía</option>
+                                <option value="CE">Cédula de extranjería</option>
+                                <option value="TI">Tarjeta de identidad</option>
+                                <option value="PA">Pasaporte</option>
+                            </InputSelect>
+                        </div>
+                        <div class="form-group">
+                            <label class="auth-label" for="numero-documento">Documento de identidad</label>
+                            <InputText id="numero-documento" @bind-Value="perfil.NumeroDocumento" class="form-control" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="form-group">
+                            <label class="auth-label" for="perfil-nombre-completo">Nombre completo</label>
+                            <InputText id="perfil-nombre-completo" @bind-Value="perfil.NombreCompleto" maxlength="150" required class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label class="auth-label" for="perfil-correo">Correo de la cuenta</label>
+                            <input id="perfil-correo" value="@perfil.Correo" readonly class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label class="auth-label" for="perfil-rol">Rol</label>
+                            <input id="perfil-rol" value="@AuthService.Rol" readonly class="form-control" />
+                        </div>
+                    }
                     <div class="form-group">
                         <label class="auth-label" for="telefono-contacto">Teléfono de contacto</label>
-                        <InputText id="telefono-contacto" @bind-Value="perfil.TelefonoContacto" type="tel" class="form-control" />
+                        <InputText id="telefono-contacto" @bind-Value="perfil.TelefonoContacto" type="tel" maxlength="20" class="form-control" />
                     </div>
                 </div>
             </section>
@@ -156,7 +163,10 @@
             mensajeExito = resultado.Data?.Mensaje ?? "Los cambios se guardaron correctamente.";
 
             // Refresca la foto de perfil en la barra superior sin recargar.
-            AuthService.ActualizarFotoPerfil(perfil.FotoPerfilUrl);
+            if (AuthService.EsEmprendedor)
+            {
+                AuthService.ActualizarFotoPerfil(perfil.FotoPerfilUrl);
+            }
         }
         catch (HttpRequestException)
         {

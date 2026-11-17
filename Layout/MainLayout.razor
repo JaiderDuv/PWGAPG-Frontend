@@ -69,9 +69,12 @@
 
                         <div class="dropdown-divider"></div>
 
-                        @if (AuthService.EsEmprendedor)
+                        @if (AuthService.EsEmprendedor || AuthService.EsChef || AuthService.EsCajero)
                         {
                             <NavLink class="dropdown-item-custom" href="editar-perfil-usuario" @onclick="() => mostrarMenu = false">Mi Perfil</NavLink>
+                        }
+                        @if (AuthService.EsEmprendedor)
+                        {
                             <NavLink class="dropdown-item-custom" href="editar-perfil" @onclick="() => mostrarMenu = false">Mi Emprendimiento</NavLink>
                         }
 
