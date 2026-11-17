@@ -1,5 +1,5 @@
 ﻿@page "/editar-perfil-usuario"
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Emprendedor")]
 @using PWGAPG_Frontend.Models
 @inject PWGAPG_Frontend.Services.PerfilService PerfilService
 @inject PWGAPG_Frontend.Services.AuthService AuthService

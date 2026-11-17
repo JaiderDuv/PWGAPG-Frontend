@@ -280,6 +280,49 @@ a, a:hover, a:focus {
     scroll-margin-top: 84px;
 }
 
+#app:has(.access-denied) > :is(.skip-link, .navbar) {
+    display: none;
+}
+
+.main-container:has(> .access-denied) {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+
+.access-denied {
+    display: grid;
+    place-items: center;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 1.5rem;
+    background: var(--onb-bg);
+    text-align: center;
+}
+
+.access-denied-card {
+    width: min(100%, 32rem);
+    padding: clamp(1.5rem, 6vw, 3.5rem);
+    border: 1px solid var(--onb-border);
+    border-radius: 1rem;
+    background: #fff;
+}
+
+.access-denied-card h1 {
+    margin: 0 0 0.75rem;
+    color: var(--primary-dark);
+    font-size: clamp(1.8rem, 5vw, 2.75rem);
+    font-weight: 750;
+}
+
+.access-denied-card p {
+    margin: 0 0 1.5rem;
+}
+
+.access-denied-card .btn-solid {
+    display: inline-block;
+}
+
 dialog.accessible-dialog {
     inset: 0;
     margin: auto;

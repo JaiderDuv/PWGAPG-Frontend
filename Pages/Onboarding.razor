@@ -1,5 +1,5 @@
 ﻿@page "/onboarding"
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Emprendedor")]
 @using PWGAPG_Frontend.Pages.OnboardingTabs
 @inject NavigationManager Navigation
 @inject PWGAPG_Frontend.Services.AuthService AuthService

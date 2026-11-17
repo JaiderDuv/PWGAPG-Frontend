@@ -1,5 +1,5 @@
 @page "/insumos/historial"
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Emprendedor")]
 @using PWGAPG_Frontend.Models
 @inject PWGAPG_Frontend.Services.InsumoService InsumoService
 @inject NavigationManager Navigation

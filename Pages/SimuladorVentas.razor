@@ -1,5 +1,5 @@
 @page "/simulador"
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Emprendedor")]
 @using PWGAPG_Frontend.Models
 @using PWGAPG_Frontend.Services
 @inject MenuApiService MenuApi
