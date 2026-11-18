@@ -1,0 +1,36 @@
+<PageTitle>@Titulo | Chef Metrics</PageTitle>
+
+<section class="panel-empresa" aria-labelledby="titulo-panel-empleado">
+    <h1 id="titulo-panel-empleado" class="panel-empresa-nombre">@Titulo</h1>
+
+    <div class="panel-resumen-grid">
+        @if (EsChef)
+        {
+            <div class="panel-resumen-card">
+                <div class="panel-resumen-card-header">
+                    <h2>Recetas</h2>
+                    <a class="btn-texto-ver-mas" href="recetas">Ver recetas</a>
+                </div>
+            </div>
+        }
+        <div class="panel-resumen-card">
+            <div class="panel-resumen-card-header">
+                <h2>Menú</h2>
+                <a class="btn-texto-ver-mas" href="menu">Ver menú</a>
+            </div>
+        </div>
+        <div class="panel-resumen-card">
+            <div class="panel-resumen-card-header">
+                <h2>Mi perfil</h2>
+                <a class="btn-texto-ver-mas" href="editar-perfil-usuario">Editar perfil</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+@code {
+    [Parameter]
+    public bool EsChef { get; set; }
+
+    private string Titulo => EsChef ? "Inicio de Chef" : "Inicio de Cajero";
+}

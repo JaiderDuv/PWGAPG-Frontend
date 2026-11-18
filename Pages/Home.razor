@@ -6,8 +6,15 @@
 <PageTitle>Chef Metrics | Controla los costos de tu cocina</PageTitle>
 
 <AuthorizeView>
-    <Authorized>
-        <PanelEmpresa />
+    <Authorized Context="sesion">
+        @if (sesion.User.IsInRole("Emprendedor"))
+        {
+            <PanelEmpresa />
+        }
+        else if (sesion.User.IsInRole("Chef") || sesion.User.IsInRole("Cajero"))
+        {
+            <PanelEmpleado EsChef="@sesion.User.IsInRole("Chef")" />
+        }
     </Authorized>
 
     <NotAuthorized>
